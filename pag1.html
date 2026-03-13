@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bine te-am regasit</title>
+    <style>
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460, #e94560);
+            background-size: 400% 400%;
+            animation: gradientShift 8s ease infinite;
+        }
+
+        @keyframes gradientShift {
+            0%   { background-position: 0% 50%; }
+            50%  { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        h1 {
+            font-family: 'Segoe UI', sans-serif;
+            font-size: 4rem;
+            background: linear-gradient(90deg, #f9d423, #ff4e50, #fc913a, #f9d423);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: textShine 3s linear infinite;
+            text-align: center;
+            text-shadow: none;
+            letter-spacing: 2px;
+        }
+
+        @keyframes textShine {
+            to { background-position: 200% center; }
+        }
+    </style>
+</head>
+<body>
+    <h1>Bine te-am regasit!!!</h1>
+</body>
+</html>
