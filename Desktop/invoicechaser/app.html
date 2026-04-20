@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>InvoiceChaser — Tracker facturi restante</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* === M1: CSS Variables + Base === */
+    :root {
+      --bg:     #0F1923;
+      --bg2:    #162030;
+      --bg3:    #1E2D3D;
+      --gold:   #C9A84C;
+      --gold-l: #E8C96A;
+      --cream:  #E8E0D0;
+      --text:   #F5F5F0;
+      --muted:  #8A9BB0;
+      --green:  #52B788;
+      --red:    #C44B2B;
+      --yellow: #D4A017;
+      --border: #253545;
+      --r:      8px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-size: 14px; }
+
+    /* Layout */
+    .app { max-width: 1140px; margin: 0 auto; padding: 28px 20px; }
+
+    /* Header */
+    .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 36px; flex-wrap: wrap; gap: 12px; }
+    .logo { font-size: 22px; font-weight: 700; color: var(--gold); letter-spacing: -0.5px; }
+    .logo span { color: var(--text); }
+    .header-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    /* Buttons */
+    .btn { padding: 8px 16px; border-radius: var(--r); border: none; cursor: pointer; font-family: inherit; font-size: 13px; font-weight: 500; transition: all 0.2s; line-height: 1.4; }
+    .btn-primary { background: var(--gold); color: #0F1923; }
+    .btn-primary:hover { background: var(--gold-l); }
+    .btn-outline { background: transparent; color: var(--cream); border: 1px solid var(--border); }
+    .btn-outline:hover { border-color: var(--gold); color: var(--gold); }
+    .btn-sm { padding: 5px 11px; font-size: 12px; }
+
+    /* === M3: Dashboard Cards === */
+    .dashboard { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 36px; }
+    .card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r); padding: 20px; transition: transform 0.2s, box-shadow 0.2s; }
+    .card:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(0,0,0,0.35); }
+    .card-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.7px; color: var(--muted); margin-bottom: 8px; }
+    .card-value { font-size: 26px; font-weight: 700; }
+    .card-value.gold  { color: var(--gold); }
+    .card-value.green { color: var(--green); }
+    .card-value.red   { color: var(--red); }
+    .card-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+    /* === M4: Invoice List === */
+    .list-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+    .list-title { font-size: 16px; font-weight: 600; }
+    .table-wrap { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r); overflow: hidden; }
+    table { width: 100%; border-collapse: collapse; }
+    th { background: var(--bg3); padding: 11px 16px; text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); border-bottom: 1px solid var(--border); white-space: nowrap; }
+    td { padding: 12px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr.risk-red    { border-left: 3px solid var(--red); }
+    tr.risk-yellow { border-left: 3px solid var(--yellow); }
+    tr.risk-green  { border-left: 3px solid var(--green); }
+    tr.risk-paid   { border-left: 3px solid var(--border); opacity: 0.55; }
+    .days-badge { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+    .days-red    { background: rgba(196,75,43,0.18);  color: #E07A5F; }
+    .days-yellow { background: rgba(212,160,23,0.18); color: #F2CC8F; }
+    .days-green  { background: rgba(82,183,136,0.18); color: var(--green); }
+    .row-actions { display: flex; gap: 6px; flex-wrap: nowrap; }
+    .empty-state { text-align: center; padding: 64px 20px; color: var(--muted); }
+    .empty-state h3 { font-size: 17px; margin-bottom: 8px; color: var(--text); }
+
+    /* Status select */
+    select.status-sel { background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: 4px 8px; border-radius: var(--r); font-size: 12px; font-family: inherit; cursor: pointer; }
+    select.status-sel:focus { outline: none; border-color: var(--gold); }
+
+    /* === M5: Modal === */
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.72); display: flex; align-items: center; justify-content: center; z-index: 100; opacity: 0; pointer-events: none; transition: opacity 0.22s; padding: 16px; }
+    .overlay.active { opacity: 1; pointer-events: all; }
+    .modal { background: var(--bg2); border: 1px solid var(--border); border-radius: 14px; padding: 32px; width: 100%; max-width: 480px; transform: translateY(18px); transition: transform 0.22s; box-shadow: 0 16px 60px rgba(0,0,0,0.55); }
+    .overlay.active .modal { transform: translateY(0); }
+    .modal h2 { font-size: 18px; font-weight: 700; margin-bottom: 24px; color: var(--gold); }
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 11px; font-weight: 600; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%; background: var(--bg3); border: 1px solid var(--border); color: var(--text);
+      padding: 10px 14px; border-radius: var(--r); font-family: inherit; font-size: 14px;
+    }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--gold); }
+    .form-group textarea { resize: vertical; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; }
+
+    /* === M7: Reminder Panel === */
+    .reminder-panel { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--r); padding: 24px; margin-top: 28px; display: none; }
+    .reminder-panel.active { display: block; animation: fadeIn 0.25s ease; }
+    .reminder-controls { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; align-items: center; }
+    .reminder-controls select { background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: 8px 12px; border-radius: var(--r); font-family: inherit; font-size: 13px; cursor: pointer; }
+    .reminder-controls select:focus { outline: none; border-color: var(--gold); }
+    .reminder-info { font-size: 12px; color: var(--muted); margin-bottom: 14px; }
+    .whatsapp-bubble { background: #1A2F24; border-radius: 0 12px 12px 12px; padding: 16px; margin-bottom: 12px; border-left: 3px solid #25D366; color: #e0f0e8; font-size: 14px; line-height: 1.65; white-space: pre-wrap; word-break: break-word; }
+    .bubble-label { font-size: 10px; color: #25D366; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; display: block; margin-bottom: 8px; }
+    .reminder-edit { width: 100%; background: var(--bg3); border: 1px solid var(--border); color: var(--text); padding: 12px 14px; border-radius: var(--r); font-family: inherit; font-size: 13px; line-height: 1.65; resize: vertical; min-height: 110px; margin-bottom: 14px; }
+    .reminder-edit:focus { outline: none; border-color: var(--gold); }
+    .reminder-btns { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    /* === M10: Wizard === */
+    .wizard-overlay { position: fixed; inset: 0; background: rgba(10,18,28,0.96); display: flex; align-items: center; justify-content: center; z-index: 200; padding: 16px; }
+    .wizard-box { background: var(--bg2); border: 1px solid var(--gold); border-radius: 18px; padding: 40px 36px; width: 100%; max-width: 500px; box-shadow: 0 0 80px rgba(201,168,76,0.18); }
+    .wizard-progress { display: flex; gap: 8px; justify-content: center; margin-bottom: 32px; }
+    .wizard-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); transition: background 0.3s; }
+    .wizard-dot.active { background: var(--gold); }
+    .wizard-step { display: none; }
+    .wizard-step.active { display: block; }
+    .wizard-icon { font-size: 48px; text-align: center; margin-bottom: 14px; }
+    .wizard-title { font-size: 22px; font-weight: 700; color: var(--gold); text-align: center; margin-bottom: 12px; }
+    .wizard-desc { color: var(--muted); text-align: center; line-height: 1.7; margin-bottom: 28px; }
+    .wizard-actions { display: flex; justify-content: center; gap: 12px; margin-top: 24px; }
+
+    /* === M11: Animations === */
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+    @keyframes goldPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.25); } }
+    .fade-in { animation: fadeIn 0.28s ease; }
+    .paid-anim td { animation: goldPulse 0.45s ease; }
+
+    /* Toast */
+    .toast { position: fixed; bottom: 28px; right: 28px; background: var(--bg3); border: 1px solid var(--gold); border-radius: var(--r); padding: 13px 20px; font-size: 13px; z-index: 300; animation: fadeIn 0.25s ease; box-shadow: 0 4px 24px rgba(0,0,0,0.45); max-width: 320px; }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .dashboard { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 600px) {
+      .dashboard { grid-template-columns: 1fr 1fr; }
+      th:nth-child(5), td:nth-child(5) { display: none; }
+      th:nth-child(4), td:nth-child(4) { display: none; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">Invoice<span>Chaser</span></div>
+    <div class="header-actions">
+      <label class="btn btn-outline btn-sm" style="cursor:pointer; display:inline-flex; align-items:center; gap:5px">
+        📥 Import CSV
+        <input type="file" id="csvInput" accept=".csv" style="display:none">
+      </label>
+      <button class="btn btn-outline btn-sm" onclick="exportCSV()">📤 Export CSV</button>
+      <button class="btn btn-primary" onclick="openModal()">+ Factură nouă</button>
+    </div>
+  </div>
+
+  <!-- M3: Dashboard -->
+  <div class="dashboard" id="dashboard"></div>
+
+  <!-- M4: Invoice List -->
+  <div class="list-header">
+    <div class="list-title">Facturi restante</div>
+    <div style="font-size:12px; color:var(--muted)" id="listMeta"></div>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Client</th>
+          <th>Sumă</th>
+          <th>Scadență</th>
+          <th>Zile întârziere</th>
+          <th>Scor risc</th>
+          <th>Status</th>
+          <th>Acțiuni</th>
+        </tr>
+      </thead>
+      <tbody id="invoiceList"></tbody>
+    </table>
+  </div>
+
+  <!-- M7: Reminder Panel -->
+  <div class="reminder-panel" id="reminderPanel">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; flex-wrap:wrap; gap:10px">
+      <strong style="color:var(--gold); font-size:15px">💬 Reminder — <span id="reminderClient"></span></strong>
+      <button class="btn btn-outline btn-sm" onclick="closeReminder()">✕ Închide</button>
+    </div>
+    <div class="reminder-info" id="reminderInfo"></div>
+    <div class="reminder-controls">
+      <select id="tonSel" onchange="updatePreview()">
+        <option value="prietenos">😊 Prietenos</option>
+        <option value="ferm">💼 Ferm</option>
+        <option value="urgent">🚨 Urgent</option>
+      </select>
+      <select id="limbaSel" onchange="updatePreview()">
+        <option value="ro">🇷🇴 Română</option>
+        <option value="en">🇬🇧 English</option>
+      </select>
+    </div>
+    <div class="whatsapp-bubble" id="whatsappBubble">
+      <span class="bubble-label">Preview mesaj</span>
+      <span id="bubbleText"></span>
+    </div>
+    <textarea class="reminder-edit" id="reminderEdit" oninput="syncBubble()"></textarea>
+    <div class="reminder-btns">
+      <button class="btn btn-primary" onclick="copyReminder()">📋 Copiază mesajul</button>
+      <button class="btn btn-outline btn-sm" onclick="markContacted()">✓ Marchează Contactat</button>
+    </div>
+  </div>
+
+</div><!-- end .app -->
+
+<!-- M5: Add/Edit Modal -->
+<div class="overlay" id="modalOverlay" onclick="closeModalOnBg(event)">
+  <div class="modal">
+    <h2 id="modalTitle">Factură nouă</h2>
+    <input type="hidden" id="editId">
+    <div class="form-group">
+      <label>Client *</label>
+      <input type="text" id="fClient" placeholder="ex: Firma ABC SRL">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Sumă *</label>
+        <input type="number" id="fSuma" placeholder="5000" min="0" step="any">
+      </div>
+      <div class="form-group">
+        <label>Valută</label>
+        <select id="fValuta">
+          <option value="RON">RON</option>
+          <option value="EUR">EUR</option>
+          <option value="USD">USD</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Data scadentă *</label>
+      <input type="date" id="fScadenta">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Canal preferat</label>
+        <select id="fCanal">
+          <option value="WhatsApp">WhatsApp</option>
+          <option value="Email">Email</option>
+          <option value="Telefon">Telefon</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select id="fStatus">
+          <option value="necontactat">Necontactat</option>
+          <option value="contactat">Contactat</option>
+          <option value="promis">Promis</option>
+          <option value="partial">Parțial plătit</option>
+          <option value="platit">Plătit</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Notă</label>
+      <textarea id="fNote" rows="2" placeholder="ex: Promis pe 15 apr, urmărire pe 20..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal()">Anulează</button>
+      <button class="btn btn-primary" onclick="saveInvoice()">Salvează</button>
+    </div>
+  </div>
+</div>
+
+<!-- M10: Onboarding Wizard -->
+<div class="wizard-overlay" id="wizardOverlay" style="display:none">
+  <div class="wizard-box">
+    <div class="wizard-progress">
+      <div class="wizard-dot active" id="dot1"></div>
+      <div class="wizard-dot" id="dot2"></div>
+      <div class="wizard-dot" id="dot3"></div>
+    </div>
+
+    <!-- Pasul 1 -->
+    <div class="wizard-step active" id="wStep1">
+      <div class="wizard-icon">💰</div>
+      <div class="wizard-title">Bun venit la InvoiceChaser</div>
+      <div class="wizard-desc">
+        Urmărești facturile restante, vezi cine datorează cel mai mult și trimiți remindere profesioniste.<br><br>
+        <strong style="color:var(--cream)">Durează mai puțin de 5 minute. Hai să adăugăm prima factură.</strong>
+      </div>
+      <div class="wizard-actions">
+        <button class="btn btn-primary" onclick="wizardGo(2)">Începe →</button>
+      </div>
+    </div>
+
+    <!-- Pasul 2 -->
+    <div class="wizard-step" id="wStep2">
+      <div class="wizard-title">Adaugă prima factură restantă</div>
+      <div class="wizard-desc" style="margin-bottom:16px">Completează datele reale sau modifică exemplul de mai jos.</div>
+      <div class="form-group">
+        <label>Client</label>
+        <input type="text" id="w_client" value="Firma Exemplu SRL">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Sumă</label>
+          <input type="number" id="w_suma" value="3500">
+        </div>
+        <div class="form-group">
+          <label>Valută</label>
+          <select id="w_valuta">
+            <option value="RON">RON</option>
+            <option value="EUR">EUR</option>
+            <option value="USD">USD</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Scadență</label>
+        <input type="date" id="w_scadenta">
+      </div>
+      <div class="wizard-actions">
+        <button class="btn btn-outline" onclick="wizardGo(1)">← Înapoi</button>
+        <button class="btn btn-primary" onclick="wizardSave()">Adaugă →</button>
+      </div>
+    </div>
+
+    <!-- Pasul 3 -->
+    <div class="wizard-step" id="wStep3">
+      <div class="wizard-icon">✉️</div>
+      <div class="wizard-title">Factura a fost adăugată!</div>
+      <div class="wizard-desc">
+        Acum apasă butonul <strong style="color:var(--gold)">💬 Reminder</strong> din dreptul facturii pentru a genera primul mesaj profesionist.<br><br>
+        Alegi tonul, limba — și mesajul e gata de trimis.
+      </div>
+      <div class="wizard-actions">
+        <button class="btn btn-primary" onclick="finishWizard()">Deschide lista →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* === M2: Data Layer (LocalStorage) === */
+const KEY = 'ic_invoices';
+
+function loadInvoices() {
+  return JSON.parse(localStorage.getItem(KEY) || '[]');
+}
+function saveInvoices(arr) {
+  localStorage.setItem(KEY, JSON.stringify(arr));
+}
+function uid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+function addInvoice(obj) {
+  const arr = loadInvoices();
+  obj.id = uid();
+  obj.creatLa = today();
+  obj.status = obj.status || 'necontactat';
+  arr.push(obj);
+  saveInvoices(arr);
+  return obj;
+}
+function updateInvoice(id, patch) {
+  saveInvoices(loadInvoices().map(i => i.id === id ? { ...i, ...patch } : i));
+}
+function deleteInvoice(id) {
+  saveInvoices(loadInvoices().filter(i => i.id !== id));
+}
+function today() {
+  return new Date().toISOString().slice(0, 10);
+}
+function daysLate(scadenta) {
+  const now = new Date(); now.setHours(0,0,0,0);
+  return Math.floor((now - new Date(scadenta)) / 86400000);
+}
+function riskScore(inv) {
+  return Number(inv.suma) * Math.max(0, daysLate(inv.scadenta));
+}
+
+/* === M3: Dashboard === */
+function renderDashboard() {
+  const all = loadInvoices();
+  const active = all.filter(i => i.status !== 'platit');
+  const totalRestant = active.reduce((s, i) => s + Number(i.suma), 0);
+  const nrActive = active.length;
+  const maxZile = active.reduce((m, i) => Math.max(m, Math.max(0, daysLate(i.scadenta))), 0);
+  const luna = today().slice(0, 7);
+  const recuperat = all
+    .filter(i => i.status === 'platit' && (i.dataContact || '').startsWith(luna))
+    .reduce((s, i) => s + Number(i.suma), 0);
+
+  document.getElementById('dashboard').innerHTML = `
+    <div class="card">
+      <div class="card-label">Total restant</div>
+      <div class="card-value gold">${fmt(totalRestant)}</div>
+      <div class="card-sub">${nrActive} factur${nrActive === 1 ? 'ă' : 'i'} active</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Facturi active</div>
+      <div class="card-value">${nrActive}</div>
+      <div class="card-sub">necolectate</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Cea mai veche</div>
+      <div class="card-value ${maxZile > 30 ? 'red' : ''}">${maxZile}</div>
+      <div class="card-sub">zile întârziere</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Recuperat luna aceasta</div>
+      <div class="card-value green">${fmt(recuperat)}</div>
+      <div class="card-sub">${luna}</div>
+    </div>
+  `;
+}
+
+function fmt(n) {
+  return new Intl.NumberFormat('ro-RO').format(Math.round(n));
+}
+
+/* === M4: Invoice List === */
+const STATUS_LABEL = {
+  necontactat: 'Necontactat',
+  contactat:   'Contactat',
+  promis:      'Promis',
+  partial:     'Parțial plătit',
+  platit:      '✓ Plătit'
+};
+
+function renderList() {
+  const invoices = loadInvoices()
+    .map(i => ({ ...i, _score: riskScore(i), _zile: daysLate(i.scadenta) }))
+    .sort((a, b) => b._score - a._score);
+
+  document.getElementById('listMeta').textContent =
+    invoices.length ? `${invoices.length} factur${invoices.length === 1 ? 'ă' : 'i'} · ordonate după risc` : '';
+
+  const tbody = document.getElementById('invoiceList');
+  if (!invoices.length) {
+    tbody.innerHTML = `<tr><td colspan="7">
+      <div class="empty-state">
+        <h3>Nicio factură înregistrată</h3>
+        <p>Apasă <strong>"+ Factură nouă"</strong> pentru a începe urmărirea.</p>
+      </div>
+    </td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = invoices.map(inv => {
+    const z = inv._zile;
+    const rClass = inv.status === 'platit' ? 'risk-paid' : z > 30 ? 'risk-red' : z > 15 ? 'risk-yellow' : 'risk-green';
+    const bClass = z > 30 ? 'days-red' : z > 15 ? 'days-yellow' : 'days-green';
+    const scoreStr = inv.status === 'platit' ? '—' : inv._score.toLocaleString('ro-RO');
+    const opts = Object.entries(STATUS_LABEL)
+      .map(([v, l]) => `<option value="${v}" ${inv.status === v ? 'selected' : ''}>${l}</option>`)
+      .join('');
+
+    return `<tr class="${rClass} fade-in" id="row-${inv.id}">
+      <td>
+        <strong>${esc(inv.client)}</strong>
+        ${inv.note ? `<br><small style="color:var(--muted); font-size:11px">${esc(inv.note)}</small>` : ''}
+      </td>
+      <td><strong>${fmt(inv.suma)}</strong> <small style="color:var(--muted)">${inv.valuta}</small></td>
+      <td style="color:var(--muted); font-size:13px">${inv.scadenta}</td>
+      <td>${z > 0 ? `<span class="days-badge ${bClass}">${z} zile</span>` : `<span style="color:var(--green); font-size:12px">La timp</span>`}</td>
+      <td style="color:var(--muted); font-size:12px">${scoreStr}</td>
+      <td><select class="status-sel" onchange="changeStatus('${inv.id}', this.value)">${opts}</select></td>
+      <td>
+        <div class="row-actions">
+          <button class="btn btn-primary btn-sm" onclick="openReminder('${inv.id}')">💬 Reminder</button>
+          <button class="btn btn-outline btn-sm" onclick="openEdit('${inv.id}')">✏️</button>
+          <button class="btn btn-outline btn-sm" style="color:var(--red);border-color:var(--red)" onclick="confirmDelete('${inv.id}')">🗑</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+/* === M5: Modal === */
+function openModal() {
+  document.getElementById('modalTitle').textContent = 'Factură nouă';
+  document.getElementById('editId').value = '';
+  ['fClient','fSuma','fNote'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('fValuta').value = 'RON';
+  document.getElementById('fScadenta').value = '';
+  document.getElementById('fCanal').value = 'WhatsApp';
+  document.getElementById('fStatus').value = 'necontactat';
+  document.getElementById('modalOverlay').classList.add('active');
+  document.getElementById('fClient').focus();
+}
+
+function openEdit(id) {
+  const inv = loadInvoices().find(i => i.id === id);
+  if (!inv) return;
+  document.getElementById('modalTitle').textContent = 'Editează factura';
+  document.getElementById('editId').value = id;
+  document.getElementById('fClient').value = inv.client;
+  document.getElementById('fSuma').value = inv.suma;
+  document.getElementById('fValuta').value = inv.valuta;
+  document.getElementById('fScadenta').value = inv.scadenta;
+  document.getElementById('fCanal').value = inv.canal;
+  document.getElementById('fStatus').value = inv.status;
+  document.getElementById('fNote').value = inv.note || '';
+  document.getElementById('modalOverlay').classList.add('active');
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('active');
+}
+
+function closeModalOnBg(e) {
+  if (e.target === document.getElementById('modalOverlay')) closeModal();
+}
+
+function saveInvoice() {
+  const client   = document.getElementById('fClient').value.trim();
+  const suma     = parseFloat(document.getElementById('fSuma').value);
+  const scadenta = document.getElementById('fScadenta').value;
+  if (!client)    { showToast('⚠️ Introdu numele clientului'); return; }
+  if (!suma || suma <= 0) { showToast('⚠️ Introdu o sumă validă'); return; }
+  if (!scadenta)  { showToast('⚠️ Alege data scadentă'); return; }
+
+  const data = {
+    client, suma, valuta: document.getElementById('fValuta').value,
+    scadenta, canal: document.getElementById('fCanal').value,
+    status: document.getElementById('fStatus').value,
+    note: document.getElementById('fNote').value.trim()
+  };
+
+  const id = document.getElementById('editId').value;
+  if (id) { updateInvoice(id, data); showToast('✓ Factură actualizată'); }
+  else    { addInvoice(data);        showToast('✓ Factură adăugată'); }
+
+  closeModal();
+  render();
+}
+
+/* === M6: Status + Note === */
+function changeStatus(id, val) {
+  const patch = { status: val };
+  if (val === 'contactat' || val === 'promis' || val === 'platit') {
+    patch.dataContact = today();
+  }
+  updateInvoice(id, patch);
+  if (val === 'platit') showToast('🎉 Factură marcată ca Plătită!');
+  render();
+}
+
+function confirmDelete(id) {
+  const inv = loadInvoices().find(i => i.id === id);
+  if (!inv) return;
+  if (confirm(`Ștergi factura pentru "${inv.client}" — ${fmt(inv.suma)} ${inv.valuta}?`)) {
+    deleteInvoice(id);
+    render();
+    showToast('Factură ștearsă');
+  }
+}
+
+/* === M7: Reminder Generator === */
+const TEMPLATES = {
+  prietenos_ro: 'Bună ziua, {client}!\n\nDoream să vă reamintesc că factura de {suma} {valuta}, cu scadența pe {scadenta}, a depășit termenul cu {zile} zile.\n\nVă rugăm să confirmați dacă plata a fost procesată sau să ne anunțați când o putem aștepta. Vă mulțumim și așteptăm cu drag vestea bună!\n\nO zi excelentă,',
+  prietenos_en: 'Hello {client},\n\nI hope this message finds you well! I wanted to gently follow up on the invoice for {suma} {valuta}, which was due on {scadenta} ({zile} days ago).\n\nCould you please confirm the payment status or let us know when we can expect it? Thank you so much!\n\nBest regards,',
+  ferm_ro: 'Bună ziua, {client},\n\nVă informăm că factura de {suma} {valuta}, cu scadența {scadenta}, înregistrează o întârziere de {zile} zile.\n\nVă rugăm să efectuați plata sau să ne contactați pentru a stabili un termen ferm. Așteptăm confirmarea dvs. în cel mai scurt timp.\n\nCu stimă,',
+  ferm_en: 'Dear {client},\n\nThis is a formal reminder that the invoice for {suma} {valuta}, due on {scadenta}, remains unpaid for {zile} days.\n\nPlease arrange payment promptly or contact us to discuss a payment timeline. We appreciate your prompt attention to this matter.\n\nKind regards,',
+  urgent_ro: 'URGENT — {client},\n\nFactura de {suma} {valuta} cu scadența {scadenta} este restantă de {zile} zile.\n\nSolicităm efectuarea plății în termen de 48 de ore sau contactarea noastră imediată pentru a evita escaladarea situației.\n\nAșteptăm răspunsul dvs. de urgență.',
+  urgent_en: 'URGENT — {client},\n\nInvoice for {suma} {valuta} due {scadenta} is now {zile} days overdue.\n\nImmediate payment is required within 48 hours. Please contact us today to resolve this matter and avoid further escalation.\n\nThis requires your immediate attention.'
+};
+
+let activeId = null;
+
+function openReminder(id) {
+  activeId = id;
+  const inv = loadInvoices().find(i => i.id === id);
+  if (!inv) return;
+  document.getElementById('reminderClient').textContent = inv.client;
+  document.getElementById('reminderInfo').textContent =
+    `${fmt(inv.suma)} ${inv.valuta}  ·  ${Math.max(0, daysLate(inv.scadenta))} zile întârziere  ·  canal preferat: ${inv.canal}`;
+  document.getElementById('tonSel').value = 'prietenos';
+  document.getElementById('limbaSel').value = 'ro';
+  updatePreview();
+  document.getElementById('reminderPanel').classList.add('active');
+  document.getElementById('reminderPanel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function closeReminder() {
+  document.getElementById('reminderPanel').classList.remove('active');
+  activeId = null;
+}
+
+function updatePreview() {
+  if (!activeId) return;
+  const inv = loadInvoices().find(i => i.id === activeId);
+  if (!inv) return;
+  const key = `${document.getElementById('tonSel').value}_${document.getElementById('limbaSel').value}`;
+  const msg = TEMPLATES[key]
+    .replace(/{client}/g,   inv.client)
+    .replace(/{suma}/g,     fmt(inv.suma))
+    .replace(/{valuta}/g,   inv.valuta)
+    .replace(/{zile}/g,     Math.max(0, daysLate(inv.scadenta)))
+    .replace(/{scadenta}/g, inv.scadenta);
+  document.getElementById('bubbleText').textContent = msg;
+  document.getElementById('reminderEdit').value = msg;
+}
+
+function syncBubble() {
+  document.getElementById('bubbleText').textContent = document.getElementById('reminderEdit').value;
+}
+
+function copyReminder() {
+  const msg = document.getElementById('reminderEdit').value;
+  navigator.clipboard.writeText(msg)
+    .then(() => {
+      showToast('📋 Mesaj copiat în clipboard!');
+      if (confirm('Marchezi factura ca "Contactat"?')) {
+        if (activeId) {
+          updateInvoice(activeId, { status: 'contactat', dataContact: today() });
+          render();
+          showToast('✓ Status actualizat: Contactat');
+        }
+      }
+    })
+    .catch(() => {
+      document.getElementById('reminderEdit').select();
+      showToast('Selectat — apasă Ctrl+C pentru a copia');
+    });
+}
+
+function markContacted() {
+  if (!activeId) return;
+  updateInvoice(activeId, { status: 'contactat', dataContact: today() });
+  render();
+  showToast('✓ Marcat ca Contactat');
+}
+
+/* === M8: Import CSV === */
+document.getElementById('csvInput').addEventListener('change', function () {
+  const file = this.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const lines = e.target.result.trim().split(/\r?\n/);
+    let count = 0;
+    lines.slice(1).forEach(line => {
+      const parts = line.split(',').map(s => s.trim().replace(/^"|"$/g, ''));
+      const [client, suma, valuta, scadenta] = parts;
+      if (client && suma && scadenta) {
+        addInvoice({ client, suma: parseFloat(suma) || 0, valuta: valuta || 'RON', scadenta, canal: 'Email', note: '' });
+        count++;
+      }
+    });
+    render();
+    showToast(`✓ ${count} factur${count === 1 ? 'ă' : 'i'} importate`);
+  };
+  reader.readAsText(file);
+  this.value = '';
+});
+
+/* === M9: Export CSV === */
+function exportCSV() {
+  const invoices = loadInvoices();
+  if (!invoices.length) { showToast('Nicio factură de exportat'); return; }
+  const header = ['Client','Suma','Valuta','Scadenta','Zile intarziere','Status','Nota','Data contact'];
+  const rows = invoices.map(i => [
+    `"${i.client}"`, i.suma, i.valuta, i.scadenta,
+    Math.max(0, daysLate(i.scadenta)), i.status,
+    `"${(i.note || '').replace(/"/g,'""')}"`, i.dataContact || ''
+  ]);
+  const csv = [header, ...rows].map(r => r.join(',')).join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
+  const a = Object.assign(document.createElement('a'), {
+    href: URL.createObjectURL(blob),
+    download: `InvoiceChaser_${today()}.csv`
+  });
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showToast('📤 Export gata!');
+}
+
+/* === M10: Onboarding Wizard === */
+let wStep = 1;
+
+function checkOnboarding() {
+  if (!localStorage.getItem('ic_onboarded')) {
+    const d = new Date(); d.setDate(d.getDate() - 18);
+    document.getElementById('w_scadenta').value = d.toISOString().slice(0, 10);
+    document.getElementById('wizardOverlay').style.display = 'flex';
+  }
+}
+
+function wizardGo(step) {
+  document.getElementById('wStep' + wStep).classList.remove('active');
+  document.getElementById('dot' + wStep).classList.remove('active');
+  wStep = step;
+  document.getElementById('wStep' + step).classList.add('active');
+  document.getElementById('dot' + step).classList.add('active');
+}
+
+function wizardSave() {
+  const client   = document.getElementById('w_client').value.trim();
+  const suma     = parseFloat(document.getElementById('w_suma').value);
+  const scadenta = document.getElementById('w_scadenta').value;
+  const valuta   = document.getElementById('w_valuta').value;
+  if (!client || !suma || !scadenta) { showToast('⚠️ Completează toate câmpurile'); return; }
+  addInvoice({ client, suma, valuta, scadenta, canal: 'WhatsApp', note: '' });
+  render();
+  wizardGo(3);
+}
+
+function finishWizard() {
+  localStorage.setItem('ic_onboarded', '1');
+  document.getElementById('wizardOverlay').style.display = 'none';
+  showToast('🎉 Bun venit! Apasă "💬 Reminder" pe factura adăugată.');
+}
+
+/* === Toast === */
+function showToast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3200);
+}
+
+/* === Init === */
+function render() {
+  renderDashboard();
+  renderList();
+}
+
+render();
+checkOnboarding();
+</script>
+</body>
+</html>
