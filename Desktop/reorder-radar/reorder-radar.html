@@ -483,7 +483,8 @@ function renderTable() {
     var qty = calcSuggestedQty(sku);
 
     var daysStr = daysLeft >= 9999 ? '∞' : daysLeft.toFixed(1) + 'z';
-    var dateStr = daysToOrder === 0 ? '<strong style="color:#f87171">AZI</strong>' : fmtDate(orderDate);
+    var noSales = !sku.sales || sku.sales === 0;
+    var dateStr = noSales ? 'N/A' : daysToOrder === 0 ? '<strong style="color:#f87171">AZI</strong>' : fmtDate(orderDate);
     var daysColor = status === 'red' ? '#f87171' : status === 'yellow' ? '#fbbf24' : '#4ade80';
 
     var badge = status === 'red'
@@ -673,7 +674,10 @@ function downloadBlob(content, filename) {
   var blob = new Blob([content], {type:'text/csv;charset=utf-8;'});
   var url = URL.createObjectURL(blob);
   var a = document.createElement('a');
-  a.href = url; a.download = filename; a.click();
+  a.href = url; a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
 
@@ -688,7 +692,7 @@ function copyOrderList() {
   var todayStr = new Date().toLocaleDateString('ro-RO');
   var text = 'COMANDĂ REAPROVIZIONARE — ' + todayStr + '\n';
   text += '─────────────────────────────\n\n';
-  toOrder.sort(function(a,b){ return calcStatus(a)==='red'?-1:1; }).forEach(function(sku){
+  toOrder.sort(function(a,b){ var o={red:0,yellow:1}; return o[calcStatus(a)]-o[calcStatus(b)]; }).forEach(function(sku){
     var st = calcStatus(sku);
     var urgency = st === 'red' ? '🔴 URGENT' : '🟡';
     var qty = calcSuggestedQty(sku);
