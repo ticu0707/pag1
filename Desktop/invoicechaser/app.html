@@ -208,6 +208,13 @@
       <button class="btn btn-primary" onclick="copyReminder()">📋 Copiază mesajul</button>
       <button class="btn btn-outline btn-sm" onclick="markContacted()">✓ Marchează Contactat</button>
     </div>
+    <div id="copyConfirm" style="display:none; margin-top:12px; padding:12px 16px; background:rgba(201,168,76,0.12); border:1px solid var(--gold); border-radius:8px; align-items:center; gap:12px; flex-wrap:wrap">
+      <span style="color:var(--cream); font-size:14px; flex:1">✓ Mesaj copiat. Marchezi factura ca <strong style="color:var(--gold)">Contactat</strong>?</span>
+      <div style="display:flex; gap:8px">
+        <button class="btn btn-primary btn-sm" onclick="confirmMarkContacted()">Da</button>
+        <button class="btn btn-outline btn-sm" onclick="dismissCopyConfirm()">Nu acum</button>
+      </div>
+    </div>
   </div>
 
 </div><!-- end .app -->
@@ -581,6 +588,7 @@ function openReminder(id) {
     `${fmt(inv.suma)} ${inv.valuta}  ·  ${Math.max(0, daysLate(inv.scadenta))} zile întârziere  ·  canal preferat: ${inv.canal}`;
   document.getElementById('tonSel').value = 'prietenos';
   document.getElementById('limbaSel').value = 'ro';
+  document.getElementById('copyConfirm').style.display = 'none';
   updatePreview();
   document.getElementById('reminderPanel').classList.add('active');
   document.getElementById('reminderPanel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
@@ -615,18 +623,28 @@ function copyReminder() {
   navigator.clipboard.writeText(msg)
     .then(() => {
       showToast('📋 Mesaj copiat în clipboard!');
-      if (confirm('Marchezi factura ca "Contactat"?')) {
-        if (activeId) {
-          updateInvoice(activeId, { status: 'contactat', dataContact: today() });
-          render();
-          showToast('✓ Status actualizat: Contactat');
-        }
-      }
+      const bar = document.getElementById('copyConfirm');
+      bar.style.display = 'flex';
+      bar.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     })
     .catch(() => {
       document.getElementById('reminderEdit').select();
       showToast('Selectat — apasă Ctrl+C pentru a copia');
     });
+}
+
+function confirmMarkContacted() {
+  if (activeId) {
+    updateInvoice(activeId, { status: 'contactat', dataContact: today() });
+    render();
+    showToast('✓ Status actualizat: Contactat');
+  }
+  dismissCopyConfirm();
+  closeReminder();
+}
+
+function dismissCopyConfirm() {
+  document.getElementById('copyConfirm').style.display = 'none';
 }
 
 function markContacted() {
