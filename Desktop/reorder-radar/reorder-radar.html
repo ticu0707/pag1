@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reorder Radar — Calculator Reaprovizionare Stocuri</title>
+
+<!-- ============================================================
+     MODUL 3 — HTML Skeleton + CSS
+     ============================================================ -->
+<style>
+/* --- Reset & Base --- */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f172a;--card:#1e293b;--border:#334155;
+  --text:#f1f5f9;--muted:#94a3b8;
+  --amber:#f59e0b;--orange:#f97316;
+  --red:#ef4444;--yellow:#eab308;--green:#22c55e;
+  --radius:12px;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;line-height:1.5}
+
+/* --- Layout --- */
+.container{max-width:1200px;margin:0 auto;padding:0 24px}
+
+/* --- Header --- */
+header{background:#0f172a;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+.header-inner{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;max-width:1200px;margin:0 auto;gap:16px}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-icon{width:36px;height:36px;background:linear-gradient(135deg,var(--amber),var(--orange));border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:13px;color:#fff;flex-shrink:0}
+.logo-text{font-weight:800;font-size:17px}
+.logo-sub{font-size:10px;color:var(--muted)}
+
+/* --- Health Score Badge --- */
+.health-badge{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:8px 14px}
+.health-score{font-size:22px;font-weight:900;line-height:1}
+.health-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.health-bar-wrap{width:72px;height:5px;background:var(--border);border-radius:3px;overflow:hidden}
+.health-bar{height:100%;border-radius:3px;background:linear-gradient(90deg,#ef4444,var(--amber),#22c55e);transition:width .5s ease}
+
+/* --- Main --- */
+main{padding:28px 24px;max-width:1200px;margin:0 auto}
+
+/* --- Summary Cards --- */
+.summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+@media(max-width:700px){.summary-grid{grid-template-columns:repeat(2,1fr)}}
+.summary-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+.summary-card-number{font-size:28px;font-weight:900;line-height:1;margin-bottom:4px}
+.summary-card-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+
+/* --- Action Bar --- */
+.action-bar{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap}
+
+/* --- Buttons --- */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:none;transition:all .15s;white-space:nowrap;font-family:inherit}
+.btn:hover{transform:translateY(-1px)}
+.btn-primary{background:linear-gradient(135deg,var(--amber),var(--orange));color:#fff}
+.btn-primary:hover{box-shadow:0 4px 15px rgba(245,158,11,.35)}
+.btn-secondary{background:var(--card);color:var(--text);border:1px solid var(--border)}
+.btn-secondary:hover{background:#273344}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}
+.btn-ghost:hover{color:var(--text);border-color:var(--text)}
+.btn-danger{background:rgba(239,68,68,.1);color:#f87171;border:1px solid rgba(239,68,68,.3)}
+.btn-danger:hover{background:rgba(239,68,68,.2)}
+.btn-sm{padding:5px 9px;font-size:11px}
+
+/* --- Table --- */
+.table-wrap{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.table-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border)}
+.table-header h2{font-size:14px}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;padding:10px 14px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);border-bottom:1px solid var(--border);white-space:nowrap}
+th.r,td.r{text-align:right}
+td{padding:13px 14px;font-size:12px;border-bottom:1px solid rgba(51,65,85,.5)}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.02)}
+.row-red td{background:rgba(239,68,68,.03)}
+.row-yellow td{background:rgba(234,179,8,.03)}
+
+/* --- Badges --- */
+.badge{display:inline-flex;align-items:center;gap:3px;padding:3px 7px;border-radius:5px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.badge-red{background:rgba(239,68,68,.15);color:#f87171;border:1px solid rgba(239,68,68,.3)}
+.badge-yellow{background:rgba(234,179,8,.15);color:#fbbf24;border:1px solid rgba(234,179,8,.3)}
+.badge-green{background:rgba(34,197,94,.15);color:#4ade80;border:1px solid rgba(34,197,94,.3)}
+.badge-blue{background:rgba(99,102,241,.15);color:#818cf8;border:1px solid rgba(99,102,241,.3)}
+
+/* --- Empty State --- */
+.empty-state{text-align:center;padding:60px 24px;color:var(--muted)}
+.empty-state .icon{font-size:44px;margin-bottom:14px}
+.empty-state h3{font-size:17px;color:var(--text);margin-bottom:8px}
+.empty-state p{font-size:13px;margin-bottom:22px}
+
+/* --- Modal --- */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(4px);z-index:1000;display:flex;align-items:center;justify-content:center;padding:24px}
+.modal-overlay.hidden{display:none}
+.modal{background:var(--card);border:1px solid var(--border);border-radius:16px;width:100%;max-width:500px;max-height:90vh;overflow-y:auto}
+.modal-header{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border)}
+.modal-header h2{font-size:15px}
+.modal-body{padding:22px}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;padding:14px 22px;border-top:1px solid var(--border)}
+
+/* --- Form --- */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:460px){.form-grid{grid-template-columns:1fr}}
+.form-group{display:flex;flex-direction:column;gap:5px}
+.form-group.full{grid-column:1/-1}
+label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+input[type=text],input[type=number]{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 11px;color:var(--text);font-size:13px;width:100%;transition:border-color .15s;font-family:inherit}
+input:focus{outline:none;border-color:var(--amber)}
+.form-hint{font-size:10px;color:var(--muted)}
+
+/* --- Onboarding Overlay --- */
+#onboarding{position:fixed;inset:0;background:var(--bg);z-index:2000;display:flex;align-items:center;justify-content:center;padding:24px}
+#onboarding.hidden{display:none}
+.onboard-card{background:var(--card);border:1px solid var(--border);border-radius:20px;max-width:480px;width:100%;padding:36px;text-align:center}
+.onboard-step{display:none}
+.onboard-step.active{display:block}
+.onboard-icon{font-size:52px;margin-bottom:16px}
+.onboard-title{font-size:22px;font-weight:900;margin-bottom:10px}
+.onboard-desc{color:var(--muted);font-size:14px;line-height:1.7;margin-bottom:26px}
+.step-dots{display:flex;justify-content:center;gap:7px;margin-bottom:26px}
+.step-dot{width:7px;height:7px;border-radius:50%;background:var(--border);transition:background .3s}
+.step-dot.active{background:var(--amber)}
+
+/* --- Toast --- */
+#toast{position:fixed;bottom:22px;right:22px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:11px 18px;font-size:12px;font-weight:600;z-index:9999;transform:translateY(80px);opacity:0;transition:all .3s}
+#toast.show{transform:translateY(0);opacity:1}
+#toast.success{border-color:rgba(34,197,94,.4);color:#4ade80}
+#toast.error{border-color:rgba(239,68,68,.4);color:#f87171}
+
+/* --- Order Placed Tag --- */
+.order-tag{display:inline-flex;align-items:center;gap:3px;font-size:10px;color:#818cf8;background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.3);padding:2px 6px;border-radius:4px;margin-top:3px}
+
+/* --- Formula Bar --- */
+.formula-bar{margin-top:20px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 18px;display:flex;gap:28px;flex-wrap:wrap;align-items:flex-start}
+.formula-item{font-size:11px}
+.formula-label{color:var(--amber);font-weight:700;font-size:9px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px}
+.formula-code{font-family:monospace;color:var(--text);font-size:11px}
+.formula-desc{color:var(--muted);font-size:10px;margin-top:2px}
+
+/* --- Print --- */
+@media print{
+  header,.action-bar,.summary-grid,.btn,#onboarding,#toast,.formula-bar,.order-tag{display:none!important}
+  body{background:#fff;color:#000}
+  .table-wrap{border:1px solid #ddd;border-radius:0}
+  td,th{color:#000;border-color:#ddd;font-size:10px}
+  .badge-red{background:#fee2e2;color:#dc2626;border-color:#fecaca}
+  .badge-yellow{background:#fef9c3;color:#b45309;border-color:#fde68a}
+  .badge-green{background:#dcfce7;color:#15803d;border-color:#bbf7d0}
+  .table-header h2{color:#000}
+  .table-header span{color:#555}
+}
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     MODUL 7 — Onboarding Overlay
+     ============================================================ -->
+<div id="onboarding">
+  <div class="onboard-card">
+    <div class="step-dots">
+      <div class="step-dot active" id="dot-0"></div>
+      <div class="step-dot" id="dot-1"></div>
+      <div class="step-dot" id="dot-2"></div>
+    </div>
+
+    <!-- Pasul 0: Welcome -->
+    <div class="onboard-step active" id="step-0">
+      <div class="onboard-icon">📡</div>
+      <div class="onboard-title">Bun venit la Reorder Radar</div>
+      <div class="onboard-desc">Calculator gratuit de reaprovizionare stocuri.<br>Știi exact ce să comanzi și când — în 5 minute.</div>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="loadDemo();finishOnboarding()">📊 Pornește cu date demo</button>
+        <button class="btn btn-secondary" onclick="nextStep(1)">Comenzi proprii →</button>
+      </div>
+    </div>
+
+    <!-- Pasul 1: Ce introduci -->
+    <div class="onboard-step" id="step-1">
+      <div class="onboard-icon">📋</div>
+      <div class="onboard-title">Ce vei introduce</div>
+      <div class="onboard-desc">
+        <strong>Stoc curent</strong> — câte unități ai acum<br>
+        <strong>Vânzări medii/zi</strong> — cât vinzi în medie<br>
+        <strong>Lead time</strong> — zile până livrează furnizorul<br>
+        <strong>Stoc minim</strong> — buffer de siguranță
+      </div>
+      <button class="btn btn-primary" onclick="nextStep(2)">Înțeles →</button>
+    </div>
+
+    <!-- Pasul 2: Ce primești -->
+    <div class="onboard-step" id="step-2">
+      <div class="onboard-icon">🎯</div>
+      <div class="onboard-title">Ce vei primi</div>
+      <div class="onboard-desc">
+        <strong style="color:#f87171">🔴 Roșu</strong> — Comandă AZI, stoc critic<br>
+        <strong style="color:#fbbf24">🟡 Galben</strong> — Comandă în curând<br>
+        <strong style="color:#4ade80">🟢 Verde</strong> — Ești acoperit<br><br>
+        Plus dată optimă de comandă, cantitate sugerată<br>și draft gata de trimis furnizorului.
+      </div>
+      <button class="btn btn-primary" onclick="finishOnboarding()">Să începem! →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     HEADER
+     ============================================================ -->
+<header>
+  <div class="header-inner">
+    <div class="logo">
+      <div class="logo-icon">RR</div>
+      <div>
+        <div class="logo-text">Reorder Radar</div>
+        <div class="logo-sub">Calculator Reaprovizionare Stocuri</div>
+      </div>
+    </div>
+    <div class="health-badge">
+      <div>
+        <div class="health-label">Health Score</div>
+        <div class="health-score" id="healthScore">—</div>
+      </div>
+      <div>
+        <div class="health-bar-wrap"><div class="health-bar" id="healthBar" style="width:0%"></div></div>
+        <div id="healthLabel" style="font-size:10px;color:var(--muted);margin-top:3px">Niciun SKU</div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ============================================================
+     MAIN
+     ============================================================ -->
+<main>
+
+  <!-- Summary Cards -->
+  <div class="summary-grid">
+    <div class="summary-card">
+      <div class="summary-card-number" id="totalCount">0</div>
+      <div class="summary-card-label">Total SKU-uri</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-card-number" id="criticalCount" style="color:#f87171">0</div>
+      <div class="summary-card-label" style="color:rgba(248,113,113,.7)">🔴 Critice — Azi</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-card-number" id="warningCount" style="color:#fbbf24">0</div>
+      <div class="summary-card-label" style="color:rgba(251,191,36,.7)">🟡 Avertisment</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-card-number" id="okCount" style="color:#4ade80">0</div>
+      <div class="summary-card-label" style="color:rgba(74,222,128,.7)">🟢 OK — Acoperit</div>
+    </div>
+  </div>
+
+  <!-- Action Bar -->
+  <div class="action-bar">
+    <button class="btn btn-primary" onclick="openAddModal()">+ Adaugă SKU</button>
+    <button class="btn btn-secondary" onclick="document.getElementById('csvInput').click()">📁 Importă CSV</button>
+    <button class="btn btn-secondary" onclick="downloadTemplate()">⬇ Template CSV</button>
+    <button class="btn btn-secondary" onclick="copyOrderList()">📋 Copiază Lista Comenzii</button>
+    <button class="btn btn-secondary" onclick="window.print()">🖨 Print / PDF</button>
+    <button class="btn btn-ghost" onclick="clearAll()" style="margin-left:auto">🗑 Șterge tot</button>
+    <input type="file" id="csvInput" accept=".csv" style="display:none" onchange="importCSV(this)">
+  </div>
+
+  <!-- Table -->
+  <div class="table-wrap">
+    <div class="table-header">
+      <h2>Stocuri &amp; Alerte Reaprovizionare</h2>
+      <span id="tableSubtitle" style="font-size:11px;color:var(--muted)"></span>
+    </div>
+
+    <!-- Empty State -->
+    <div id="emptyState" class="empty-state">
+      <div class="icon">📦</div>
+      <h3>Niciun SKU adăugat</h3>
+      <p>Adaugă primul produs sau importă un CSV pentru a vedea alertele de reaprovizionare.</p>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="openAddModal()">+ Adaugă primul SKU</button>
+        <button class="btn btn-secondary" onclick="loadDemo()">📊 Încarcă date demo</button>
+      </div>
+    </div>
+
+    <!-- Table Container -->
+    <div id="tableContainer" style="display:none;overflow-x:auto">
+      <table>
+        <thead>
+          <tr>
+            <th>Produs / SKU</th>
+            <th class="r">Stoc</th>
+            <th class="r">Vânz./zi</th>
+            <th class="r">Lead time</th>
+            <th class="r">Stoc min.</th>
+            <th class="r">Zile până 0</th>
+            <th class="r">Data comandă</th>
+            <th class="r">Cant. sugerată</th>
+            <th class="r">Status</th>
+            <th class="r">Acțiuni</th>
+          </tr>
+        </thead>
+        <tbody id="skuTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Formula Bar -->
+  <div class="formula-bar">
+    <div class="formula-item">
+      <div class="formula-label">Reorder Point</div>
+      <div class="formula-code">ROP = (Vânzări/zi × Lead Time) + Stoc Min</div>
+      <div class="formula-desc">Nivelul la care trebuie plasată comanda</div>
+    </div>
+    <div class="formula-item">
+      <div class="formula-label">Cantitate Sugerată</div>
+      <div class="formula-code">Q = Stoc Min + Vânzări × (LT + 7z) − Stoc Curent</div>
+      <div class="formula-desc">Acoperă lead time + săptămâna de revizuire</div>
+    </div>
+    <div style="margin-left:auto;font-size:10px;color:var(--muted);align-self:center;text-align:right">
+      ⚠️ Versiune lite<br>Nu acoperă sezonalitate sau promoții
+    </div>
+  </div>
+
+</main>
+
+<!-- ============================================================
+     MODAL Add/Edit SKU
+     ============================================================ -->
+<div id="skuModal" class="modal-overlay hidden">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modalTitle">Adaugă SKU</h2>
+      <button class="btn btn-ghost btn-sm" onclick="closeModal()" style="padding:6px 10px">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="form-group full">
+          <label for="fName">Nume Produs / SKU *</label>
+          <input type="text" id="fName" placeholder="ex: Cafea Arabica 1kg">
+        </div>
+        <div class="form-group">
+          <label for="fStock">Stoc Curent *</label>
+          <input type="number" id="fStock" placeholder="ex: 50" min="0">
+          <span class="form-hint">Unități disponibile acum</span>
+        </div>
+        <div class="form-group">
+          <label for="fSales">Vânzări Medii / Zi *</label>
+          <input type="number" id="fSales" placeholder="ex: 5" min="0" step="0.1">
+          <span class="form-hint">Unități vândute în medie pe zi</span>
+        </div>
+        <div class="form-group">
+          <label for="fLeadTime">Lead Time (zile) *</label>
+          <input type="number" id="fLeadTime" placeholder="ex: 7" min="0">
+          <span class="form-hint">Zile până livrează furnizorul</span>
+        </div>
+        <div class="form-group">
+          <label for="fSafety">Stoc Minim (buffer) *</label>
+          <input type="number" id="fSafety" placeholder="ex: 10" min="0">
+          <span class="form-hint">Stoc de rezervă de siguranță</span>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">Anulează</button>
+      <button class="btn btn-primary" onclick="saveSKU()">Salvează SKU</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- ============================================================
+     MODUL 1 — Data Model & LocalStorage
+     ============================================================ -->
+<script>
+var skus = [];
+var editingId = null;
+
+function uid() {
+  return Math.random().toString(36).substr(2, 9);
+}
+
+function saveToStorage() {
+  localStorage.setItem('rr_skus', JSON.stringify(skus));
+}
+
+function loadFromStorage() {
+  try {
+    var saved = localStorage.getItem('rr_skus');
+    skus = saved ? JSON.parse(saved) : [];
+  } catch(e) { skus = []; }
+}
+</script>
+
+<!-- ============================================================
+     MODUL 2 — Calculator Engine (funcții pure)
+     ============================================================ -->
+<script>
+function calcDaysUntilStockout(sku) {
+  if (!sku.sales || sku.sales === 0) return 9999;
+  return sku.stock / sku.sales;
+}
+
+function calcReorderPoint(sku) {
+  return (sku.sales * sku.leadTime) + sku.safetyStock;
+}
+
+function calcDaysToOrder(sku) {
+  if (!sku.sales || sku.sales === 0) return 9999;
+  return Math.max(0, (sku.stock - calcReorderPoint(sku)) / sku.sales);
+}
+
+function calcOrderDate(sku) {
+  var d = new Date();
+  d.setDate(d.getDate() + Math.floor(calcDaysToOrder(sku)));
+  return d;
+}
+
+function calcSuggestedQty(sku) {
+  var target = sku.safetyStock + sku.sales * (sku.leadTime + 7);
+  return Math.max(0, Math.ceil(target - sku.stock));
+}
+
+function calcStatus(sku) {
+  if (sku.stock <= sku.safetyStock) return 'red';
+  if (sku.stock <= calcReorderPoint(sku)) return 'yellow';
+  return 'green';
+}
+
+function calcHealthScore(list) {
+  if (!list || list.length === 0) return null;
+  var total = list.reduce(function(sum, s) {
+    var st = calcStatus(s);
+    return sum + (st === 'red' ? 0 : st === 'yellow' ? 50 : 100);
+  }, 0);
+  return Math.round(total / list.length);
+}
+</script>
+
+<!-- ============================================================
+     MODUL 4 — Render Engine
+     ============================================================ -->
+<script>
+function render() {
+  renderTable();
+  renderSummary();
+  renderHealthScore();
+}
+
+function renderTable() {
+  var empty = document.getElementById('emptyState');
+  var container = document.getElementById('tableContainer');
+  var subtitle = document.getElementById('tableSubtitle');
+  var body = document.getElementById('skuTableBody');
+
+  if (skus.length === 0) {
+    empty.style.display = 'block';
+    container.style.display = 'none';
+    subtitle.textContent = '';
+    return;
+  }
+
+  empty.style.display = 'none';
+  container.style.display = 'block';
+
+  var sorted = skus.slice().sort(function(a, b) {
+    var o = {red:0, yellow:1, green:2};
+    return o[calcStatus(a)] - o[calcStatus(b)];
+  });
+
+  var critical = sorted.filter(function(s){ return calcStatus(s) === 'red'; }).length;
+  subtitle.textContent = critical > 0
+    ? critical + ' produs' + (critical > 1 ? 'e' : '') + ' necesită comandă azi'
+    : 'Toate produsele sunt în regulă ✓';
+
+  body.innerHTML = sorted.map(function(sku) {
+    var status = calcStatus(sku);
+    var daysLeft = calcDaysUntilStockout(sku);
+    var daysToOrder = Math.floor(calcDaysToOrder(sku));
+    var orderDate = calcOrderDate(sku);
+    var qty = calcSuggestedQty(sku);
+
+    var daysStr = daysLeft >= 9999 ? '∞' : daysLeft.toFixed(1) + 'z';
+    var dateStr = daysToOrder === 0 ? '<strong style="color:#f87171">AZI</strong>' : fmtDate(orderDate);
+    var daysColor = status === 'red' ? '#f87171' : status === 'yellow' ? '#fbbf24' : '#4ade80';
+
+    var badge = status === 'red'
+      ? '<span class="badge badge-red">🔴 Comandă Azi</span>'
+      : status === 'yellow'
+        ? '<span class="badge badge-yellow">🟡 În Curând</span>'
+        : '<span class="badge badge-green">🟢 OK</span>';
+
+    var rowCls = status === 'red' ? 'row-red' : status === 'yellow' ? 'row-yellow' : '';
+
+    var orderTag = sku.orderPlaced
+      ? '<div class="order-tag">✓ Comandat ' + (sku.orderPlacedDate || '') + '</div>'
+      : '';
+
+    var actionBtns = '';
+    if (!sku.orderPlaced && (status === 'red' || status === 'yellow')) {
+      actionBtns += '<button class="btn btn-sm badge-blue" onclick="markOrderPlaced(\'' + sku.id + '\')" title="Marchează comandă plasată" style="cursor:pointer">✓ Plasat</button>';
+    }
+    if (sku.orderPlaced) {
+      actionBtns += '<button class="btn btn-sm btn-ghost" onclick="unmarkOrderPlaced(\'' + sku.id + '\')" title="Anulează">↩</button>';
+    }
+    actionBtns += '<button class="btn btn-sm btn-secondary" onclick="openEditModal(\'' + sku.id + '\')">✏</button>';
+    actionBtns += '<button class="btn btn-sm btn-danger" onclick="deleteSKU(\'' + sku.id + '\')">✕</button>';
+
+    return '<tr class="' + rowCls + '">' +
+      '<td><div style="font-weight:600">' + esc(sku.name) + '</div>' + orderTag + '</td>' +
+      '<td class="r">' + sku.stock + '</td>' +
+      '<td class="r">' + sku.sales + '/zi</td>' +
+      '<td class="r">' + sku.leadTime + 'z</td>' +
+      '<td class="r">' + sku.safetyStock + '</td>' +
+      '<td class="r" style="font-weight:700;color:' + daysColor + '">' + daysStr + '</td>' +
+      '<td class="r">' + dateStr + '</td>' +
+      '<td class="r">' + (qty > 0 ? qty + ' buc' : '—') + '</td>' +
+      '<td class="r">' + badge + '</td>' +
+      '<td class="r"><div style="display:flex;gap:5px;justify-content:flex-end">' + actionBtns + '</div></td>' +
+      '</tr>';
+  }).join('');
+}
+
+function renderSummary() {
+  document.getElementById('totalCount').textContent = skus.length;
+  document.getElementById('criticalCount').textContent = skus.filter(function(s){ return calcStatus(s)==='red'; }).length;
+  document.getElementById('warningCount').textContent = skus.filter(function(s){ return calcStatus(s)==='yellow'; }).length;
+  document.getElementById('okCount').textContent = skus.filter(function(s){ return calcStatus(s)==='green'; }).length;
+}
+
+function renderHealthScore() {
+  var score = calcHealthScore(skus);
+  var el = document.getElementById('healthScore');
+  var bar = document.getElementById('healthBar');
+  var lbl = document.getElementById('healthLabel');
+
+  if (score === null) {
+    el.textContent = '—'; bar.style.width = '0%'; lbl.textContent = 'Niciun SKU'; el.style.color = '';
+    return;
+  }
+
+  el.textContent = score;
+  bar.style.width = score + '%';
+  var color = score >= 80 ? '#4ade80' : score >= 50 ? '#fbbf24' : '#f87171';
+  var label = score >= 80 ? 'Sănătos' : score >= 50 ? 'Atenție' : 'Critic';
+  el.style.color = color; lbl.textContent = label; lbl.style.color = color;
+}
+
+function esc(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function fmtDate(d) {
+  return d.toLocaleDateString('ro-RO', {day:'2-digit', month:'2-digit', year:'2-digit'});
+}
+</script>
+
+<!-- ============================================================
+     MODUL 5 — CRUD + Modal
+     ============================================================ -->
+<script>
+function openAddModal() {
+  editingId = null;
+  document.getElementById('modalTitle').textContent = 'Adaugă SKU';
+  clearForm();
+  document.getElementById('skuModal').classList.remove('hidden');
+  setTimeout(function(){ document.getElementById('fName').focus(); }, 80);
+}
+
+function openEditModal(id) {
+  var sku = skus.find(function(s){ return s.id === id; });
+  if (!sku) return;
+  editingId = id;
+  document.getElementById('modalTitle').textContent = 'Editează SKU';
+  document.getElementById('fName').value = sku.name;
+  document.getElementById('fStock').value = sku.stock;
+  document.getElementById('fSales').value = sku.sales;
+  document.getElementById('fLeadTime').value = sku.leadTime;
+  document.getElementById('fSafety').value = sku.safetyStock;
+  document.getElementById('skuModal').classList.remove('hidden');
+}
+
+function closeModal() {
+  document.getElementById('skuModal').classList.add('hidden');
+  editingId = null;
+  clearForm();
+}
+
+function clearForm() {
+  ['fName','fStock','fSales','fLeadTime','fSafety'].forEach(function(id){
+    document.getElementById(id).value = '';
+  });
+}
+
+function saveSKU() {
+  var name = document.getElementById('fName').value.trim();
+  var stock = parseFloat(document.getElementById('fStock').value);
+  var sales = parseFloat(document.getElementById('fSales').value);
+  var leadTime = parseFloat(document.getElementById('fLeadTime').value);
+  var safetyStock = parseFloat(document.getElementById('fSafety').value);
+
+  if (!name || isNaN(stock) || isNaN(sales) || isNaN(leadTime) || isNaN(safetyStock)) {
+    showToast('Completează toate câmpurile obligatorii.', 'error');
+    return;
+  }
+
+  if (editingId) {
+    var idx = skus.findIndex(function(s){ return s.id === editingId; });
+    if (idx !== -1) skus[idx] = Object.assign(skus[idx], {name,stock,sales,leadTime,safetyStock});
+    showToast('SKU actualizat.', 'success');
+  } else {
+    skus.push({id:uid(), name, stock, sales, leadTime, safetyStock, orderPlaced:false, orderPlacedDate:null});
+    showToast('SKU adăugat cu succes!', 'success');
+  }
+
+  saveToStorage(); render(); closeModal();
+}
+
+function deleteSKU(id) {
+  skus = skus.filter(function(s){ return s.id !== id; });
+  saveToStorage(); render();
+  showToast('SKU șters.', 'success');
+}
+
+function clearAll() {
+  if (!confirm('Ești sigur? Toate datele vor fi șterse.')) return;
+  skus = []; saveToStorage(); render();
+  showToast('Toate datele au fost șterse.', 'success');
+}
+</script>
+
+<!-- ============================================================
+     MODUL 6 — Import / Export
+     ============================================================ -->
+<script>
+function downloadTemplate() {
+  var csv = 'Produs/SKU,Stoc Curent,Vanzari Medii pe Zi,Lead Time (zile),Stoc Minim\n' +
+            'Cafea Arabica 1kg,50,5,7,10\n' +
+            'Lapte UHT 1L,30,8,3,12\n';
+  downloadBlob(csv, 'template-reorder-radar.csv');
+  showToast('Template descărcat!', 'success');
+}
+
+function importCSV(input) {
+  var file = input.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var lines = e.target.result.trim().split('\n');
+    var imported = 0;
+    for (var i = 1; i < lines.length; i++) {
+      var cols = lines[i].split(',').map(function(c){ return c.trim().replace(/"/g,''); });
+      if (cols.length < 5) continue;
+      var name = cols[0];
+      var stock = parseFloat(cols[1]);
+      var sales = parseFloat(cols[2]);
+      var leadTime = parseFloat(cols[3]);
+      var safetyStock = parseFloat(cols[4]);
+      if (!name || isNaN(stock) || isNaN(sales) || isNaN(leadTime) || isNaN(safetyStock)) continue;
+      skus.push({id:uid(), name, stock, sales, leadTime, safetyStock, orderPlaced:false, orderPlacedDate:null});
+      imported++;
+    }
+    saveToStorage(); render();
+    showToast(imported + ' SKU-uri importate din CSV!', 'success');
+    input.value = '';
+  };
+  reader.readAsText(file);
+}
+
+function downloadBlob(content, filename) {
+  var blob = new Blob([content], {type:'text/csv;charset=utf-8;'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function copyOrderList() {
+  var toOrder = skus.filter(function(s){
+    return (calcStatus(s) === 'red' || calcStatus(s) === 'yellow') && !s.orderPlaced;
+  });
+  if (toOrder.length === 0) {
+    showToast('Nu există produse de comandat acum.', 'error');
+    return;
+  }
+  var todayStr = new Date().toLocaleDateString('ro-RO');
+  var text = 'COMANDĂ REAPROVIZIONARE — ' + todayStr + '\n';
+  text += '─────────────────────────────\n\n';
+  toOrder.sort(function(a,b){ return calcStatus(a)==='red'?-1:1; }).forEach(function(sku){
+    var st = calcStatus(sku);
+    var urgency = st === 'red' ? '🔴 URGENT' : '🟡';
+    var qty = calcSuggestedQty(sku);
+    var dateStr = st === 'red' ? 'AZI' : fmtDate(calcOrderDate(sku));
+    text += urgency + ' ' + sku.name + '\n';
+    text += '   Cantitate: ' + qty + ' buc\n';
+    text += '   Data comandă: ' + dateStr + '\n\n';
+  });
+  text += '─────────────────────────────\n';
+  text += 'Total: ' + toOrder.length + ' produs' + (toOrder.length !== 1 ? 'e' : '') + ' de comandat\n';
+  text += 'Generat de Reorder Radar';
+
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(function(){
+      showToast('Lista copiată! ' + toOrder.length + ' produs' + (toOrder.length!==1?'e':'') + ' de comandat.', 'success');
+    }).catch(function(){ showToast('Eroare la copiere. Încearcă din nou.', 'error'); });
+  } else {
+    showToast('Clipboard indisponibil în acest browser.', 'error');
+  }
+}
+
+function markOrderPlaced(id) {
+  var sku = skus.find(function(s){ return s.id===id; });
+  if (!sku) return;
+  sku.orderPlaced = true;
+  sku.orderPlacedDate = new Date().toLocaleDateString('ro-RO');
+  saveToStorage(); render();
+  showToast('Comandă marcată ca plasată!', 'success');
+}
+
+function unmarkOrderPlaced(id) {
+  var sku = skus.find(function(s){ return s.id===id; });
+  if (!sku) return;
+  sku.orderPlaced = false; sku.orderPlacedDate = null;
+  saveToStorage(); render();
+}
+</script>
+
+<!-- ============================================================
+     MODUL 7 — Onboarding + Demo Data
+     ============================================================ -->
+<script>
+function checkOnboarding() {
+  if (localStorage.getItem('rr_onboarding_done')) {
+    document.getElementById('onboarding').classList.add('hidden');
+  }
+}
+
+function nextStep(n) {
+  document.querySelectorAll('.onboard-step').forEach(function(s){ s.classList.remove('active'); });
+  document.querySelectorAll('.step-dot').forEach(function(d){ d.classList.remove('active'); });
+  document.getElementById('step-' + n).classList.add('active');
+  document.getElementById('dot-' + n).classList.add('active');
+}
+
+function finishOnboarding() {
+  localStorage.setItem('rr_onboarding_done', '1');
+  document.getElementById('onboarding').classList.add('hidden');
+}
+
+function skipOnboarding() { finishOnboarding(); }
+
+function loadDemo() {
+  skus = [
+    {id:uid(), name:'Cafea Arabica 1kg', stock:3, sales:2, leadTime:5, safetyStock:5, orderPlaced:false, orderPlacedDate:null},
+    {id:uid(), name:'Lapte UHT 1L (bax 12)', stock:18, sales:6, leadTime:3, safetyStock:6, orderPlaced:false, orderPlacedDate:null},
+    {id:uid(), name:'Zahar 1kg', stock:45, sales:2, leadTime:7, safetyStock:10, orderPlaced:false, orderPlacedDate:null},
+    {id:uid(), name:'Pahare 250ml (bax 50)', stock:4, sales:5, leadTime:4, safetyStock:5, orderPlaced:true, orderPlacedDate:new Date().toLocaleDateString('ro-RO')},
+    {id:uid(), name:'Servetele (bax 100)', stock:22, sales:3, leadTime:5, safetyStock:8, orderPlaced:false, orderPlacedDate:null},
+    {id:uid(), name:'Capsule espresso 100buc', stock:120, sales:8, leadTime:7, safetyStock:30, orderPlaced:false, orderPlacedDate:null},
+  ];
+  saveToStorage(); render();
+  showToast('6 SKU-uri demo încărcate!', 'success');
+}
+
+/* --- Toast --- */
+var _toastTimer;
+function showToast(msg, type) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show ' + (type || 'success');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(function(){ t.className = ''; }, 3200);
+}
+
+/* --- Init --- */
+document.addEventListener('DOMContentLoaded', function() {
+  loadFromStorage();
+  checkOnboarding();
+  render();
+});
+
+/* --- Modal close on overlay click --- */
+document.getElementById('skuModal').addEventListener('click', function(e){
+  if (e.target === this) closeModal();
+});
+
+/* --- Keyboard shortcuts --- */
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeModal();
+  if (e.key === 'Enter' && !document.getElementById('skuModal').classList.contains('hidden')) {
+    if (document.activeElement && document.activeElement.tagName === 'INPUT') saveSKU();
+  }
+});
+</script>
+
+</body>
+</html>
