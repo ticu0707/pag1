@@ -904,6 +904,10 @@
     state.incasari         = [...tpl.incasari];
     state.cheltuieliFixe   = tpl.cheltuieliFixe;
     state.platiUnice       = tpl.platiUnice.map(p => ({ ...p }));
+
+    buildIncasariGrid();
+    populateForm();
+    buildPlatiUniceFromState();
   }
 
   // ═══════════════════════════════════════════════════════
