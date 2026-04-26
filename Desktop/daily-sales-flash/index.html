@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Daily Sales Flash — Scorul zilei tale în 60 de secunde</title>
+  <meta name="description" content="Mini-dashboard offline pentru oweri de business. Introdu 4 cifre, primești un Day Score instant. Fără cont, fără internet, fără abonament." />
+  <style>
+    :root {
+      --bg:           #0f0f0f;
+      --bg-card:      #1a1a1a;
+      --bg-card-2:    #222222;
+      --border:       #2a2a2a;
+      --text:         #f0f0f0;
+      --text-muted:   #888888;
+      --text-dim:     #555555;
+      --green:        #22c55e;
+      --green-dim:    #166534;
+      --yellow:       #eab308;
+      --red:          #ef4444;
+      --gold:         #f59e0b;
+      --accent:       #6366f1;
+      --accent-hover: #4f46e5;
+      --radius:       12px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 16px;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; text-decoration: none; }
+    button { cursor: pointer; border: none; background: none; font: inherit; color: inherit; }
+
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+
+    /* ── NAVBAR ─────────────────────────────────────────────── */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      z-index: 100;
+      background: rgba(15,15,15,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+    nav .inner {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 0 20px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .nav-logo {
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+    .nav-logo span { color: var(--gold); }
+    .nav-cta {
+      background: var(--accent);
+      color: #fff;
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      transition: background 0.15s;
+    }
+    .nav-cta:hover { background: var(--accent-hover); }
+
+    /* ── HERO ────────────────────────────────────────────────── */
+    .hero {
+      padding: 120px 20px 80px;
+      text-align: center;
+      max-width: 720px;
+      margin: 0 auto;
+    }
+    .hero-badge {
+      display: inline-block;
+      background: rgba(99,102,241,0.15);
+      border: 1px solid rgba(99,102,241,0.35);
+      color: #a5b4fc;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      padding: 5px 14px;
+      border-radius: 20px;
+      margin-bottom: 24px;
+    }
+    .hero h1 {
+      font-size: clamp(32px, 5vw, 52px);
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -1.5px;
+      margin-bottom: 20px;
+    }
+    .hero h1 em {
+      font-style: normal;
+      color: var(--gold);
+    }
+    .hero-sub {
+      font-size: 18px;
+      color: var(--text-muted);
+      max-width: 540px;
+      margin: 0 auto 40px;
+      line-height: 1.6;
+    }
+    .hero-sub strong { color: var(--text); }
+    .hero-buttons {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--accent);
+      color: #fff;
+      padding: 14px 28px;
+      border-radius: var(--radius);
+      font-size: 16px;
+      font-weight: 700;
+      transition: background 0.15s, transform 0.1s;
+    }
+    .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); }
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 14px 28px;
+      border-radius: var(--radius);
+      font-size: 16px;
+      font-weight: 600;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .btn-secondary:hover { border-color: #555; color: var(--text); }
+    .hero-note {
+      margin-top: 16px;
+      font-size: 13px;
+      color: var(--text-dim);
+    }
+    .hero-note span { color: var(--green); }
+
+    /* ── MOCK DASHBOARD ─────────────────────────────────────── */
+    .mock-wrap {
+      padding: 60px 20px;
+      display: flex;
+      justify-content: center;
+    }
+    .mock-phone {
+      width: 280px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 28px;
+      padding: 24px 16px 20px;
+      box-shadow: 0 24px 64px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.04);
+      position: relative;
+      overflow: hidden;
+    }
+    .mock-greeting {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+    .mock-score-wrap {
+      text-align: center;
+      margin-bottom: 16px;
+    }
+    .mock-score-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .mock-score {
+      font-size: 72px;
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: -3px;
+      animation: scoreReveal 2s ease-out forwards, scoreGlow 3s 2s ease-in-out infinite alternate;
+      color: var(--gold);
+    }
+    .mock-score-tag {
+      font-size: 13px;
+      color: var(--gold);
+      font-weight: 600;
+      margin-top: 4px;
+      opacity: 0;
+      animation: fadeIn 0.5s 1.8s ease forwards;
+    }
+    .mock-cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .mock-card {
+      background: var(--bg-card-2);
+      border-radius: 8px;
+      padding: 10px;
+      opacity: 0;
+    }
+    .mock-card:nth-child(1) { animation: cardIn 0.4s 0.4s ease forwards; }
+    .mock-card:nth-child(2) { animation: cardIn 0.4s 0.6s ease forwards; }
+    .mock-card:nth-child(3) { animation: cardIn 0.4s 0.8s ease forwards; }
+    .mock-card:nth-child(4) { animation: cardIn 0.4s 1.0s ease forwards; }
+    .mock-card-label {
+      font-size: 10px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    .mock-card-val {
+      font-size: 15px;
+      font-weight: 700;
+      margin-top: 3px;
+    }
+    .val-green { color: var(--green); }
+    .val-gold  { color: var(--gold); }
+    .val-red   { color: var(--red); }
+    .mock-sparkline {
+      display: flex;
+      gap: 5px;
+      justify-content: center;
+      align-items: flex-end;
+      margin-top: 14px;
+      height: 28px;
+      opacity: 0;
+      animation: fadeIn 0.5s 1.2s ease forwards;
+    }
+    .spark-bar {
+      flex: 1;
+      border-radius: 3px;
+      min-height: 6px;
+    }
+    .mock-insight {
+      margin-top: 10px;
+      font-size: 11px;
+      color: var(--text-muted);
+      text-align: center;
+      font-style: italic;
+      opacity: 0;
+      animation: fadeIn 0.5s 2.2s ease forwards;
+    }
+
+    @keyframes scoreReveal {
+      0%   { opacity: 0; transform: scale(0.6); }
+      60%  { transform: scale(1.08); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+    @keyframes scoreGlow {
+      from { text-shadow: 0 0 20px rgba(245,158,11,0.3); }
+      to   { text-shadow: 0 0 40px rgba(245,158,11,0.7); }
+    }
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to   { opacity: 1; }
+    }
+
+    /* ── BENEFITS ────────────────────────────────────────────── */
+    .benefits {
+      padding: 60px 20px 80px;
+    }
+    .section-title {
+      text-align: center;
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      margin-bottom: 12px;
+    }
+    .section-sub {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 16px;
+      margin-bottom: 48px;
+    }
+    .benefits-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 20px;
+      max-width: 860px;
+      margin: 0 auto;
+    }
+    .benefit-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 24px;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+    .benefit-card:hover { border-color: #444; transform: translateY(-2px); }
+    .benefit-icon {
+      width: 44px;
+      height: 44px;
+      background: rgba(99,102,241,0.12);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 16px;
+    }
+    .benefit-icon svg { width: 22px; height: 22px; }
+    .benefit-title {
+      font-size: 17px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .benefit-desc {
+      font-size: 14px;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    /* ── HOW IT WORKS ────────────────────────────────────────── */
+    .how {
+      padding: 60px 20px 80px;
+      background: var(--bg-card);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 32px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .step {
+      text-align: center;
+    }
+    .step-num {
+      width: 40px;
+      height: 40px;
+      background: var(--accent);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      font-weight: 800;
+      margin: 0 auto 16px;
+      color: #fff;
+    }
+    .step-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .step-desc {
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+
+    /* ── SCORE LEGEND ────────────────────────────────────────── */
+    .legend {
+      padding: 60px 20px 80px;
+    }
+    .legend-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: center;
+      max-width: 700px;
+      margin: 0 auto;
+    }
+    .legend-chip {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 18px;
+      min-width: 160px;
+    }
+    .legend-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .legend-info { flex: 1; }
+    .legend-range { font-size: 12px; color: var(--text-muted); }
+    .legend-label { font-size: 14px; font-weight: 600; margin-top: 2px; }
+
+    /* ── CTA FINAL ───────────────────────────────────────────── */
+    .cta-section {
+      padding: 80px 20px;
+      text-align: center;
+      background: linear-gradient(180deg, transparent 0%, rgba(99,102,241,0.06) 100%);
+    }
+    .cta-section h2 {
+      font-size: clamp(24px, 4vw, 38px);
+      font-weight: 800;
+      letter-spacing: -1px;
+      margin-bottom: 12px;
+    }
+    .cta-section p {
+      color: var(--text-muted);
+      font-size: 16px;
+      margin-bottom: 36px;
+    }
+
+    /* ── FOOTER ──────────────────────────────────────────────── */
+    footer {
+      background: var(--bg-card);
+      border-top: 1px solid var(--border);
+      padding: 32px 20px;
+      text-align: center;
+    }
+    .footer-inner {
+      max-width: 960px;
+      margin: 0 auto;
+    }
+    .footer-tagline {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+    .footer-creator {
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+    .footer-creator a {
+      color: var(--accent);
+      transition: color 0.15s;
+    }
+    .footer-creator a:hover { color: #a5b4fc; }
+
+    /* ── RESPONSIVE ──────────────────────────────────────────── */
+    @media (max-width: 600px) {
+      .hero { padding: 96px 16px 60px; }
+      .mock-phone { width: 240px; }
+      .mock-score { font-size: 60px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav>
+  <div class="inner">
+    <div class="nav-logo">Daily Sales <span>Flash</span> ⚡</div>
+    <a href="app.html" class="nav-cta">Descarcă gratuit</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-badge">100% offline · fără cont · gratuit</div>
+  <h1>Știi exact cum a fost<br>ziua ta în <em>60 de secunde</em>?</h1>
+  <p class="hero-sub">
+    Introduci 4 cifre. Primești un <strong>Day Score</strong> clar, colorat, instant.<br>
+    Fără dashboard complicat. Fără abonament. Fără internet.
+  </p>
+  <div class="hero-buttons">
+    <a href="app.html" class="btn-primary">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      Descarcă aplicația
+    </a>
+    <a href="app.html?demo=true" class="btn-secondary">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+      Încearcă demo live
+    </a>
+  </div>
+  <p class="hero-note"><span>✓</span> Un fișier HTML · se deschide în orice browser · datele rămân la tine</p>
+</section>
+
+<!-- MOCK DASHBOARD -->
+<div class="mock-wrap">
+  <div class="mock-phone">
+    <div class="mock-greeting">Bună seara, Andrei · Duminică, 27/04/2026</div>
+    <div class="mock-score-wrap">
+      <div class="mock-score-label">Day Score</div>
+      <div class="mock-score">97</div>
+      <div class="mock-score-tag">Zi excepțională</div>
+    </div>
+    <div class="mock-cards">
+      <div class="mock-card">
+        <div class="mock-card-label">Target</div>
+        <div class="mock-card-val val-green">+8%</div>
+      </div>
+      <div class="mock-card">
+        <div class="mock-card-label">AOV net</div>
+        <div class="mock-card-val val-gold">71 RON</div>
+      </div>
+      <div class="mock-card">
+        <div class="mock-card-label">Refund</div>
+        <div class="mock-card-val val-green">0%</div>
+      </div>
+      <div class="mock-card">
+        <div class="mock-card-label">Cash ±</div>
+        <div class="mock-card-val val-green">+15 RON</div>
+      </div>
+    </div>
+    <div class="mock-sparkline">
+      <div class="spark-bar" style="height:10px;background:var(--red);"></div>
+      <div class="spark-bar" style="height:14px;background:var(--yellow);"></div>
+      <div class="spark-bar" style="height:18px;background:var(--green);"></div>
+      <div class="spark-bar" style="height:12px;background:var(--yellow);"></div>
+      <div class="spark-bar" style="height:20px;background:var(--green);"></div>
+      <div class="spark-bar" style="height:22px;background:var(--green);"></div>
+      <div class="spark-bar" style="height:26px;background:var(--gold);"></div>
+    </div>
+    <div class="mock-insight">Media ultimelor 7 zile: 3.180 RON/zi</div>
+  </div>
+</div>
+
+<!-- BENEFITS -->
+<section class="benefits">
+  <div class="container">
+    <h2 class="section-title">Tot ce ai nevoie. Nimic în plus.</h2>
+    <p class="section-sub">Construit special pentru owerii care nu au timp de dashboard-uri complicate.</p>
+    <div class="benefits-grid">
+
+      <div class="benefit-card">
+        <div class="benefit-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+          </svg>
+        </div>
+        <div class="benefit-title">60 de secunde pe zi</div>
+        <div class="benefit-desc">Introdu vânzările, bonurile, refund-urile și diferența de casă. Aplicația calculează scorul instant — nu tu.</div>
+      </div>
+
+      <div class="benefit-card">
+        <div class="benefit-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+        </div>
+        <div class="benefit-title">Datele tale, la tine</div>
+        <div class="benefit-desc">Zero server, zero cloud, zero cont. Totul stă în browserul tău. Funcționează offline complet — chiar și în avion.</div>
+      </div>
+
+      <div class="benefit-card">
+        <div class="benefit-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="20" x2="18" y2="10"/>
+            <line x1="12" y1="20" x2="12" y2="4"/>
+            <line x1="6"  y1="20" x2="6"  y2="14"/>
+          </svg>
+        </div>
+        <div class="benefit-title">Tendințe în timp real</div>
+        <div class="benefit-desc">Grafice săptămânale, istoricul ultimelor 90 de zile și micro-insights contextuale care te ajută să înțelegi ce se întâmplă.</div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how">
+  <div class="container">
+    <h2 class="section-title">Cum funcționează</h2>
+    <p class="section-sub">Trei pași, o dată pe zi.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-title">Descarcă fișierul</div>
+        <div class="step-desc">Un singur fișier HTML. Nicio instalare, nicio configurare. Se deschide direct în browser.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-title">Introdu 4 cifre</div>
+        <div class="step-desc">Vânzări totale, număr bonuri, refund-uri și diferența de casă. Durează mai puțin de un minut.</div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-title">Primești scorul zilei</div>
+        <div class="step-desc">De la 0 la 110. Verde, galben sau roșu. Știi imediat dacă ziua a mers bine sau nu.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SCORE LEGEND -->
+<section class="legend">
+  <div class="container">
+    <h2 class="section-title">Ce înseamnă scorul?</h2>
+    <p class="section-sub">O singură cifră care rezumă performanța zilei.</p>
+    <div class="legend-grid">
+      <div class="legend-chip">
+        <div class="legend-dot" style="background:var(--gold);"></div>
+        <div class="legend-info">
+          <div class="legend-range">100 – 110</div>
+          <div class="legend-label" style="color:var(--gold);">Zi de record</div>
+        </div>
+      </div>
+      <div class="legend-chip">
+        <div class="legend-dot" style="background:var(--green);"></div>
+        <div class="legend-info">
+          <div class="legend-range">90 – 99</div>
+          <div class="legend-label" style="color:var(--green);">Zi excepțională</div>
+        </div>
+      </div>
+      <div class="legend-chip">
+        <div class="legend-dot" style="background:var(--green);opacity:0.7"></div>
+        <div class="legend-info">
+          <div class="legend-range">75 – 89</div>
+          <div class="legend-label" style="color:var(--green);">Zi bună</div>
+        </div>
+      </div>
+      <div class="legend-chip">
+        <div class="legend-dot" style="background:var(--yellow);"></div>
+        <div class="legend-info">
+          <div class="legend-range">50 – 74</div>
+          <div class="legend-label" style="color:var(--yellow);">Zi acceptabilă</div>
+        </div>
+      </div>
+      <div class="legend-chip">
+        <div class="legend-dot" style="background:var(--red);"></div>
+        <div class="legend-info">
+          <div class="legend-range">0 – 49</div>
+          <div class="legend-label" style="color:var(--red);">Zi dificilă</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA FINAL -->
+<section class="cta-section">
+  <div class="container">
+    <h2>Gata să știi cum merge afacerea ta?</h2>
+    <p>Gratuit pentru orice tip de business. Funcționează fără internet.</p>
+    <div class="hero-buttons">
+      <a href="app.html" class="btn-primary">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Descarcă aplicația
+      </a>
+      <a href="app.html?demo=true" class="btn-secondary">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Demo live
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <p class="footer-tagline">Daily Sales Flash ⚡ — Gratuit pentru orice tip de business. Funcționează fără internet.</p>
+    <p class="footer-creator">Creat de <a href="#" target="_blank">[Nume Creator]</a> · Un fișier, zero dependențe, datele rămân la tine.</p>
+  </div>
+</footer>
+
+</body>
+</html>
