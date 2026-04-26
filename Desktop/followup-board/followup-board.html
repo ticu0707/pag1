@@ -48,6 +48,8 @@ body{font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--tex
 .btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:var(--radius-sm);font-size:12px;font-weight:600;border:none;cursor:pointer;transition:all .15s;white-space:nowrap;font-family:inherit;}
 .btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border);}
 .btn-ghost:hover{color:var(--text);border-color:var(--border-2);}
+.btn-date-icon{background:var(--surface-2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:0 12px;height:40px;cursor:pointer;font-size:15px;flex-shrink:0;transition:background .15s;}
+.btn-date-icon:hover{background:var(--indigo);}
 .btn-primary{background:var(--indigo);color:#fff;}
 .btn-primary:hover{background:#4f46e5;}
 .btn-green{background:var(--green);color:#fff;}
@@ -389,7 +391,11 @@ select.form-control option{background:var(--surface);}
       </div>
       <div class="form-group">
         <label>Data acțiunii *</label>
-        <input class="form-control" id="f-nextdate" type="date"/>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <input class="form-control" id="f-nextdate" type="text" placeholder="zz/ll/aaaa" maxlength="10" style="flex:1;"/>
+          <input type="date" id="f-nextdate-picker" style="position:absolute;width:0;height:0;opacity:0;pointer-events:none;"/>
+          <button type="button" class="btn-date-icon" onclick="document.getElementById('f-nextdate-picker').showPicker()">📅</button>
+        </div>
       </div>
     </div>
     <div class="form-group">
@@ -466,7 +472,11 @@ select.form-control option{background:var(--surface);}
       </div>
       <div class="form-group">
         <label>Următoarea acțiune</label>
-        <input class="form-control" id="contact-nextdate" type="date"/>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <input class="form-control" id="contact-nextdate" type="text" placeholder="zz/ll/aaaa" maxlength="10" style="flex:1;"/>
+          <input type="date" id="contact-nextdate-picker" style="position:absolute;width:0;height:0;opacity:0;pointer-events:none;"/>
+          <button type="button" class="btn-date-icon" onclick="document.getElementById('contact-nextdate-picker').showPicker()">📅</button>
+        </div>
       </div>
     </div>
     <div class="form-group">
@@ -597,6 +607,26 @@ const Demo = {
   },
   isVisible(st) { return !st.meta.demoHidden; }
 };
+
+// ─── Date helpers: YYYY-MM-DD ↔ DD/MM/YYYY ───────
+function toISO(ro) {
+  if (!ro) return '';
+  const [d, m, y] = ro.split('/');
+  return (d && m && y) ? `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}` : '';
+}
+function toRO(iso) {
+  if (!iso) return '';
+  const [y, m, d] = iso.split('-');
+  return (y && m && d) ? `${d}/${m}/${y}` : '';
+}
+function maskRoDate(el) {
+  el.addEventListener('input', function() {
+    let v = this.value.replace(/\D/g, '').slice(0, 8);
+    if (v.length > 4) v = v.slice(0,2)+'/'+v.slice(2,4)+'/'+v.slice(4);
+    else if (v.length > 2) v = v.slice(0,2)+'/'+v.slice(2);
+    this.value = v;
+  });
+}
 
 // ═══════════════════════════════════════════════════
 // M05 — STATE + INIT
@@ -992,7 +1022,7 @@ const Panel = {
           </select>
         </div>
         <div class="p-field"><div class="p-field-lbl">Data</div>
-          <input type="date" class="p-field-input" value="${lead.nextDate||''}" onchange="Panel.saveField('${lead.id}','nextDate',this.value)"/>
+          <input type="text" class="p-field-input" placeholder="zz/ll/aaaa" maxlength="10" value="${toRO(lead.nextDate||'')}" oninput="(function(el){let v=el.value.replace(/\\D/g,'').slice(0,8);if(v.length>4)v=v.slice(0,2)+'/'+v.slice(2,4)+'/'+v.slice(4);else if(v.length>2)v=v.slice(0,2)+'/'+v.slice(2);el.value=v;})(this)" onchange="Panel.saveField('${lead.id}','nextDate',toISO(this.value))"/>
         </div>
         <div class="p-field"><div class="p-field-lbl">Detaliu</div>
           <input type="text" class="p-field-input" value="${(lead.actionDetail||'').replace(/"/g,'&quot;')}" maxlength="80"
@@ -1254,8 +1284,8 @@ const Backup = {
     const BOM = '﻿';
     const cols = ['Nume','Sursă','Valoare','Etapă','Tip acțiune','Data acțiunii','Detaliu','Ultim contact','Notițe'];
     const rows = state.leads.map(l => [
-      l.name, l.source||'', l.value||'', l.stage, l.actionType, l.nextDate||'',
-      l.actionDetail||'', l.lastContact||'', (l.notes||'').replace(/\n/g,' ')
+      l.name, l.source||'', l.value||'', l.stage, l.actionType, toRO(l.nextDate||''),
+      l.actionDetail||'', toRO(l.lastContact||''), (l.notes||'').replace(/\n/g,' ')
     ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(','));
     const csv = BOM + [cols.join(','), ...rows].join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -1372,8 +1402,11 @@ const Email = {
 const Keyboard = {
   setup() {
     document.addEventListener('keydown', e => {
-      const tag = document.activeElement.tagName.toLowerCase();
-      const inInput = ['input','textarea','select'].includes(tag);
+      const active = document.activeElement;
+      const tag = active.tagName.toLowerCase();
+      // "real" form field = textarea, select, or any input except the search bar
+      const inFormField = tag === 'textarea' || tag === 'select' ||
+                          (tag === 'input' && active.id !== 'search-input');
       if (e.key === 'Escape') {
         if (!document.getElementById('briefing-overlay').classList.contains('hidden')) { Briefing.dismiss(); return; }
         if (!document.getElementById('modal-lead').classList.contains('hidden')) { Modal.closeLead(); return; }
@@ -1382,11 +1415,15 @@ const Keyboard = {
         if (!document.getElementById('modal-contact').classList.contains('hidden')) { Modal.closeContact(); return; }
         if (!document.getElementById('modal-ics').classList.contains('hidden')) { Modal.closeICS(); return; }
         if (document.getElementById('panel').classList.contains('open')) { Panel.close(); return; }
+        active.blur();
         document.getElementById('snooze-menu').classList.remove('open');
+        return;
       }
-      if (inInput) return;
-      if (e.key === 'n' || e.key === 'N') { e.preventDefault(); Modal.openLead(); }
-      if (e.key === '/') { e.preventDefault(); document.getElementById('search-input').focus(); }
+      // / always focuses search regardless of current focus
+      if (e.key === '/') { e.preventDefault(); document.getElementById('search-input').focus(); return; }
+      if (inFormField) return;
+      // N works even from search bar (blurs it first)
+      if (e.key === 'n' || e.key === 'N') { e.preventDefault(); active.blur(); Modal.openLead(); }
     });
   }
 };
@@ -1404,7 +1441,9 @@ const Modal = {
     })();
     document.getElementById('f-name').value = lead ? lead.name : '';
     document.getElementById('f-actiontype').value = lead ? lead.actionType : 'Apel';
-    document.getElementById('f-nextdate').value = lead ? lead.nextDate : defaultDate;
+    const isoDate = lead ? lead.nextDate : defaultDate;
+    document.getElementById('f-nextdate').value = toRO(isoDate);
+    document.getElementById('f-nextdate-picker').value = isoDate;
     document.getElementById('f-detail').value = lead ? lead.actionDetail : '';
     document.getElementById('f-source').value = lead ? (lead.source||'') : '';
     document.getElementById('f-value').value = lead ? (lead.value||'') : '';
@@ -1423,7 +1462,8 @@ const Modal = {
       return d.toISOString().split('T')[0];
     })();
     document.getElementById('contact-type').value = lead ? lead.actionType : 'Apel';
-    document.getElementById('contact-nextdate').value = defaultDate;
+    document.getElementById('contact-nextdate').value = toRO(defaultDate);
+    document.getElementById('contact-nextdate-picker').value = defaultDate;
     document.getElementById('contact-nexttype').value = lead ? lead.actionType : 'Apel';
     document.getElementById('modal-contact').classList.remove('hidden');
   },
@@ -1460,8 +1500,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-save-lead').addEventListener('click', () => {
     const name = document.getElementById('f-name').value.trim();
     if (!name) { Toast.show('Introdu un nume.'); return; }
-    const nextDate = document.getElementById('f-nextdate').value;
-    if (!nextDate) { Toast.show('Alege data acțiunii.'); return; }
+    const nextDate = toISO(document.getElementById('f-nextdate').value);
+    if (!nextDate) { Toast.show('Alege data acțiunii. Format: zz/ll/aaaa'); return; }
     const data = {
       name, actionType: document.getElementById('f-actiontype').value,
       nextDate, actionDetail: document.getElementById('f-detail').value.trim(),
@@ -1478,6 +1518,16 @@ document.addEventListener('DOMContentLoaded', () => {
       Toast.show('✓ Lead adăugat!');
     }
     Modal.closeLead();
+  });
+
+  // Date input auto-masking (manual typing) + picker sync
+  maskRoDate(document.getElementById('f-nextdate'));
+  maskRoDate(document.getElementById('contact-nextdate'));
+  document.getElementById('f-nextdate-picker').addEventListener('change', function() {
+    document.getElementById('f-nextdate').value = toRO(this.value);
+  });
+  document.getElementById('contact-nextdate-picker').addEventListener('change', function() {
+    document.getElementById('contact-nextdate').value = toRO(this.value);
   });
 
   // Detail char count
@@ -1502,9 +1552,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // Confirm contact
   document.getElementById('btn-confirm-contact').addEventListener('click', () => {
     const type = document.getElementById('contact-type').value;
-    const nextDate = document.getElementById('contact-nextdate').value;
+    const nextDate = toISO(document.getElementById('contact-nextdate').value);
     const nextType = document.getElementById('contact-nexttype').value;
-    if (!nextDate) { Toast.show('Alege data următoarei acțiuni.'); return; }
+    if (!nextDate) { Toast.show('Alege data următoarei acțiuni. Format: zz/ll/aaaa'); return; }
     Leads.markContacted(contactTargetId, type, nextDate, nextType);
     Modal.closeContact();
   });
