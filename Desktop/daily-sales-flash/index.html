@@ -490,7 +490,7 @@
 <!-- MOCK DASHBOARD -->
 <div class="mock-wrap">
   <div class="mock-phone">
-    <div class="mock-greeting">Bună seara, Andrei · Duminică, 27/04/2026</div>
+    <div class="mock-greeting" id="mock-greeting">Bună seara, Andrei · Duminică, 27/04/2026</div>
     <div class="mock-score-wrap">
       <div class="mock-score-label">Day Score</div>
       <div class="mock-score">97</div>
@@ -667,5 +667,23 @@
   </div>
 </footer>
 
+<script>
+(function() {
+  var DAYS = ['Duminică','Luni','Marți','Miercuri','Joi','Vineri','Sâmbătă'];
+  var GREETINGS = function(h) {
+    if (h < 12) return 'Bună dimineața';
+    if (h < 18) return 'Bună ziua';
+    return 'Bună seara';
+  };
+  var now = new Date();
+  var dd = String(now.getDate()).padStart(2,'0');
+  var mm = String(now.getMonth()+1).padStart(2,'0');
+  var yyyy = now.getFullYear();
+  var dayName = DAYS[now.getDay()];
+  var greeting = GREETINGS(now.getHours());
+  var el = document.getElementById('mock-greeting');
+  if (el) el.textContent = greeting + ', Andrei · ' + dayName + ', ' + dd + '/' + mm + '/' + yyyy;
+})();
+</script>
 </body>
 </html>
