@@ -1,0 +1,2578 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Daily Sales Flash</title>
+  <style>
+    /* ── VARIABILE ─────────────────────────────────────────── */
+    :root {
+      --bg:           #0f0f0f;
+      --bg-card:      #1a1a1a;
+      --bg-card-2:    #222222;
+      --border:       #2a2a2a;
+      --text:         #f0f0f0;
+      --text-muted:   #888888;
+      --text-dim:     #555555;
+
+      --green:        #22c55e;
+      --green-dim:    #166534;
+      --yellow:       #eab308;
+      --yellow-dim:   #713f12;
+      --red:          #ef4444;
+      --red-dim:      #7f1d1d;
+      --gold:         #f59e0b;
+      --gold-dim:     #78350f;
+
+      --accent:       #6366f1;
+      --accent-hover: #4f46e5;
+
+      --radius:       12px;
+      --radius-sm:    8px;
+      --nav-h:        64px;
+      --max-w:        480px;
+    }
+
+    /* ── RESET ─────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 16px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+    button { cursor: pointer; border: none; background: none; font: inherit; color: inherit; }
+    input, select { font: inherit; color: inherit; }
+    a { color: inherit; text-decoration: none; }
+
+    /* ── LAYOUT ─────────────────────────────────────────────── */
+    #app {
+      max-width: var(--max-w);
+      margin: 0 auto;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+
+    .screen {
+      display: none;
+      flex: 1;
+      padding: 20px 16px calc(var(--nav-h) + 16px);
+      overflow-y: auto;
+    }
+    .screen.active { display: block; }
+
+    /* ── HEADER ─────────────────────────────────────────────── */
+    .screen-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+    }
+    .greeting {
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.3;
+    }
+    .greeting strong {
+      display: block;
+      font-size: 16px;
+      color: var(--text);
+      font-weight: 600;
+    }
+    #export-badge {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 20px;
+      background: var(--bg-card-2);
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+    #export-badge.warn  { background: var(--yellow-dim); color: var(--yellow); }
+    #export-badge.alert { background: var(--red-dim);    color: var(--red);    }
+
+    /* ── CARDS ──────────────────────────────────────────────── */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+    .card-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+    }
+    .card-value {
+      font-size: 22px;
+      font-weight: 700;
+    }
+    .card-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .cards-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    .cards-grid .card { margin-bottom: 0; }
+
+    /* ── DAY SCORE ──────────────────────────────────────────── */
+    #score-card {
+      text-align: center;
+      padding: 24px 16px;
+      position: relative;
+      overflow: hidden;
+    }
+    #score-number {
+      font-size: 80px;
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: -3px;
+      transition: color 0.3s ease;
+    }
+    #score-label {
+      font-size: 14px;
+      font-weight: 600;
+      margin-top: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+    #score-date {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+    .score-gold   { color: var(--gold);   }
+    .score-green  { color: var(--green);  }
+    .score-yellow { color: var(--yellow); }
+    .score-red    { color: var(--red);    }
+
+    /* ── STATUS BAR ─────────────────────────────────────────── */
+    #status-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-card-2);
+      margin-bottom: 12px;
+      font-size: 13px;
+    }
+    #status-bar .status-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 6px;
+      flex-shrink: 0;
+    }
+    #status-bar.missing .status-dot { background: var(--red); }
+    #status-bar.ok      .status-dot { background: var(--green); }
+    #status-bar .status-action {
+      font-size: 12px;
+      color: var(--accent);
+      cursor: pointer;
+    }
+
+    /* ── METRIC CARDS ───────────────────────────────────────── */
+    .metric-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px;
+    }
+    .metric-card .metric-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 4px;
+    }
+    .metric-card .metric-val {
+      font-size: 18px;
+      font-weight: 700;
+    }
+    .metric-card .metric-sub {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+    .metric-card.green  { border-color: var(--green-dim);  }
+    .metric-card.yellow { border-color: var(--yellow-dim); }
+    .metric-card.red    { border-color: var(--red-dim);    }
+    .metric-card.green  .metric-val { color: var(--green);  }
+    .metric-card.yellow .metric-val { color: var(--yellow); }
+    .metric-card.red    .metric-val { color: var(--red);    }
+
+    /* card flip animation */
+    .metric-card { transition: transform 0.3s ease, opacity 0.3s ease; }
+    .metric-card.flip-hidden { transform: rotateY(90deg); opacity: 0; }
+
+    /* ── STREAK / RECORD ────────────────────────────────────── */
+    .badge-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 12px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      background: var(--bg-card-2);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+    }
+    .badge.streak { color: var(--gold); border-color: var(--gold-dim); }
+    .badge.record { color: var(--accent); border-color: #312e81; }
+
+    /* ── SPARKLINE ──────────────────────────────────────────── */
+    #sparkline-wrap {
+      margin-bottom: 12px;
+    }
+    #sparkline-wrap .card-label { margin-bottom: 8px; }
+    #sparkline-svg {
+      display: flex;
+      gap: 6px;
+      align-items: flex-end;
+      height: 40px;
+    }
+    .spark-dot {
+      flex: 1;
+      border-radius: 4px;
+      min-height: 6px;
+      transition: height 0.3s ease;
+    }
+    .spark-dot.gold   { background: var(--gold);   }
+    .spark-dot.green  { background: var(--green);  }
+    .spark-dot.yellow { background: var(--yellow); }
+    .spark-dot.red    { background: var(--red);    }
+    .spark-dot.empty  { background: var(--border); height: 6px !important; }
+
+    /* ── INSIGHT ────────────────────────────────────────────── */
+    #insight-box {
+      font-size: 13px;
+      color: var(--text-muted);
+      padding: 10px 14px;
+      background: var(--bg-card-2);
+      border-left: 3px solid var(--accent);
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      margin-bottom: 12px;
+      line-height: 1.5;
+    }
+
+    /* ── MONTH SUMMARY CARD ─────────────────────────────────── */
+    #month-summary {
+      display: none;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      border: 1px solid var(--accent);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+    #month-summary .ms-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      margin-bottom: 8px;
+    }
+    #month-summary .ms-stats {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    #month-summary .ms-stat { font-size: 13px; }
+    #month-summary .ms-stat span {
+      display: block;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    /* ── BUTTONS ────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 12px 20px;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      font-weight: 600;
+      transition: opacity 0.15s, transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn:active { transform: scale(0.97); opacity: 0.85; }
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      width: 100%;
+    }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-secondary {
+      background: var(--bg-card-2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      width: 100%;
+    }
+    .btn-ghost {
+      color: var(--text-muted);
+      font-size: 13px;
+      padding: 8px 12px;
+    }
+    .btn-danger {
+      background: var(--red-dim);
+      color: var(--red);
+      width: 100%;
+    }
+    .btn-icon {
+      width: 36px; height: 36px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-card-2);
+      border: 1px solid var(--border);
+      padding: 0;
+      font-size: 16px;
+    }
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .btn-row .btn { flex: 1; }
+
+    /* ── BOTTOM NAV ─────────────────────────────────────────── */
+    #nav-bottom {
+      position: fixed;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: var(--max-w);
+      height: var(--nav-h);
+      background: var(--bg-card);
+      border-top: 1px solid var(--border);
+      display: flex;
+      z-index: 100;
+    }
+    .nav-btn {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      font-size: 10px;
+      color: var(--text-dim);
+      transition: color 0.15s;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+    }
+    .nav-btn .nav-icon { font-size: 20px; line-height: 1; }
+    .nav-btn.active { color: var(--accent); }
+
+    /* ── MODALS ─────────────────────────────────────────────── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.75);
+      z-index: 200;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-sheet {
+      background: var(--bg-card);
+      border-radius: var(--radius) var(--radius) 0 0;
+      padding: 20px 16px 32px;
+      width: 100%;
+      max-width: var(--max-w);
+      max-height: 92vh;
+      overflow-y: auto;
+    }
+    .modal-handle {
+      width: 36px; height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      margin: 0 auto 16px;
+    }
+    .modal-title {
+      font-size: 17px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    /* ── FORMS ──────────────────────────────────────────────── */
+    .form-group { margin-bottom: 14px; }
+    .form-label {
+      display: block;
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      font-weight: 500;
+    }
+    .form-hint {
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-top: 4px;
+    }
+    .form-input {
+      width: 100%;
+      background: var(--bg-card-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text);
+      transition: border-color 0.15s;
+      -webkit-appearance: none;
+    }
+    .form-input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    .form-input.error { border-color: var(--red); }
+    .form-input::placeholder { color: var(--text-dim); font-weight: 400; font-size: 16px; }
+    .form-error {
+      font-size: 12px;
+      color: var(--red);
+      margin-top: 4px;
+      display: none;
+    }
+    .form-error.show { display: block; }
+
+    .form-select {
+      width: 100%;
+      background: var(--bg-card-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      font-size: 16px;
+      color: var(--text);
+      -webkit-appearance: none;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%23888' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+    }
+    .form-select:focus { outline: none; border-color: var(--accent); }
+
+    /* date toggle */
+    .date-toggle {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+    .date-toggle-btn {
+      flex: 1;
+      padding: 9px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--bg-card-2);
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-muted);
+      transition: all 0.15s;
+    }
+    .date-toggle-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    /* live score preview */
+    #live-score-preview {
+      text-align: center;
+      padding: 12px;
+      background: var(--bg-card-2);
+      border-radius: var(--radius-sm);
+      margin-bottom: 16px;
+    }
+    #live-score-preview .lsp-label {
+      font-size: 11px;
+      color: var(--text-dim);
+      font-style: italic;
+      margin-bottom: 2px;
+    }
+    #live-score-value {
+      font-size: 32px;
+      font-weight: 800;
+      transition: color 0.2s;
+    }
+
+    /* ── ONBOARDING SCREEN ──────────────────────────────────── */
+    #screen-onboarding {
+      display: none;
+      flex: 1;
+      padding: 48px 24px 32px;
+      flex-direction: column;
+      justify-content: center;
+    }
+    #screen-onboarding.active { display: flex; }
+    .onboard-logo {
+      font-size: 28px;
+      font-weight: 800;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, var(--accent), var(--gold));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .onboard-sub {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-bottom: 36px;
+      line-height: 1.6;
+    }
+    .onboard-step {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--accent);
+      margin-bottom: 16px;
+      font-weight: 600;
+    }
+
+    /* ── SETTINGS SCREEN ────────────────────────────────────── */
+    .settings-section {
+      margin-bottom: 24px;
+    }
+    .settings-section-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+    .settings-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      margin-bottom: 8px;
+    }
+    .settings-row-label { font-size: 14px; font-weight: 500; }
+    .settings-row-val   { font-size: 14px; color: var(--text-muted); }
+    .settings-currency-warn {
+      font-size: 12px;
+      color: var(--yellow);
+      padding: 8px 12px;
+      background: var(--yellow-dim);
+      border-radius: var(--radius-sm);
+      margin-top: 4px;
+      display: none;
+    }
+
+    /* ── TABLES ─────────────────────────────────────────────── */
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .data-table th {
+      text-align: left;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      padding: 6px 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .data-table td {
+      padding: 10px 8px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+    }
+    .data-table tr:last-child td { border-bottom: none; }
+    .score-pill {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .score-pill.gold   { background: var(--gold-dim);   color: var(--gold);   }
+    .score-pill.green  { background: var(--green-dim);  color: var(--green);  }
+    .score-pill.yellow { background: var(--yellow-dim); color: var(--yellow); }
+    .score-pill.red    { background: var(--red-dim);    color: var(--red);    }
+
+    /* ── FILTER TABS ────────────────────────────────────────── */
+    .filter-tabs {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 16px;
+    }
+    .filter-tab {
+      flex: 1;
+      padding: 8px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: var(--bg-card-2);
+      font-size: 13px;
+      color: var(--text-muted);
+      transition: all 0.15s;
+    }
+    .filter-tab.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    /* ── CHART CONTAINER ────────────────────────────────────── */
+    .chart-wrap {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 12px;
+      position: relative;
+      height: 200px;
+    }
+    .chart-wrap canvas { width: 100% !important; height: 100% !important; }
+
+    /* ── EMPTY STATE ────────────────────────────────────────── */
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-muted);
+    }
+    .empty-state .es-icon { font-size: 40px; margin-bottom: 12px; }
+    .empty-state .es-title { font-size: 16px; font-weight: 600; margin-bottom: 6px; color: var(--text); }
+    .empty-state .es-sub { font-size: 13px; line-height: 1.5; }
+
+    /* ── DEMO BANNER ────────────────────────────────────────── */
+    #demo-banner {
+      display: none;
+      background: var(--gold-dim);
+      border-bottom: 1px solid var(--gold);
+      padding: 8px 16px;
+      font-size: 12px;
+      color: var(--gold);
+      text-align: center;
+      position: sticky;
+      top: 0;
+      z-index: 90;
+    }
+    #demo-banner.show { display: block; }
+    #demo-banner a { color: var(--gold); text-decoration: underline; }
+
+    /* ── TOAST ──────────────────────────────────────────────── */
+    #toast {
+      position: fixed;
+      bottom: calc(var(--nav-h) + 16px);
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--bg-card-2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 10px 16px;
+      font-size: 13px;
+      color: var(--text);
+      z-index: 300;
+      opacity: 0;
+      transition: opacity 0.25s, transform 0.25s;
+      pointer-events: none;
+      white-space: nowrap;
+      max-width: calc(var(--max-w) - 32px);
+    }
+    #toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ── CONFETTI CANVAS ────────────────────────────────────── */
+    #confetti-canvas {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 400;
+      display: none;
+    }
+
+    /* ── EMAIL MODAL EXTRAS ─────────────────────────────────── */
+    .email-modal-icon {
+      text-align: center;
+      font-size: 36px;
+      margin-bottom: 8px;
+    }
+    .email-modal-title {
+      text-align: center;
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .email-modal-sub {
+      text-align: center;
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+
+    /* ── SCREEN TITLE ───────────────────────────────────────── */
+    .screen-title {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 20px;
+    }
+
+    /* ── WEEK SUMMARY CARD ──────────────────────────────────── */
+    #week-summary-card .ws-row {
+      display: flex;
+      justify-content: space-around;
+      text-align: center;
+    }
+    #week-summary-card .ws-stat { font-size: 13px; color: var(--text-muted); }
+    #week-summary-card .ws-stat span {
+      display: block;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    /* ── SCROLLBAR ──────────────────────────────────────────── */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    /* ── UTILS ──────────────────────────────────────────────── */
+    .hidden { display: none !important; }
+    .mt-8  { margin-top: 8px; }
+    .mt-12 { margin-top: 12px; }
+    .mt-16 { margin-top: 16px; }
+    .text-muted { color: var(--text-muted); }
+    .text-center { text-align: center; }
+    .divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+  </style>
+</head>
+<body>
+
+<!-- DEMO BANNER -->
+<div id="demo-banner">
+  ⚠️ MOD DEMO — datele nu se salvează.
+  <a href="app.html">Încearcă cu datele tale →</a>
+</div>
+
+<div id="app">
+
+  <!-- ── ONBOARDING ──────────────────────────────────────── -->
+  <div id="screen-onboarding" class="screen">
+    <div class="onboard-logo">Daily Sales Flash ⚡</div>
+    <p class="onboard-sub">Știi cum a fost ziua ta în 60 de secunde.<br>Fără cont. Fără internet.</p>
+    <div class="onboard-step">Pasul 1 din 1 — Configurare rapidă</div>
+
+    <div class="form-group">
+      <label class="form-label" for="ob-name">Prenumele tău</label>
+      <input id="ob-name" class="form-input" type="text"
+             placeholder="ex: Andrei" autocomplete="off" />
+      <div id="ob-name-err" class="form-error">Introdu prenumele tău.</div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="ob-target">Target zilnic de vânzări</label>
+      <input id="ob-target" class="form-input" type="text"
+             inputmode="decimal" placeholder="ex: 3000" />
+      <div id="ob-target-err" class="form-error">Introdu un target valid (mai mare ca 0).</div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="ob-currency">Moneda</label>
+      <select id="ob-currency" class="form-select">
+        <option value="RON">RON — Leu românesc</option>
+        <option value="EUR">EUR — Euro</option>
+        <option value="USD">USD — Dolar american</option>
+        <option value="GBP">GBP — Liră britanică</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="ob-biz">Tipul businessului</label>
+      <select id="ob-biz" class="form-select">
+        <option value="restaurant">Restaurant / Bar / Cafenea</option>
+        <option value="retail">Magazin fizic (Retail)</option>
+        <option value="ecommerce">eCommerce / Magazin online</option>
+      </select>
+    </div>
+
+    <button id="ob-submit" class="btn btn-primary mt-16">
+      Pornește Daily Sales Flash ⚡
+    </button>
+  </div>
+
+  <!-- ── DASHBOARD (AZI) ─────────────────────────────────── -->
+  <div id="screen-dash" class="screen">
+
+    <div class="screen-header">
+      <div class="greeting">
+        <strong id="greeting-name">Bună ziua!</strong>
+        <span id="greeting-date">—</span>
+      </div>
+      <div id="export-badge">Export: —</div>
+    </div>
+
+    <!-- status bar -->
+    <div id="status-bar" class="missing">
+      <span>
+        <span class="status-dot"></span>
+        <span id="status-text">Date lipsă pentru azi</span>
+      </span>
+      <span id="status-action" class="status-action"></span>
+    </div>
+
+    <!-- month summary (apare la prima zi din lună) -->
+    <div id="month-summary">
+      <div class="ms-title" id="ms-title">Luna anterioară</div>
+      <div class="ms-stats" id="ms-stats"></div>
+    </div>
+
+    <!-- day score card -->
+    <div class="card" id="score-card">
+      <div id="score-number" class="score-red">—</div>
+      <div id="score-label" class="text-muted">Nicio intrare azi</div>
+      <div id="score-date" class="text-muted"></div>
+    </div>
+
+    <!-- badges: streak + record -->
+    <div class="badge-row" id="badge-row"></div>
+
+    <!-- metric cards 2x2 -->
+    <div class="cards-grid" id="metric-cards">
+      <div class="metric-card" id="card-target">
+        <div class="metric-label">Target</div>
+        <div class="metric-val">—</div>
+        <div class="metric-sub">vs. obiectiv</div>
+      </div>
+      <div class="metric-card" id="card-aov">
+        <div class="metric-label">AOV net</div>
+        <div class="metric-val">—</div>
+        <div class="metric-sub">per bon</div>
+      </div>
+      <div class="metric-card" id="card-refund">
+        <div class="metric-label">Refund rate</div>
+        <div class="metric-val">—</div>
+        <div class="metric-sub">din vânzări</div>
+      </div>
+      <div class="metric-card" id="card-cash">
+        <div class="metric-label">Cash variance</div>
+        <div class="metric-val">—</div>
+        <div class="metric-sub">diferență casă</div>
+      </div>
+    </div>
+
+    <!-- sparkline 7 zile -->
+    <div class="card" id="sparkline-wrap">
+      <div class="card-label">Ultimele 7 zile</div>
+      <div id="sparkline-svg"></div>
+    </div>
+
+    <!-- micro insight -->
+    <div id="insight-box">—</div>
+
+    <!-- action buttons -->
+    <div class="btn-row">
+      <button id="btn-add-day" class="btn btn-primary">+ Adaugă ziua de azi</button>
+      <button id="btn-copy-summary" class="btn-icon" title="Copiază rezumatul">📋</button>
+      <button id="btn-share-app" class="btn-icon" title="Distribuie aplicația">🔗</button>
+    </div>
+
+  </div>
+
+  <!-- ── SĂPTĂMÂNĂ ──────────────────────────────────────── -->
+  <div id="screen-week" class="screen">
+    <div class="screen-title">Săptămâna aceasta</div>
+    <div class="chart-wrap">
+      <canvas id="chart-week"></canvas>
+    </div>
+    <div class="card" id="week-summary-card">
+      <div class="ws-row" id="week-stats"></div>
+    </div>
+    <div id="week-table-wrap"></div>
+  </div>
+
+  <!-- ── ISTORIC ────────────────────────────────────────── -->
+  <div id="screen-history" class="screen">
+    <div class="screen-title">Istoric</div>
+    <div class="filter-tabs">
+      <button class="filter-tab active" data-days="7">7 zile</button>
+      <button class="filter-tab" data-days="30">30 zile</button>
+      <button class="filter-tab" data-days="90">90 zile</button>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="chart-history"></canvas>
+    </div>
+    <div id="history-table-wrap"></div>
+  </div>
+
+  <!-- ── SETĂRI ─────────────────────────────────────────── -->
+  <div id="screen-settings" class="screen">
+    <div class="screen-title">Setări</div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">Profil</div>
+      <div class="form-group">
+        <label class="form-label" for="s-name">Prenume</label>
+        <input id="s-name" class="form-input" type="text" placeholder="Prenumele tău" />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="s-biz">Tip business</label>
+        <select id="s-biz" class="form-select">
+          <option value="restaurant">Restaurant / Bar / Cafenea</option>
+          <option value="retail">Magazin fizic (Retail)</option>
+          <option value="ecommerce">eCommerce / Magazin online</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">Obiective</div>
+      <div class="form-group">
+        <label class="form-label" for="s-target">Target zilnic de vânzări</label>
+        <input id="s-target" class="form-input" type="text" inputmode="decimal" />
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="s-threshold">Prag alertă (%)</label>
+        <input id="s-threshold" class="form-input" type="text"
+               inputmode="numeric" placeholder="80" />
+        <div class="form-hint">Sub acest % față de target → semnal roșu. Default: 80%</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="s-currency">Monedă</label>
+        <select id="s-currency" class="form-select">
+          <option value="RON">RON</option>
+          <option value="EUR">EUR</option>
+          <option value="USD">USD</option>
+          <option value="GBP">GBP</option>
+        </select>
+        <div id="s-currency-warn" class="settings-currency-warn">
+          ⚠️ Istoricul tău e în <span id="s-currency-old"></span>. Schimbarea afectează afișarea. Exportă datele mai întâi.
+        </div>
+      </div>
+      <button id="btn-save-settings" class="btn btn-primary">Salvează setările</button>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">Date</div>
+      <button id="btn-export" class="btn btn-secondary mt-8">⬇ Exportă datele (JSON)</button>
+      <label class="btn btn-secondary mt-8" style="cursor:pointer;">
+        ⬆ Importă date (JSON)
+        <input id="inp-import" type="file" accept=".json" class="hidden" />
+      </label>
+    </div>
+
+    <div class="settings-section">
+      <div class="settings-section-title">Pericol</div>
+      <button id="btn-reset" class="btn btn-danger">Resetează toate datele</button>
+    </div>
+
+    <div class="text-center mt-16" style="font-size:12px; color: var(--text-dim);">
+      Daily Sales Flash v1.0 · <a href="index.html" style="color:var(--text-dim);">creat de [Nume Creator]</a>
+    </div>
+  </div>
+
+  <!-- ── BOTTOM NAV ─────────────────────────────────────── -->
+  <nav id="nav-bottom">
+    <button class="nav-btn active" data-screen="dash">
+      <span class="nav-icon">⚡</span>
+      <span>Azi</span>
+    </button>
+    <button class="nav-btn" data-screen="week">
+      <span class="nav-icon">📊</span>
+      <span>Săptămână</span>
+    </button>
+    <button class="nav-btn" data-screen="history">
+      <span class="nav-icon">📈</span>
+      <span>Istoric</span>
+    </button>
+    <button class="nav-btn" data-screen="settings">
+      <span class="nav-icon">⚙️</span>
+      <span>Setări</span>
+    </button>
+  </nav>
+
+</div><!-- /#app -->
+
+<!-- ── MODAL: INPUT ZILNIC ──────────────────────────────── -->
+<div id="modal-input" class="modal-overlay">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">
+      <span id="modal-input-title">Adaugă ziua</span>
+      <button id="modal-input-close" class="btn-ghost">✕</button>
+    </div>
+
+    <!-- selector azi/ieri -->
+    <div class="date-toggle">
+      <button class="date-toggle-btn active" data-day="today" id="dtb-today">Astăzi</button>
+      <button class="date-toggle-btn" data-day="yesterday" id="dtb-yesterday">Ieri</button>
+    </div>
+
+    <!-- live score preview -->
+    <div id="live-score-preview">
+      <div class="lsp-label">Scor provizoriu</div>
+      <div id="live-score-value" class="score-red">—</div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="f-sales">Vânzări totale <span id="f-currency-label">(RON)</span></label>
+      <input id="f-sales" class="form-input" type="text"
+             inputmode="decimal" placeholder="0" autocomplete="off" />
+      <div id="f-sales-err" class="form-error">Introdu vânzările (minim 0).</div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="f-orders">Număr bonuri / comenzi</label>
+      <input id="f-orders" class="form-input" type="text"
+             inputmode="numeric" placeholder="0" autocomplete="off" />
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="f-refunds">Refund-uri <span class="text-muted">(opțional)</span></label>
+      <input id="f-refunds" class="form-input" type="text"
+             inputmode="decimal" placeholder="0" autocomplete="off" />
+      <div id="f-refunds-err" class="form-error">Refund-urile nu pot depăși vânzările. Verifică suma.</div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label" for="f-cash">Cash variance <span class="text-muted">(opțional)</span></label>
+      <input id="f-cash" class="form-input" type="text"
+             inputmode="decimal" placeholder="0" autocomplete="off" />
+      <div class="form-hint">Diferența cash fizic − cash teoretic din POS. Pozitiv = plus, negativ = minus.</div>
+    </div>
+
+    <button id="btn-save-day" class="btn btn-primary mt-16">Salvează ziua</button>
+  </div>
+</div>
+
+<!-- ── MODAL: EMAIL CAPTURE ─────────────────────────────── -->
+<div id="modal-email" class="modal-overlay">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="email-modal-icon">⚡</div>
+    <div class="email-modal-title">Îți place ce vezi?</div>
+    <div class="email-modal-sub" id="email-modal-sub">
+      Primești săptămânal un tip de management pentru businessul tău.
+    </div>
+    <div class="form-group">
+      <input id="email-input" class="form-input" type="email"
+             placeholder="adresa@ta.ro" inputmode="email" />
+      <div id="email-err" class="form-error">Introdu o adresă de email validă.</div>
+    </div>
+    <button id="btn-email-submit" class="btn btn-primary">Da, vreau tips-urile</button>
+    <button id="btn-email-dismiss" class="btn btn-ghost mt-8" style="width:100%; text-align:center;">
+      Nu acum
+    </button>
+  </div>
+</div>
+
+<!-- ── TOAST ────────────────────────────────────────────── -->
+<div id="toast"></div>
+
+<!-- ── CONFETTI CANVAS ──────────────────────────────────── -->
+<canvas id="confetti-canvas"></canvas>
+
+<script>
+/* ═══════════════════════════════════════════════════════════
+   MODULELE JS — încărcate secvențial
+   DSF.utils → M1 → M2 → M3 → M4 → M5 → M6 → M7 →
+   M8 → M9 → M10 → M11 → M12 → M13 → M14 → M15 → M16 → INIT
+═══════════════════════════════════════════════════════════ */
+const DSF = {};
+
+/* ─── DSF.utils ───────────────────────────────────────────
+   Utilitar date și helpers globale
+──────────────────────────────────────────────────────────── */
+DSF.utils = {
+  /* "2026-04-27" → "27/04/2026" */
+  toDisplay(iso) {
+    if (!iso) return '—';
+    const [y, m, d] = iso.split('-');
+    return `${d}/${m}/${y}`;
+  },
+  /* "27/04/2026" → "2026-04-27" */
+  toISO(display) {
+    if (!display) return '';
+    const [d, m, y] = display.split('/');
+    return `${y}-${m}-${d}`;
+  },
+  todayISO() {
+    const n = new Date();
+    return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`;
+  },
+  yesterdayISO() {
+    const n = new Date();
+    n.setDate(n.getDate() - 1);
+    return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`;
+  },
+  /* "2026-04-27" → "Duminică, 27/04/2026" */
+  toDisplayFull(iso) {
+    if (!iso) return '—';
+    const days = ['Duminică','Luni','Marți','Miercuri','Joi','Vineri','Sâmbătă'];
+    const [y, m, d] = iso.split('-').map(Number);
+    const date = new Date(y, m - 1, d);
+    return `${days[date.getDay()]}, ${String(d).padStart(2,'0')}/${String(m).padStart(2,'0')}/${y}`;
+  },
+  /* parsează string numeric cu virgulă sau punct → number */
+  parseNum(str) {
+    if (str === null || str === undefined || str === '') return 0;
+    const cleaned = String(str).replace(/\s/g, '').replace(',', '.');
+    const n = parseFloat(cleaned);
+    return isNaN(n) ? 0 : n;
+  },
+  /* formatează număr cu separatoare */
+  fmtNum(n, currency) {
+    if (n === null || n === undefined || isNaN(n)) return '—';
+    const c = currency || DSF.config.get().currency;
+    return n.toLocaleString('ro-RO', { minimumFractionDigits: 0, maximumFractionDigits: 2 }) + ' ' + c;
+  },
+  /* nr zile între două date ISO */
+  daysBetween(isoA, isoB) {
+    const a = new Date(isoA), b = new Date(isoB);
+    return Math.round(Math.abs((b - a) / 86400000));
+  }
+};
+
+/* ─── M1: DSF.storage ─────────────────────────────────────
+   Interfața unică cu LocalStorage.
+   Niciun alt modul nu scrie direct în localStorage.
+──────────────────────────────────────────────────────────── */
+DSF.storage = (function() {
+  const PREFIX = 'dsf_day_';
+  const KEY_ALL = 'dsf_all_keys'; // index de chei pentru loadAll rapid
+
+  function _key(dateISO) { return PREFIX + dateISO; }
+
+  function _getIndex() {
+    try { return JSON.parse(localStorage.getItem(KEY_ALL) || '[]'); }
+    catch(e) { return []; }
+  }
+
+  function _setIndex(arr) {
+    localStorage.setItem(KEY_ALL, JSON.stringify(arr));
+  }
+
+  function validateEntry(e) {
+    if (!e || typeof e !== 'object') return { ok: false, error: 'Entry invalid.' };
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(e.date)) return { ok: false, error: `Dată invalidă: ${e.date}` };
+    if (typeof e.sales !== 'number' || e.sales < 0) return { ok: false, error: 'Vânzări invalide.' };
+    if (typeof e.orders !== 'number' || e.orders < 0) return { ok: false, error: 'Bonuri invalide.' };
+    if (typeof e.refunds !== 'number' || e.refunds < 0) return { ok: false, error: 'Refund-uri invalide.' };
+    if (e.refunds > e.sales && e.sales > 0) return { ok: false, error: `Refund-uri (${e.refunds}) > vânzări (${e.sales}).` };
+    if (typeof e.cashVariance !== 'number') return { ok: false, error: 'Cash variance invalid.' };
+    return { ok: true };
+  }
+
+  return {
+    validateEntry,
+
+    save(dateISO, entry) {
+      try {
+        const data = Object.assign({}, entry, {
+          date: dateISO,
+          savedAt: new Date().toISOString().slice(0, 19)
+        });
+        localStorage.setItem(_key(dateISO), JSON.stringify(data));
+        const idx = _getIndex();
+        if (!idx.includes(dateISO)) {
+          idx.push(dateISO);
+          idx.sort().reverse(); // DESC
+          _setIndex(idx);
+        }
+        return { ok: true };
+      } catch(e) {
+        return { ok: false, error: 'Spațiu insuficient. Exportă datele și eliberează spațiu.' };
+      }
+    },
+
+    load(dateISO) {
+      try {
+        const raw = localStorage.getItem(_key(dateISO));
+        return raw ? JSON.parse(raw) : null;
+      } catch(e) { return null; }
+    },
+
+    /* returnează array cu intrările din ultimele N zile calendaristice care au date */
+    loadRange(days) {
+      const result = [];
+      const today = DSF.utils.todayISO();
+      for (let i = 0; i < days; i++) {
+        const d = new Date(today);
+        d.setDate(d.getDate() - i);
+        const iso = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        const entry = this.load(iso);
+        if (entry) result.push(entry);
+      }
+      return result; // DESC (azi primul)
+    },
+
+    /* returnează TOATE intrările, sortate DESC */
+    loadAll() {
+      const idx = _getIndex();
+      const result = [];
+      for (const dateISO of idx) {
+        const e = this.load(dateISO);
+        if (e) result.push(e);
+      }
+      return result;
+    },
+
+    delete(dateISO) {
+      localStorage.removeItem(_key(dateISO));
+      const idx = _getIndex().filter(d => d !== dateISO);
+      _setIndex(idx);
+    },
+
+    clear() {
+      const idx = _getIndex();
+      idx.forEach(d => localStorage.removeItem(_key(d)));
+      _setIndex([]);
+    },
+
+    getExportData() {
+      return {
+        app: 'Daily Sales Flash',
+        version: '1.0',
+        exportedAt: new Date().toISOString().slice(0, 19),
+        config: DSF.config.get(),
+        entries: this.loadAll()
+      };
+    },
+
+    importData(jsonObj) {
+      if (!jsonObj || typeof jsonObj !== 'object') return { ok: false, error: 'Fișier invalid.' };
+      if (jsonObj.app !== 'Daily Sales Flash') return { ok: false, error: 'Fișierul nu aparține aplicației Daily Sales Flash.' };
+      if (!Array.isArray(jsonObj.entries)) return { ok: false, error: 'Format invalid: câmpul entries lipsește.' };
+
+      for (const e of jsonObj.entries) {
+        const v = validateEntry(e);
+        if (!v.ok) return { ok: false, error: `Intrare invalidă (${e.date || '?'}): ${v.error}` };
+      }
+
+      // import efectiv
+      for (const e of jsonObj.entries) {
+        this.save(e.date, e);
+      }
+      if (jsonObj.config) DSF.config.setAll(jsonObj.config);
+
+      return { ok: true, count: jsonObj.entries.length };
+    }
+  };
+})();
+
+/* ─── M2: DSF.config ──────────────────────────────────────
+   Citire/scriere setări utilizator.
+──────────────────────────────────────────────────────────── */
+DSF.config = (function() {
+  const KEY = 'dsf_config';
+  const VALID_CURRENCIES = ['RON', 'EUR', 'USD', 'GBP'];
+  const VALID_BIZ = ['restaurant', 'retail', 'ecommerce'];
+
+  const DEFAULTS = {
+    name: '',
+    bizType: 'restaurant',
+    target: 0,
+    currency: 'RON',
+    alertThreshold: 80,
+    emailCaptured: false,
+    currencyLocked: false,
+    lastExport: null,
+    onboardingDone: false
+  };
+
+  function _load() {
+    try {
+      const raw = localStorage.getItem(KEY);
+      return raw ? Object.assign({}, DEFAULTS, JSON.parse(raw)) : Object.assign({}, DEFAULTS);
+    } catch(e) { return Object.assign({}, DEFAULTS); }
+  }
+
+  function _save(obj) {
+    localStorage.setItem(KEY, JSON.stringify(obj));
+  }
+
+  return {
+    DEFAULTS,
+
+    get() { return _load(); },
+
+    set(key, value) {
+      const cfg = _load();
+      if (key === 'target') { value = Math.max(0, DSF.utils.parseNum(String(value))); }
+      if (key === 'alertThreshold') { value = Math.min(100, Math.max(0, Number(value))); }
+      if (key === 'currency' && !VALID_CURRENCIES.includes(value)) return;
+      if (key === 'bizType' && !VALID_BIZ.includes(value)) return;
+      cfg[key] = value;
+      _save(cfg);
+    },
+
+    setAll(obj) {
+      const cfg = _load();
+      Object.keys(obj).forEach(k => {
+        if (k in DEFAULTS) cfg[k] = obj[k];
+      });
+      _save(cfg);
+    },
+
+    reset() {
+      localStorage.removeItem(KEY);
+    }
+  };
+})();
+
+/* ─── M3: DSF.score ───────────────────────────────────────
+   Calcul Day Score — funcții pure, fără efecte secundare.
+──────────────────────────────────────────────────────────── */
+DSF.score = (function() {
+
+  function calcTarget(actual, target) {
+    if (!target || target <= 0) return null;
+    if (actual >= target) return Math.min(100 + (actual - target) / target * 100, 120);
+    return actual / target * 100;
+  }
+
+  function calcCash(cashVariance, sales) {
+    if (cashVariance === null || cashVariance === undefined || sales <= 0) return 100;
+    const pct = Math.abs(cashVariance) / sales * 100;
+    if (pct === 0)    return 100;
+    if (pct <= 0.5)   return 90;
+    if (pct <= 1)     return 70;
+    if (pct <= 2)     return 50;
+    return 20;
+  }
+
+  function calcRefund(refunds, sales) {
+    if (!refunds || refunds === 0 || sales <= 0) return 100;
+    const rate = refunds / sales * 100;
+    if (rate <= 1)  return 95;
+    if (rate <= 3)  return 80;
+    if (rate <= 5)  return 60;
+    if (rate <= 10) return 40;
+    return 20;
+  }
+
+  function calc(entry, target) {
+    const { sales, refunds, cashVariance } = entry;
+    if (sales === 0) return { score: 0, targetScore: 0, cashScore: 0, refundScore: 0, noSales: true };
+
+    const ts = calcTarget(sales, target);
+    const cs = calcCash(cashVariance, sales);
+    const rs = calcRefund(refunds, sales);
+
+    let score;
+    if (ts === null) {
+      score = Math.min(Math.round(cs * 0.5 + rs * 0.5), 110);
+    } else {
+      score = Math.min(Math.round(ts * 0.6 + cs * 0.2 + rs * 0.2), 110);
+    }
+
+    return { score, targetScore: ts, cashScore: cs, refundScore: rs };
+  }
+
+  function getLabel(score) {
+    if (score >= 100) return 'Zi de record';
+    if (score >= 90)  return 'Zi excepțională';
+    if (score >= 75)  return 'Zi bună';
+    if (score >= 50)  return 'Zi acceptabilă';
+    return 'Zi dificilă';
+  }
+
+  function getColor(score) {
+    if (score >= 100) return 'gold';
+    if (score >= 90)  return 'green';
+    if (score >= 75)  return 'green';
+    if (score >= 50)  return 'yellow';
+    return 'red';
+  }
+
+  function isPersonalBest(score, history) {
+    if (!history || history.length === 0) return score >= 100;
+    return history.every(e => (e.score || 0) < score);
+  }
+
+  return { calcTarget, calcCash, calcRefund, calc, getLabel, getColor, isPersonalBest };
+})();
+
+/* ─── M4: DSF.nav ─────────────────────────────────────────
+   Navigare între ecrane + bottom nav activ.
+──────────────────────────────────────────────────────────── */
+DSF.nav = (function() {
+  const SCREENS = ['onboarding', 'dash', 'week', 'history', 'settings'];
+  let _current = 'dash';
+
+  function go(screenId) {
+    SCREENS.forEach(id => {
+      const el = document.getElementById('screen-' + id);
+      if (el) el.classList.toggle('active', id === screenId);
+    });
+    // bottom nav activ (onboarding nu are nav button)
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.screen === screenId);
+    });
+    _current = screenId;
+
+    // randează ecranul la navigare
+    if (screenId === 'dash')     DSF.dash    && DSF.dash.render();
+    if (screenId === 'week')     DSF.week    && DSF.week.render();
+    if (screenId === 'history')  DSF.history && DSF.history.render(7);
+    if (screenId === 'settings') DSF.settings && DSF.settings.render();
+  }
+
+  function current() { return _current; }
+
+  // Wire nav buttons
+  document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('.nav-btn').forEach(btn => {
+      btn.addEventListener('click', () => go(btn.dataset.screen));
+    });
+  });
+
+  return { go, current, SCREENS };
+})();
+
+/* ─── M5: DSF.onboard ─────────────────────────────────────
+   Flow prima lansare.
+──────────────────────────────────────────────────────────── */
+DSF.onboard = (function() {
+
+  function show() {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('screen-onboarding').classList.add('active');
+    document.getElementById('nav-bottom').style.display = 'none';
+  }
+
+  function _validate() {
+    const name = document.getElementById('ob-name').value.trim();
+    const targetStr = document.getElementById('ob-target').value.trim();
+    const target = DSF.utils.parseNum(targetStr);
+    let ok = true;
+
+    const nameErr = document.getElementById('ob-name-err');
+    const targetErr = document.getElementById('ob-target-err');
+    nameErr.classList.remove('show');
+    targetErr.classList.remove('show');
+
+    if (!name) { nameErr.classList.add('show'); ok = false; }
+    if (target <= 0) { targetErr.classList.add('show'); ok = false; }
+    return ok;
+  }
+
+  function init() {
+    document.getElementById('ob-submit').addEventListener('click', () => {
+      if (!_validate()) return;
+      DSF.config.setAll({
+        name:            document.getElementById('ob-name').value.trim(),
+        target:          DSF.utils.parseNum(document.getElementById('ob-target').value),
+        currency:        document.getElementById('ob-currency').value,
+        bizType:         document.getElementById('ob-biz').value,
+        onboardingDone:  true,
+        currencyLocked:  false
+      });
+      document.getElementById('nav-bottom').style.display = '';
+      DSF.nav.go('dash');
+    });
+  }
+
+  return { show, init };
+})();
+
+/* ─── M6: DSF.form ────────────────────────────────────────
+   Formular intrare zilnică — validare, live score, salvare.
+──────────────────────────────────────────────────────────── */
+DSF.form = (function() {
+  let _selectedDay = 'today'; // 'today' | 'yesterday'
+  let _isSubmitting = false;
+  const overlay = () => document.getElementById('modal-input');
+
+  function _getDateISO() {
+    return _selectedDay === 'today' ? DSF.utils.todayISO() : DSF.utils.yesterdayISO();
+  }
+
+  function open() {
+    const dateISO = _getDateISO();
+    const existing = DSF.storage.load(dateISO);
+    _isSubmitting = false;
+
+    // eticheta buton + titlu
+    const isEdit = !!existing;
+    document.getElementById('btn-save-day').textContent = isEdit ? 'Actualizează ziua' : 'Salvează ziua';
+    document.getElementById('modal-input-title').textContent = isEdit
+      ? `Editezi: ${DSF.utils.toDisplay(dateISO)}`
+      : `Adaugă ziua — ${DSF.utils.toDisplay(dateISO)}`;
+
+    // moneda curentă
+    document.getElementById('f-currency-label').textContent = `(${DSF.config.get().currency})`;
+
+    // precompletare dacă există date
+    document.getElementById('f-sales').value   = existing ? existing.sales   : '';
+    document.getElementById('f-orders').value  = existing ? existing.orders  : '';
+    document.getElementById('f-refunds').value = existing && existing.refunds  ? existing.refunds  : '';
+    document.getElementById('f-cash').value    = existing && existing.cashVariance !== 0 ? existing.cashVariance : '';
+
+    // resetare erori
+    ['f-sales-err', 'f-refunds-err'].forEach(id => {
+      document.getElementById(id).classList.remove('show');
+    });
+    ['f-sales', 'f-refunds'].forEach(id => {
+      document.getElementById(id).classList.remove('error');
+    });
+
+    _calcLive();
+    overlay().classList.add('open');
+    setTimeout(() => document.getElementById('f-sales').focus(), 100);
+  }
+
+  function close() {
+    overlay().classList.remove('open');
+  }
+
+  function validate() {
+    const sales   = DSF.utils.parseNum(document.getElementById('f-sales').value);
+    const refunds = DSF.utils.parseNum(document.getElementById('f-refunds').value);
+    let ok = true;
+
+    document.getElementById('f-sales-err').classList.remove('show');
+    document.getElementById('f-refunds-err').classList.remove('show');
+    document.getElementById('f-sales').classList.remove('error');
+    document.getElementById('f-refunds').classList.remove('error');
+
+    if (isNaN(sales) || sales < 0) {
+      document.getElementById('f-sales-err').classList.add('show');
+      document.getElementById('f-sales').classList.add('error');
+      ok = false;
+    }
+    if (refunds > sales && sales > 0) {
+      document.getElementById('f-refunds-err').classList.add('show');
+      document.getElementById('f-refunds').classList.add('error');
+      ok = false;
+    }
+    return ok;
+  }
+
+  function _calcLive() {
+    const sales        = DSF.utils.parseNum(document.getElementById('f-sales').value);
+    const refunds      = DSF.utils.parseNum(document.getElementById('f-refunds').value);
+    const cashVariance = DSF.utils.parseNum(document.getElementById('f-cash').value);
+    const cfg          = DSF.config.get();
+
+    const el    = document.getElementById('live-score-value');
+    const entry = { sales, refunds, cashVariance, orders: 0 };
+    const res   = DSF.score.calc(entry, cfg.target);
+
+    el.textContent = sales > 0 ? res.score : '—';
+    el.className   = sales > 0 ? `score-${DSF.score.getColor(res.score)}` : 'score-red';
+  }
+
+  function _save() {
+    if (_isSubmitting) return;
+    if (!validate()) return;
+    _isSubmitting = true;
+
+    const dateISO      = _getDateISO();
+    const sales        = DSF.utils.parseNum(document.getElementById('f-sales').value);
+    const orders       = Math.round(DSF.utils.parseNum(document.getElementById('f-orders').value));
+    const refunds      = DSF.utils.parseNum(document.getElementById('f-refunds').value);
+    const cashVariance = DSF.utils.parseNum(document.getElementById('f-cash').value);
+    const cfg          = DSF.config.get();
+    const result       = DSF.score.calc({ sales, orders, refunds, cashVariance }, cfg.target);
+    const history      = DSF.storage.loadAll();
+
+    const entry = { sales, orders, refunds, cashVariance, score: result.score };
+    const saveRes = DSF.storage.save(dateISO, entry);
+
+    if (!saveRes.ok) {
+      DSF.anim.toast(saveRes.error);
+      _isSubmitting = false;
+      return;
+    }
+
+    // lock monedă după prima salvare
+    if (!cfg.currencyLocked) DSF.config.set('currencyLocked', true);
+
+    close();
+    DSF.anim.revealScore(result, dateISO, DSF.score.isPersonalBest(result.score, history));
+    DSF.email.maybeShow();
+  }
+
+  function init() {
+    // toggle azi/ieri
+    document.getElementById('dtb-today').addEventListener('click', () => {
+      _selectedDay = 'today';
+      document.getElementById('dtb-today').classList.add('active');
+      document.getElementById('dtb-yesterday').classList.remove('active');
+      const dateISO = DSF.utils.todayISO();
+      const existing = DSF.storage.load(dateISO);
+      document.getElementById('modal-input-title').textContent = existing
+        ? `Editezi: ${DSF.utils.toDisplay(dateISO)}`
+        : `Adaugă ziua — ${DSF.utils.toDisplay(dateISO)}`;
+    });
+    document.getElementById('dtb-yesterday').addEventListener('click', () => {
+      _selectedDay = 'yesterday';
+      document.getElementById('dtb-yesterday').classList.add('active');
+      document.getElementById('dtb-today').classList.remove('active');
+      const dateISO = DSF.utils.yesterdayISO();
+      const existing = DSF.storage.load(dateISO);
+      document.getElementById('modal-input-title').textContent = existing
+        ? `Editezi: ${DSF.utils.toDisplay(dateISO)}`
+        : `Adaugă ziua — ${DSF.utils.toDisplay(dateISO)}`;
+    });
+
+    // calcul live la fiecare keystroke
+    ['f-sales','f-orders','f-refunds','f-cash'].forEach(id => {
+      document.getElementById(id).addEventListener('input', _calcLive);
+    });
+
+    document.getElementById('btn-save-day').addEventListener('click', _save);
+    document.getElementById('modal-input-close').addEventListener('click', close);
+    document.getElementById('btn-add-day').addEventListener('click', open);
+
+    // status action (editează)
+    document.getElementById('status-action').addEventListener('click', open);
+
+    // închide la click pe overlay (nu pe sheet)
+    overlay().addEventListener('click', (e) => {
+      if (e.target === overlay()) close();
+    });
+  }
+
+  return { open, close, init };
+})();
+
+/* ─── M7: DSF.dash ────────────────────────────────────────
+   Randează ecranul Dashboard (Azi).
+──────────────────────────────────────────────────────────── */
+DSF.dash = (function() {
+
+  function _greeting() {
+    const h = new Date().getHours();
+    if (h < 12) return 'Bună dimineața';
+    if (h < 18) return 'Bună ziua';
+    return 'Bună seara';
+  }
+
+  function renderScore(entry) {
+    const cfg    = DSF.config.get();
+    const result = DSF.score.calc(entry, cfg.target);
+    const color  = DSF.score.getColor(result.score);
+    const label  = result.noSales ? 'Zi fără activitate înregistrată' : DSF.score.getLabel(result.score);
+
+    document.getElementById('score-number').textContent = result.noSales ? '0' : result.score;
+    document.getElementById('score-number').className   = `score-${color}`;
+    document.getElementById('score-label').textContent  = label;
+    document.getElementById('score-label').className    = `score-${color}`;
+    document.getElementById('score-date').textContent   = DSF.utils.toDisplay(entry.date);
+  }
+
+  function renderCards(entry) {
+    const cfg = DSF.config.get();
+    const cur = cfg.currency;
+
+    // TARGET card
+    const targetCard = document.getElementById('card-target');
+    if (cfg.target > 0) {
+      const pct = Math.round(entry.sales / cfg.target * 100);
+      const diff = entry.sales - cfg.target;
+      const color = pct >= 100 ? 'green' : pct >= cfg.alertThreshold ? 'yellow' : 'red';
+      targetCard.className = `metric-card ${color}`;
+      targetCard.querySelector('.metric-val').textContent = `${pct}%`;
+      targetCard.querySelector('.metric-sub').textContent = (diff >= 0 ? '+' : '') +
+        DSF.utils.fmtNum(diff, cur) + ' față de target';
+    } else {
+      targetCard.className = 'metric-card';
+      targetCard.querySelector('.metric-val').textContent = '—';
+      targetCard.querySelector('.metric-sub').textContent = 'Target nesetat';
+    }
+
+    // AOV card
+    const aovCard = document.getElementById('card-aov');
+    const aov = entry.orders > 0 ? (entry.sales - entry.refunds) / entry.orders : null;
+    aovCard.querySelector('.metric-val').textContent = aov !== null ? DSF.utils.fmtNum(aov, cur) : '—';
+    aovCard.querySelector('.metric-sub').textContent = entry.orders > 0 ? `${entry.orders} bonuri` : 'fără bonuri';
+
+    // REFUND card
+    const refCard = document.getElementById('card-refund');
+    const refRate = entry.sales > 0 ? entry.refunds / entry.sales * 100 : 0;
+    const refColor = refRate === 0 ? 'green' : refRate <= 3 ? 'yellow' : 'red';
+    refCard.className = `metric-card ${refColor}`;
+    refCard.querySelector('.metric-val').textContent = entry.sales > 0 ? `${refRate.toFixed(1)}%` : '—';
+    refCard.querySelector('.metric-sub').textContent = entry.refunds > 0 ? DSF.utils.fmtNum(entry.refunds, cur) : 'fără refund-uri';
+
+    // CASH VARIANCE card
+    const cashCard = document.getElementById('card-cash');
+    const cv = entry.cashVariance;
+    const cvPct = entry.sales > 0 ? Math.abs(cv) / entry.sales * 100 : 0;
+    const cvColor = cv === 0 ? 'green' : cvPct <= 1 ? 'yellow' : 'red';
+    cashCard.className = `metric-card ${cvColor}`;
+    cashCard.querySelector('.metric-val').textContent = cv !== 0
+      ? (cv > 0 ? '+' : '') + DSF.utils.fmtNum(cv, cur)
+      : '0 ' + cur;
+    cashCard.querySelector('.metric-sub').textContent = cv === 0 ? 'casă perfectă' : cvPct.toFixed(2) + '% din vânzări';
+  }
+
+  function renderStreak() {
+    const cfg     = DSF.config.get();
+    const all     = DSF.storage.loadAll(); // DESC
+    const badgeRow = document.getElementById('badge-row');
+    badgeRow.innerHTML = '';
+
+    // streak
+    let streak = 0;
+    let prevDate = null;
+    for (const e of all) {
+      if (prevDate !== null) {
+        const diff = DSF.utils.daysBetween(e.date, prevDate);
+        if (diff > 1) break; // zi lipsă — streak rupt
+      }
+      if ((e.score || 0) >= cfg.alertThreshold) {
+        streak++;
+        prevDate = e.date;
+      } else { break; }
+    }
+    if (streak >= 2) {
+      const b = document.createElement('div');
+      b.className = 'badge streak';
+      b.textContent = `🔥 ${streak} zile consecutive la target`;
+      badgeRow.appendChild(b);
+    }
+
+    // record personal
+    if (all.length > 0) {
+      const best = all.reduce((a, b) => (b.score || 0) > (a.score || 0) ? b : a);
+      const b = document.createElement('div');
+      b.className = 'badge record';
+      b.textContent = `🏆 Record: ${DSF.utils.toDisplay(best.date)} — ${DSF.utils.fmtNum(best.sales)}`;
+      badgeRow.appendChild(b);
+    }
+  }
+
+  function renderSparkline() {
+    const wrap    = document.getElementById('sparkline-svg');
+    const today   = DSF.utils.todayISO();
+    wrap.innerHTML = '';
+
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const iso = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      const entry = DSF.storage.load(iso);
+
+      const dot = document.createElement('div');
+      dot.className = 'spark-dot';
+      dot.title = DSF.utils.toDisplay(iso);
+
+      if (entry) {
+        const score  = entry.score || 0;
+        const color  = DSF.score.getColor(score);
+        const height = Math.max(6, Math.round(score / 110 * 40));
+        dot.classList.add(color);
+        dot.style.height = height + 'px';
+        dot.title += ` — Scor ${score}`;
+      } else {
+        dot.classList.add('empty');
+      }
+      wrap.appendChild(dot);
+    }
+  }
+
+  function renderMonthSummary() {
+    const today = new Date();
+    if (today.getDate() !== 1) {
+      document.getElementById('month-summary').style.display = 'none';
+      return;
+    }
+    const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+    const lmYear  = lastMonth.getFullYear();
+    const lmMonth = lastMonth.getMonth() + 1;
+    const prefix  = `${lmYear}-${String(lmMonth).padStart(2,'0')}-`;
+    const all     = DSF.storage.loadAll().filter(e => e.date.startsWith(prefix));
+
+    if (all.length < 20) {
+      document.getElementById('month-summary').style.display = 'none';
+      return;
+    }
+    const months = ['Ianuarie','Februarie','Martie','Aprilie','Mai','Iunie',
+                    'Iulie','August','Septembrie','Octombrie','Noiembrie','Decembrie'];
+    const cfg    = DSF.config.get();
+    const total  = all.reduce((s, e) => s + e.sales, 0);
+    const avg    = Math.round(total / all.length);
+    const atTarget = all.filter(e => (e.score || 0) >= cfg.alertThreshold).length;
+
+    document.getElementById('ms-title').textContent = `Luna ${months[lmMonth-1]} ${lmYear}`;
+    document.getElementById('ms-stats').innerHTML = `
+      <div class="ms-stat">Total<span>${DSF.utils.fmtNum(total)}</span></div>
+      <div class="ms-stat">Medie/zi<span>${DSF.utils.fmtNum(avg)}</span></div>
+      <div class="ms-stat">Zile ✓<span>${atTarget}/${all.length}</span></div>
+    `;
+    document.getElementById('month-summary').style.display = 'block';
+  }
+
+  function render() {
+    const cfg     = DSF.config.get();
+    const todayISO = DSF.utils.todayISO();
+    const entry   = DSF.storage.load(todayISO);
+
+    // greeting
+    const gr = document.getElementById('greeting-name');
+    gr.textContent = `${_greeting()}, ${cfg.name || 'bine ai venit'}!`;
+    document.getElementById('greeting-date').textContent = DSF.utils.toDisplayFull(todayISO);
+
+    // status bar
+    const sb     = document.getElementById('status-bar');
+    const stText = document.getElementById('status-text');
+    const stAct  = document.getElementById('status-action');
+    if (entry) {
+      sb.className    = 'ok';
+      stText.textContent = `Date introduse ✓ — ${DSF.utils.toDisplay(todayISO)}`;
+      stAct.textContent  = 'Editează';
+    } else {
+      sb.className    = 'missing';
+      stText.textContent = 'Date lipsă pentru azi';
+      stAct.textContent  = '';
+    }
+
+    // buton principal
+    document.getElementById('btn-add-day').textContent = entry
+      ? '✏️ Editează ziua de azi'
+      : '+ Adaugă ziua de azi';
+
+    // score + cards (cu ultima intrare sau azi)
+    const displayEntry = entry || DSF.storage.loadRange(30)[0];
+    if (displayEntry) {
+      renderScore(displayEntry);
+      renderCards(displayEntry);
+    } else {
+      document.getElementById('score-number').textContent = '—';
+      document.getElementById('score-label').textContent  = 'Nicio intrare încă';
+      document.getElementById('score-date').textContent   = '';
+    }
+
+    renderStreak();
+    renderSparkline();
+    renderMonthSummary();
+    document.getElementById('insight-box').textContent = DSF.insights.generate(
+      DSF.storage.loadAll(), cfg
+    );
+    DSF.backup.updateExportIndicator();
+  }
+
+  return { render, renderScore, renderCards, renderStreak, renderSparkline };
+})();
+
+/* ─── M8: DSF.insights ────────────────────────────────────
+   Generează textul micro-insight contextual.
+──────────────────────────────────────────────────────────── */
+DSF.insights = (function() {
+  const DAYS_RO = ['Duminică','Luni','Marți','Miercuri','Joi','Vineri','Sâmbătă'];
+
+  function generate(history, cfg) {
+    if (!history || history.length === 0) {
+      return 'Prima zi înregistrată. Continuă zilnic pentru a vedea tendințe.';
+    }
+    if (history.length < 7) {
+      return `Zi ${history.length} din 7. Tendința săptămânală devine vizibilă după 7 zile.`;
+    }
+
+    // 3+ zile consecutive sub target (prioritate mare)
+    const threshold = cfg.alertThreshold || 80;
+    let belowStreak = 0;
+    for (const e of history) {
+      const pct = cfg.target > 0 ? e.sales / cfg.target * 100 : 100;
+      if (pct < threshold) belowStreak++; else break;
+    }
+    if (belowStreak >= 3) {
+      return `⚠️ ${belowStreak} zile consecutive sub target — moment bun să analizezi cauza.`;
+    }
+
+    if (history.length < 14) {
+      const week = history.slice(0, 7);
+      const avg  = Math.round(week.reduce((s, e) => s + e.sales, 0) / week.length);
+      return `Media săptămânii: ${DSF.utils.fmtNum(avg, cfg.currency)}/zi`;
+    }
+
+    if (history.length < 28) {
+      const w1 = history.slice(0, 7).reduce((s, e) => s + e.sales, 0);
+      const w2 = history.slice(7, 14).reduce((s, e) => s + e.sales, 0);
+      if (w2 > 0) {
+        const diff = Math.round((w1 - w2) / w2 * 100);
+        const sign = diff >= 0 ? '+' : '';
+        return `Față de săptămâna trecută: ${sign}${diff}%`;
+      }
+    }
+
+    // pattern ziua săptămânii (min 4 ocurențe)
+    const byDay = {};
+    history.forEach(e => {
+      const [y, m, d] = e.date.split('-').map(Number);
+      const dow = new Date(y, m - 1, d).getDay();
+      if (!byDay[dow]) byDay[dow] = [];
+      byDay[dow].push(e.sales);
+    });
+    let bestDay = null, bestAvg = 0;
+    Object.entries(byDay).forEach(([dow, vals]) => {
+      if (vals.length >= 4) {
+        const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+        if (avg > bestAvg) { bestAvg = avg; bestDay = Number(dow); }
+      }
+    });
+    if (bestDay !== null) {
+      return `📈 ${DAYS_RO[bestDay]}le sunt în medie cele mai bune zile ale tale.`;
+    }
+
+    // fallback: media lunii
+    const month30 = history.slice(0, 30);
+    const avg30 = Math.round(month30.reduce((s, e) => s + e.sales, 0) / month30.length);
+    return `Media ultimelor 30 de zile: ${DSF.utils.fmtNum(avg30, cfg.currency)}/zi`;
+  }
+
+  return { generate };
+})();
+
+/* ─── M9: DSF.anim ────────────────────────────────────────
+   Animații: card flip, confetti, toast, respiră.
+──────────────────────────────────────────────────────────── */
+DSF.anim = (function() {
+
+  function toast(msg, duration) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), duration || 3000);
+  }
+
+  function pulse(el) {
+    el.style.transition = 'transform 0.15s';
+    el.style.transform  = 'scale(1.05)';
+    setTimeout(() => { el.style.transform = ''; }, 150);
+  }
+
+  function breathe(target) {
+    const msg = `Ziua de mâine e o nouă oportunitate. Target-ul tău: ${DSF.utils.fmtNum(target)}.`;
+    toast(msg, 4000);
+  }
+
+  function confetti() {
+    const canvas = document.getElementById('confetti-canvas');
+    const ctx    = canvas.getContext('2d');
+    canvas.width  = window.innerWidth;
+    canvas.height = window.innerHeight;
+    canvas.style.display = 'block';
+
+    const pieces = Array.from({length: 80}, () => ({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height - canvas.height,
+      r: Math.random() * 6 + 3,
+      d: Math.random() * 80,
+      color: ['#f59e0b','#22c55e','#6366f1','#ef4444','#fff'][Math.floor(Math.random()*5)],
+      tilt: Math.random() * 10 - 10,
+      tiltAngle: 0,
+      tiltAngleInc: Math.random() * 0.07 + 0.05
+    }));
+
+    let angle = 0;
+    let start = null;
+    const DURATION = 1500;
+
+    function draw(ts) {
+      if (!start) start = ts;
+      const elapsed = ts - start;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      angle += 0.01;
+      pieces.forEach(p => {
+        p.tiltAngle += p.tiltAngleInc;
+        p.y += (Math.cos(angle + p.d) + 2) * 2;
+        p.x += Math.sin(angle) * 1.5;
+        p.tilt = Math.sin(p.tiltAngle) * 12;
+        ctx.beginPath();
+        ctx.lineWidth = p.r;
+        ctx.strokeStyle = p.color;
+        ctx.moveTo(p.x + p.tilt + p.r/4, p.y);
+        ctx.lineTo(p.x + p.tilt, p.y + p.tilt + p.r/4);
+        ctx.stroke();
+      });
+      if (elapsed < DURATION) requestAnimationFrame(draw);
+      else { ctx.clearRect(0, 0, canvas.width, canvas.height); canvas.style.display = 'none'; }
+    }
+    requestAnimationFrame(draw);
+  }
+
+  function revealScore(result, dateISO, isPersonalBest) {
+    // rirandează dashboard-ul complet
+    DSF.dash.render();
+
+    // flip animație pe carduri
+    const cardIds = ['card-target','card-aov','card-refund','card-cash'];
+    cardIds.forEach((id, i) => {
+      const el = document.getElementById(id);
+      el.classList.add('flip-hidden');
+      setTimeout(() => el.classList.remove('flip-hidden'), 100 + i * 450);
+    });
+
+    // pulse pe score după carduri
+    setTimeout(() => {
+      pulse(document.getElementById('score-number'));
+    }, 100 + cardIds.length * 450);
+
+    // confetti doar la record personal
+    if (isPersonalBest && result.score >= 100) {
+      setTimeout(confetti, 600);
+    }
+
+    // mesaj "respiră" pe zi dificilă
+    if (result.score < 50) {
+      setTimeout(() => breathe(DSF.config.get().target), 800);
+    }
+  }
+
+  return { toast, pulse, breathe, confetti, revealScore };
+})();
+
+/* ─── M10: DSF.week ───────────────────────────────────────
+   Ecranul Săptămână — grafic bare + tabel + sumar.
+──────────────────────────────────────────────────────────── */
+DSF.week = (function() {
+  let _chart = null;
+
+  function render() {
+    const cfg      = DSF.config.get();
+    const cur      = cfg.currency;
+    const today    = DSF.utils.todayISO();
+    const labels   = [], sales = [], colors = [], entries = [];
+
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const iso = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      const e   = DSF.storage.load(iso);
+      const daysShort = ['Du','Lu','Ma','Mi','Jo','Vi','Sâ'];
+      labels.push(daysShort[d.getDay()]);
+      sales.push(e ? e.sales : 0);
+      colors.push(e ? (e.score >= 100 ? '#f59e0b' : e.score >= 75 ? '#22c55e' : e.score >= 50 ? '#eab308' : '#ef4444') : '#2a2a2a');
+      entries.push(e);
+    }
+
+    const hasData = entries.some(Boolean);
+    if (!hasData) {
+      document.getElementById('week-table-wrap').innerHTML = '<div class="empty-state"><div class="es-icon">📊</div><div class="es-title">Nicio dată această săptămână</div><div class="es-sub">Adaugă prima intrare zilnică pentru a vedea graficul.</div></div>';
+      document.getElementById('week-stats').innerHTML = '';
+      if (_chart) { _chart.destroy(); _chart = null; }
+      return;
+    }
+
+    // Chart.js
+    const ctx = document.getElementById('chart-week').getContext('2d');
+    if (_chart) _chart.destroy();
+    _chart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          data: sales,
+          backgroundColor: colors,
+          borderRadius: 6,
+          borderSkipped: false
+        }, cfg.target > 0 ? {
+          type: 'line',
+          data: Array(7).fill(cfg.target),
+          borderColor: '#6366f1',
+          borderWidth: 2,
+          borderDash: [4, 4],
+          pointRadius: 0,
+          fill: false
+        } : null].filter(Boolean)
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: {
+          callbacks: { label: (ctx) => DSF.utils.fmtNum(ctx.raw, cur) }
+        }},
+        scales: {
+          x: { ticks: { color: '#888' }, grid: { color: '#2a2a2a' } },
+          y: { ticks: { color: '#888', callback: v => DSF.utils.fmtNum(v, cur) }, grid: { color: '#2a2a2a' } }
+        }
+      }
+    });
+
+    // Sumar săptămână
+    const validEntries = entries.filter(Boolean);
+    const total  = validEntries.reduce((s, e) => s + e.sales, 0);
+    const avg    = validEntries.length ? Math.round(total / validEntries.length) : 0;
+    const atTgt  = validEntries.filter(e => cfg.target > 0 && e.sales >= cfg.target * cfg.alertThreshold / 100).length;
+    document.getElementById('week-stats').innerHTML = `
+      <div class="ws-stat">Total<span>${DSF.utils.fmtNum(total, cur)}</span></div>
+      <div class="ws-stat">Medie/zi<span>${DSF.utils.fmtNum(avg, cur)}</span></div>
+      <div class="ws-stat">La target<span>${atTgt}/${validEntries.length}</span></div>
+    `;
+
+    // Tabel
+    const rows = entries.map((e, i) => {
+      if (!e) return `<tr><td>${labels[i]}</td><td class="text-muted">—</td><td>—</td><td>—</td></tr>`;
+      const color = DSF.score.getColor(e.score || 0);
+      return `<tr>
+        <td>${labels[i]} <span class="text-muted" style="font-size:11px">${DSF.utils.toDisplay(e.date)}</span></td>
+        <td>${DSF.utils.fmtNum(e.sales, cur)}</td>
+        <td><span class="score-pill ${color}">${e.score || 0}</span></td>
+      </tr>`;
+    }).join('');
+    document.getElementById('week-table-wrap').innerHTML = `
+      <table class="data-table"><thead><tr><th>Zi</th><th>Vânzări</th><th>Score</th></tr></thead>
+      <tbody>${rows}</tbody></table>`;
+  }
+
+  return { render };
+})();
+
+/* ─── M11: DSF.history ────────────────────────────────────
+   Ecranul Istoric — grafic linie + tabel cu filtru.
+──────────────────────────────────────────────────────────── */
+DSF.history = (function() {
+  let _chart = null;
+  let _days  = 7;
+
+  function render(days) {
+    if (days) _days = days;
+    const cfg  = DSF.config.get();
+    const cur  = cfg.currency;
+    const data = DSF.storage.loadRange(_days).reverse(); // ASC pentru grafic
+
+    // butoane filtru
+    document.querySelectorAll('.filter-tab').forEach(btn => {
+      btn.classList.toggle('active', Number(btn.dataset.days) === _days);
+    });
+
+    if (data.length === 0) {
+      document.getElementById('history-table-wrap').innerHTML = '<div class="empty-state"><div class="es-icon">📈</div><div class="es-title">Nicio dată înregistrată</div><div class="es-sub">Adaugă prima intrare zilnică pentru a vedea istoricul.</div></div>';
+      if (_chart) { _chart.destroy(); _chart = null; }
+      return;
+    }
+
+    // Chart.js line
+    const ctx = document.getElementById('chart-history').getContext('2d');
+    if (_chart) _chart.destroy();
+    _chart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: data.map(e => DSF.utils.toDisplay(e.date)),
+        datasets: [{
+          data: data.map(e => e.score || 0),
+          borderColor: '#6366f1',
+          backgroundColor: 'rgba(99,102,241,0.1)',
+          borderWidth: 2,
+          pointRadius: 4,
+          pointBackgroundColor: data.map(e => {
+            const c = DSF.score.getColor(e.score || 0);
+            return c === 'gold' ? '#f59e0b' : c === 'green' ? '#22c55e' : c === 'yellow' ? '#eab308' : '#ef4444';
+          }),
+          tension: 0.3,
+          fill: true
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: {
+          callbacks: { label: (ctx) => `Scor: ${ctx.raw} — ${DSF.score.getLabel(ctx.raw)}` }
+        }},
+        scales: {
+          x: { ticks: { color: '#888', maxRotation: 45 }, grid: { color: '#2a2a2a' } },
+          y: { min: 0, max: 110, ticks: { color: '#888' }, grid: { color: '#2a2a2a' } }
+        }
+      }
+    });
+
+    // Tabel DESC
+    const reversed = [...data].reverse();
+    const rows = reversed.map(e => {
+      const color = DSF.score.getColor(e.score || 0);
+      const aov   = e.orders > 0 ? DSF.utils.fmtNum((e.sales - e.refunds) / e.orders, cur) : '—';
+      return `<tr>
+        <td>${DSF.utils.toDisplay(e.date)}</td>
+        <td>${DSF.utils.fmtNum(e.sales, cur)}</td>
+        <td>${aov}</td>
+        <td><span class="score-pill ${color}">${e.score || 0}</span></td>
+      </tr>`;
+    }).join('');
+    document.getElementById('history-table-wrap').innerHTML = `
+      <table class="data-table">
+        <thead><tr><th>Data</th><th>Vânzări</th><th>AOV</th><th>Score</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+  }
+
+  function init() {
+    document.querySelectorAll('.filter-tab').forEach(btn => {
+      btn.addEventListener('click', () => render(Number(btn.dataset.days)));
+    });
+  }
+
+  return { render, init };
+})();
+
+/* ─── M12: DSF.backup ─────────────────────────────────────
+   Export/import JSON + indicator export în header.
+──────────────────────────────────────────────────────────── */
+DSF.backup = (function() {
+
+  function getExportAge() {
+    const last = DSF.config.get().lastExport;
+    if (!last) return null;
+    return DSF.utils.daysBetween(last.slice(0, 10), DSF.utils.todayISO());
+  }
+
+  function updateExportIndicator() {
+    const age  = getExportAge();
+    const el   = document.getElementById('export-badge');
+    if (age === null) {
+      el.textContent = 'Export: niciodată';
+      el.className   = 'alert';
+    } else if (age === 0) {
+      el.textContent = 'Export: azi';
+      el.className   = '';
+    } else if (age <= 7) {
+      el.textContent = `Export: acum ${age}z`;
+      el.className   = '';
+    } else if (age <= 14) {
+      el.textContent = `Export: ${age}z`;
+      el.className   = 'warn';
+    } else {
+      el.textContent = `Export: ${age}z ⚠️`;
+      el.className   = 'alert';
+    }
+  }
+
+  function exportData() {
+    const data = DSF.storage.getExportData();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    const date = DSF.utils.toDisplay(DSF.utils.todayISO()).replace(/\//g, '-');
+    a.href     = url;
+    a.download = `daily-sales-flash-${date}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    DSF.config.set('lastExport', new Date().toISOString());
+    updateExportIndicator();
+    DSF.anim.toast('Date exportate cu succes! ✓');
+  }
+
+  function importFile(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const json = JSON.parse(ev.target.result);
+        const res  = DSF.storage.importData(json);
+        if (res.ok) {
+          DSF.anim.toast(`Import reușit: ${res.count} intrări restaurate. ✓`);
+          DSF.nav.go('dash');
+        } else {
+          DSF.anim.toast(`Import eșuat: ${res.error}`, 5000);
+        }
+      } catch(e) {
+        DSF.anim.toast('Fișier JSON invalid sau corupt.', 5000);
+      }
+    };
+    reader.readAsText(file);
+  }
+
+  function init() {
+    document.getElementById('btn-export').addEventListener('click', exportData);
+    document.getElementById('inp-import').addEventListener('change', (e) => {
+      importFile(e.target.files[0]);
+      e.target.value = '';
+    });
+  }
+
+  return { exportData, importFile, getExportAge, updateExportIndicator, init };
+})();
+
+/* ─── M13: DSF.email ──────────────────────────────────────
+   Captare email după prima intrare — Formspree.
+──────────────────────────────────────────────────────────── */
+DSF.email = (function() {
+  const FORMSPREE_ID = 'YOUR_FORM_ID'; // înlocuiește cu ID-ul tău Formspree
+  const overlay = () => document.getElementById('modal-email');
+
+  function maybeShow() {
+    const cfg = DSF.config.get();
+    if (cfg.emailCaptured) return;
+    const all = DSF.storage.loadAll();
+    if (all.length !== 1) return; // doar după prima intrare
+    setTimeout(() => show(), 1500);
+  }
+
+  function show() {
+    const cfg = DSF.config.get();
+    const bizLabels = { restaurant: 'restaurantul', retail: 'magazinul', ecommerce: 'shop-ul' };
+    document.getElementById('email-modal-sub').textContent =
+      `Primești săptămânal un tip de management pentru ${bizLabels[cfg.bizType] || 'businessul'} tău.`;
+    overlay().classList.add('open');
+  }
+
+  function dismiss() {
+    DSF.config.set('emailCaptured', true);
+    overlay().classList.remove('open');
+  }
+
+  function submit() {
+    const emailEl = document.getElementById('email-input');
+    const email   = emailEl.value.trim();
+    const errEl   = document.getElementById('email-err');
+    errEl.classList.remove('show');
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      errEl.classList.add('show');
+      return;
+    }
+
+    const cfg = DSF.config.get();
+    DSF.config.set('emailCaptured', true);
+    overlay().classList.remove('open');
+    DSF.anim.toast('Mulțumim! Vei primi tips-urile săptămânal. ✓');
+
+    // trimitere Formspree (silențios dacă offline)
+    if (FORMSPREE_ID !== 'YOUR_FORM_ID') {
+      fetch(`https://formspree.io/f/${FORMSPREE_ID}`, {
+        method: 'POST',
+        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, name: cfg.name, bizType: cfg.bizType, _subject: 'Daily Sales Flash — Lead' }),
+        signal: AbortSignal.timeout(5000)
+      }).catch(() => {}); // eșec silențios
+    }
+  }
+
+  function init() {
+    document.getElementById('btn-email-submit').addEventListener('click', submit);
+    document.getElementById('btn-email-dismiss').addEventListener('click', dismiss);
+    overlay().addEventListener('click', (e) => { if (e.target === overlay()) dismiss(); });
+  }
+
+  return { maybeShow, show, submit, dismiss, init };
+})();
+
+/* ─── M14: DSF.share ──────────────────────────────────────
+   Web Share API + copiere clipboard.
+──────────────────────────────────────────────────────────── */
+DSF.share = (function() {
+  const LANDING_URL = 'YOUR_LANDING_URL'; // înlocuiește cu URL-ul landing page-ului
+
+  function shareApp() {
+    const shareData = {
+      title: 'Daily Sales Flash ⚡',
+      text: 'Știi cum a fost ziua ta în 60 de secunde — fără cont, fără internet.',
+      url: LANDING_URL !== 'YOUR_LANDING_URL' ? LANDING_URL : window.location.href
+    };
+    if (navigator.share) {
+      navigator.share(shareData).catch(() => {});
+    } else {
+      const url = shareData.url;
+      navigator.clipboard.writeText(url)
+        .then(() => DSF.anim.toast('Link copiat în clipboard! ✓'))
+        .catch(() => DSF.anim.toast('Copiază manual: ' + url, 5000));
+    }
+  }
+
+  function copyDaySummary() {
+    const todayISO = DSF.utils.todayISO();
+    const entry    = DSF.storage.load(todayISO) || DSF.storage.loadRange(30)[0];
+    if (!entry) { DSF.anim.toast('Nicio intrare de copiat.'); return; }
+
+    const cfg    = DSF.config.get();
+    const score  = entry.score || 0;
+    const label  = DSF.score.getLabel(score);
+    const atTgt  = cfg.target > 0
+      ? (entry.sales >= cfg.target ? '✓ Target depășit' : `✗ Sub target cu ${Math.round((1 - entry.sales/cfg.target)*100)}%`)
+      : '';
+    const text = [
+      'Daily Sales Flash ⚡',
+      `${DSF.utils.toDisplay(entry.date)}: ${DSF.utils.fmtNum(entry.sales, cfg.currency)}`,
+      `Score ${score}/100 — ${label}`,
+      atTgt,
+      LANDING_URL !== 'YOUR_LANDING_URL' ? LANDING_URL : ''
+    ].filter(Boolean).join('\n');
+
+    navigator.clipboard.writeText(text)
+      .then(() => DSF.anim.toast('Rezumat copiat! ✓'))
+      .catch(() => DSF.anim.toast('Nu s-a putut copia.', 3000));
+  }
+
+  function init() {
+    document.getElementById('btn-share-app').addEventListener('click', shareApp);
+    document.getElementById('btn-copy-summary').addEventListener('click', copyDaySummary);
+  }
+
+  return { shareApp, copyDaySummary, init };
+})();
+
+/* ─── M15: DSF.demo ───────────────────────────────────────
+   Mod demo — date în memorie, zero scrieri în localStorage.
+──────────────────────────────────────────────────────────── */
+DSF.demo = (function() {
+  let _active = false;
+  let _data   = {};
+
+  function isActive() { return _active; }
+
+  function _buildDemoData() {
+    const today  = DSF.utils.todayISO();
+    const scores = [92,74,48,85,101,67,88,95,53,79,104,82,71,90];
+    const sales  = [3200,2600,1700,2950,3450,2300,3050,3300,1900,2750,3600,2850,2500,3150];
+    const refunds= [0,50,200,0,0,100,0,0,300,50,0,0,150,0];
+    const cash   = [0,0,-80,15,0,-30,0,20,-100,0,30,0,0,-15];
+    const orders = [42,35,22,38,46,30,40,44,25,36,48,37,32,41];
+    const result = {};
+
+    scores.forEach((score, i) => {
+      const d = new Date(today);
+      d.setDate(d.getDate() - (13 - i));
+      const iso = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+      result[iso] = { date: iso, sales: sales[i], orders: orders[i], refunds: refunds[i], cashVariance: cash[i], score, savedAt: iso + 'T20:00:00' };
+    });
+    return result;
+  }
+
+  function init() {
+    _active = true;
+    _data   = _buildDemoData();
+
+    // patch storage pentru a citi din memorie
+    const orig = DSF.storage;
+    DSF.storage.load      = (iso) => _data[iso] || null;
+    DSF.storage.loadAll   = () => Object.values(_data).sort((a,b) => b.date.localeCompare(a.date));
+    DSF.storage.loadRange = (days) => {
+      const today = DSF.utils.todayISO();
+      const res = [];
+      for (let i = 0; i < days; i++) {
+        const d = new Date(today);
+        d.setDate(d.getDate() - i);
+        const iso = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        if (_data[iso]) res.push(_data[iso]);
+      }
+      return res;
+    };
+    DSF.storage.save   = () => ({ ok: true });
+    DSF.storage.delete = () => {};
+    DSF.storage.clear  = () => {};
+
+    document.getElementById('demo-banner').classList.add('show');
+  }
+
+  return { isActive, init };
+})();
+
+/* ─── M16: DSF.settings ───────────────────────────────────
+   Ecranul Setări — UI + salvare.
+──────────────────────────────────────────────────────────── */
+DSF.settings = (function() {
+
+  function render() {
+    const cfg = DSF.config.get();
+    document.getElementById('s-name').value      = cfg.name || '';
+    document.getElementById('s-target').value    = cfg.target || '';
+    document.getElementById('s-threshold').value = cfg.alertThreshold || 80;
+    document.getElementById('s-biz').value       = cfg.bizType || 'restaurant';
+
+    const selCur = document.getElementById('s-currency');
+    selCur.value = cfg.currency;
+
+    // avertisment schimbare monedă
+    selCur.onchange = () => {
+      const warn = document.getElementById('s-currency-warn');
+      if (selCur.value !== cfg.currency && DSF.storage.loadAll().length > 0) {
+        document.getElementById('s-currency-old').textContent = cfg.currency;
+        warn.style.display = 'block';
+      } else {
+        warn.style.display = 'none';
+      }
+    };
+  }
+
+  function save() {
+    const name      = document.getElementById('s-name').value.trim();
+    const targetVal = DSF.utils.parseNum(document.getElementById('s-target').value);
+    const threshold = Number(document.getElementById('s-threshold').value) || 80;
+    const currency  = document.getElementById('s-currency').value;
+    const bizType   = document.getElementById('s-biz').value;
+
+    if (!name) { DSF.anim.toast('Introdu prenumele.'); return; }
+    if (targetVal < 0) { DSF.anim.toast('Target invalid.'); return; }
+
+    DSF.config.setAll({ name, target: targetVal, alertThreshold: threshold, currency, bizType });
+    DSF.anim.toast('Setări salvate. ✓');
+    document.getElementById('s-currency-warn').style.display = 'none';
+  }
+
+  function reset() {
+    const first = confirm('Ești sigur că vrei să ștergi TOATE datele?\nAceastă acțiune nu poate fi anulată.');
+    if (!first) return;
+    const second = confirm('Confirmare finală: toate intrările zilnice și setările vor fi șterse.');
+    if (!second) return;
+    DSF.storage.clear();
+    DSF.config.reset();
+    DSF.anim.toast('Toate datele au fost șterse.');
+    setTimeout(() => location.reload(), 1000);
+  }
+
+  function init() {
+    document.getElementById('btn-save-settings').addEventListener('click', save);
+    document.getElementById('btn-reset').addEventListener('click', reset);
+  }
+
+  return { render, save, init };
+})();
+
+/* ═══════════════════════════════════════════════════════════
+   INIT — secvența de boot
+═══════════════════════════════════════════════════════════ */
+(function init() {
+  // inițializare module
+  DSF.onboard.init();
+  DSF.form.init();
+  DSF.history.init();
+  DSF.backup.init();
+  DSF.email.init();
+  DSF.share.init();
+  DSF.settings.init();
+
+  // demo mode
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('demo') === 'true') {
+    DSF.demo.init();
+    DSF.config.setAll({
+      name: 'Demo', target: 3000, currency: 'RON',
+      bizType: 'restaurant', onboardingDone: true, alertThreshold: 80
+    });
+  }
+
+  const cfg = DSF.config.get();
+  if (!cfg.onboardingDone) {
+    DSF.onboard.show();
+  } else {
+    document.getElementById('nav-bottom').style.display = '';
+    DSF.nav.go('dash');
+    DSF.backup.updateExportIndicator();
+  }
+})();
+
+</script>
+</body>
+</html>
