@@ -603,6 +603,7 @@ const Demo = {
 // ═══════════════════════════════════════════════════
 let state = Storage.defaultState();
 let currentFilter = 'toate';
+let currentStageFilter = '';
 let currentSearch = '';
 let panelLeadId = null;
 let snoozeTargetId = null;
@@ -632,15 +633,15 @@ const App = {
         if (!demoIds.includes(dl.id)) leads.unshift(dl);
       });
     }
-    // Apply filter
-    if (currentFilter !== 'toate') {
-      if (currentFilter === 'restante') {
-        leads = leads.filter(l => Urgency.calc(l).level === 'red');
-      } else if (currentFilter === 'azi') {
-        leads = leads.filter(l => Urgency.calc(l).level === 'yellow');
-      } else {
-        leads = leads.filter(l => l.stage === currentFilter);
-      }
+    // Apply urgency filter
+    if (currentFilter === 'restante') {
+      leads = leads.filter(l => Urgency.calc(l).level === 'red');
+    } else if (currentFilter === 'azi') {
+      leads = leads.filter(l => Urgency.calc(l).level === 'yellow');
+    }
+    // Apply stage filter (AND with urgency filter)
+    if (currentStageFilter) {
+      leads = leads.filter(l => l.stage === currentStageFilter);
     }
     // Apply search
     if (currentSearch.trim()) {
@@ -1035,7 +1036,10 @@ const Panel = {
       contactTargetId = lead.id;
       Modal.openContact(lead.id);
     };
-    document.getElementById('panel-btn-edit').onclick = () => Modal.openLead(lead.id);
+    document.getElementById('panel-btn-edit').onclick = () => {
+      if (lead.id.startsWith('demo-')) { Toast.show('Lead-urile demo nu pot fi editate. Adaugă un lead real!'); return; }
+      Modal.openLead(lead.id);
+    };
     document.getElementById('panel-btn-delete').onclick = () => {
       if (lead.id.startsWith('demo-')) { Toast.show('Lead-urile demo nu se pot șterge. Apasă "Ascunde demo".'); return; }
       Leads.delete(lead.id);
@@ -1543,11 +1547,23 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Sidebar filter buttons
+  const urgencyFilters = ['toate', 'restante', 'azi'];
+  const stageFilters = ['Nou', 'Activ', 'Propunere', 'Won', 'Lost'];
   document.querySelectorAll('.filter-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      currentFilter = btn.dataset.filter;
-      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
+      const f = btn.dataset.filter;
+      if (urgencyFilters.includes(f)) {
+        // Toggle urgency filter: click same → reset to 'toate'
+        currentFilter = (currentFilter === f && f !== 'toate') ? 'toate' : f;
+        document.querySelectorAll('.filter-btn[data-filter="toate"], .filter-btn[data-filter="restante"], .filter-btn[data-filter="azi"]')
+          .forEach(b => b.classList.toggle('active', b.dataset.filter === currentFilter));
+        if (currentFilter === 'toate') document.querySelector('.filter-btn[data-filter="toate"]').classList.add('active');
+      } else if (stageFilters.includes(f)) {
+        // Toggle stage filter: click same → clear stage filter
+        currentStageFilter = (currentStageFilter === f) ? '' : f;
+        document.querySelectorAll('.filter-btn[data-filter="Nou"], .filter-btn[data-filter="Activ"], .filter-btn[data-filter="Propunere"], .filter-btn[data-filter="Won"], .filter-btn[data-filter="Lost"]')
+          .forEach(b => b.classList.toggle('active', b.dataset.filter === currentStageFilter));
+      }
       App.render();
     });
   });
