@@ -1631,27 +1631,36 @@ DSF.form = (function() {
     DSF.email.maybeShow();
   }
 
+  function _reloadFields(dateISO) {
+    const existing = DSF.storage.load(dateISO);
+    document.getElementById('modal-input-title').textContent = existing
+      ? `Editezi: ${DSF.utils.toDisplay(dateISO)}`
+      : `Adaugă ziua — ${DSF.utils.toDisplay(dateISO)}`;
+    document.getElementById('btn-save-day').textContent = existing ? 'Actualizează ziua' : 'Salvează ziua';
+    document.getElementById('f-sales').value   = existing ? existing.sales   : '';
+    document.getElementById('f-orders').value  = existing ? existing.orders  : '';
+    document.getElementById('f-refunds').value = existing && existing.refunds  ? existing.refunds  : '';
+    document.getElementById('f-cash').value    = existing && existing.cashVariance !== 0 ? existing.cashVariance : '';
+    ['f-sales-err','f-refunds-err'].forEach(id => document.getElementById(id).classList.remove('show'));
+    ['f-sales','f-refunds'].forEach(id => document.getElementById(id).classList.remove('error'));
+    _calcLive();
+  }
+
   function init() {
-    // toggle azi/ieri
+    // toggle azi/ieri — reîncarcă câmpurile la schimbare
     document.getElementById('dtb-today').addEventListener('click', () => {
+      if (_selectedDay === 'today') return;
       _selectedDay = 'today';
       document.getElementById('dtb-today').classList.add('active');
       document.getElementById('dtb-yesterday').classList.remove('active');
-      const dateISO = DSF.utils.todayISO();
-      const existing = DSF.storage.load(dateISO);
-      document.getElementById('modal-input-title').textContent = existing
-        ? `Editezi: ${DSF.utils.toDisplay(dateISO)}`
-        : `Adaugă ziua — ${DSF.utils.toDisplay(dateISO)}`;
+      _reloadFields(DSF.utils.todayISO());
     });
     document.getElementById('dtb-yesterday').addEventListener('click', () => {
+      if (_selectedDay === 'yesterday') return;
       _selectedDay = 'yesterday';
       document.getElementById('dtb-yesterday').classList.add('active');
       document.getElementById('dtb-today').classList.remove('active');
-      const dateISO = DSF.utils.yesterdayISO();
-      const existing = DSF.storage.load(dateISO);
-      document.getElementById('modal-input-title').textContent = existing
-        ? `Editezi: ${DSF.utils.toDisplay(dateISO)}`
-        : `Adaugă ziua — ${DSF.utils.toDisplay(dateISO)}`;
+      _reloadFields(DSF.utils.yesterdayISO());
     });
 
     // calcul live la fiecare keystroke
@@ -2470,8 +2479,7 @@ DSF.demo = (function() {
     _active = true;
     _data   = _buildDemoData();
 
-    // patch storage pentru a citi din memorie
-    const orig = DSF.storage;
+    // patch storage — citire din memorie, scrieri no-op
     DSF.storage.load      = (iso) => _data[iso] || null;
     DSF.storage.loadAll   = () => Object.values(_data).sort((a,b) => b.date.localeCompare(a.date));
     DSF.storage.loadRange = (days) => {
@@ -2488,6 +2496,16 @@ DSF.demo = (function() {
     DSF.storage.save   = () => ({ ok: true });
     DSF.storage.delete = () => {};
     DSF.storage.clear  = () => {};
+
+    // patch config — in-memory, zero scrieri în localStorage real
+    const _demoCfg = {
+      name: 'Demo', bizType: 'restaurant', target: 3000,
+      currency: 'RON', alertThreshold: 80, emailCaptured: true,
+      currencyLocked: true, lastExport: null, onboardingDone: true
+    };
+    DSF.config.get    = () => Object.assign({}, _demoCfg);
+    DSF.config.set    = () => {};
+    DSF.config.setAll = () => {};
 
     document.getElementById('demo-banner').classList.add('show');
   }
@@ -2569,15 +2587,9 @@ DSF.settings = (function() {
   DSF.share.init();
   DSF.settings.init();
 
-  // demo mode
+  // demo mode — config patch-uit intern în DSF.demo.init(), fără scrieri în localStorage
   const params = new URLSearchParams(window.location.search);
-  if (params.get('demo') === 'true') {
-    DSF.demo.init();
-    DSF.config.setAll({
-      name: 'Demo', target: 3000, currency: 'RON',
-      bizType: 'restaurant', onboardingDone: true, alertThreshold: 80
-    });
-  }
+  if (params.get('demo') === 'true') DSF.demo.init();
 
   const cfg = DSF.config.get();
   if (!cfg.onboardingDone) {
