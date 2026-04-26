@@ -1,0 +1,1605 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>FollowUp Board</title>
+<style>
+/* ═══════════════════════════════════════════════════
+   M01 — CSS DESIGN SYSTEM
+═══════════════════════════════════════════════════ */
+:root {
+  --bg:         #0f172a;
+  --surface:    #1e293b;
+  --surface-2:  #334155;
+  --border:     rgba(255,255,255,.08);
+  --border-2:   rgba(255,255,255,.14);
+  --text:       #f1f5f9;
+  --muted:      #94a3b8;
+  --red:        #ef4444;
+  --red-bg:     rgba(239,68,68,.1);
+  --red-bdr:    rgba(239,68,68,.28);
+  --yellow:     #eab308;
+  --yellow-bg:  rgba(234,179,8,.08);
+  --yellow-bdr: rgba(234,179,8,.22);
+  --green:      #10b981;
+  --green-bg:   rgba(16,185,129,.1);
+  --indigo:     #6366f1;
+  --indigo-bg:  rgba(99,102,241,.15);
+  --indigo-bdr: rgba(99,102,241,.35);
+  --radius:     12px;
+  --radius-sm:  8px;
+  --shadow:     0 8px 32px rgba(0,0,0,.5);
+}
+
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden;font-size:14px;}
+
+/* ── NAV ── */
+#nav{height:54px;background:rgba(15,23,42,.96);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 14px;gap:10px;flex-shrink:0;backdrop-filter:blur(8px);}
+.nav-logo{display:flex;align-items:center;gap:8px;font-weight:800;font-size:15px;color:var(--text);text-decoration:none;flex-shrink:0;}
+.nav-logo-icon{width:28px;height:28px;background:linear-gradient(135deg,var(--indigo),#38bdf8);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px;}
+#search-input{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);padding:6px 12px;font-size:13px;outline:none;transition:border-color .2s;max-width:320px;}
+#search-input:focus{border-color:var(--indigo);}
+#search-input::placeholder{color:var(--muted);}
+.nav-sep{flex:1;}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:5px;padding:6px 12px;border-radius:var(--radius-sm);font-size:12px;font-weight:600;border:none;cursor:pointer;transition:all .15s;white-space:nowrap;font-family:inherit;}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border);}
+.btn-ghost:hover{color:var(--text);border-color:var(--border-2);}
+.btn-primary{background:var(--indigo);color:#fff;}
+.btn-primary:hover{background:#4f46e5;}
+.btn-green{background:var(--green);color:#fff;}
+.btn-green:hover{background:#059669;}
+.btn-danger{background:transparent;color:var(--red);border:1px solid var(--red-bdr);}
+.btn-danger:hover{background:var(--red-bg);}
+.btn-sm{padding:4px 9px;font-size:11px;}
+.btn-xs{padding:3px 7px;font-size:11px;}
+.btn-icon{background:transparent;border:none;color:var(--muted);cursor:pointer;padding:4px;border-radius:6px;display:flex;align-items:center;justify-content:center;transition:color .15s;}
+.btn-icon:hover{color:var(--text);background:var(--surface-2);}
+
+/* ── MAIN LAYOUT ── */
+#main{flex:1;display:grid;grid-template-columns:196px 1fr;min-height:0;overflow:hidden;}
+
+/* ── SIDEBAR ── */
+#sidebar{background:var(--surface);border-right:1px solid var(--border);padding:14px 10px;overflow-y:auto;display:flex;flex-direction:column;gap:20px;}
+.sb-section-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:6px;}
+.filter-btn{display:flex;align-items:center;gap:8px;width:100%;padding:7px 10px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;border:none;cursor:pointer;background:transparent;color:var(--muted);transition:all .15s;text-align:left;font-family:inherit;}
+.filter-btn:hover{background:var(--surface-2);color:var(--text);}
+.filter-btn.active{background:var(--indigo-bg);color:var(--text);font-weight:600;}
+.filter-btn .cnt{margin-left:auto;font-size:11px;color:var(--muted);}
+.filter-btn.active .cnt{color:var(--indigo);}
+
+.stats-box{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px;}
+.stat-row{display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:3px 0;}
+.stat-lbl{color:var(--muted);}
+.stat-val{font-weight:700;color:var(--text);}
+.stat-val.green{color:var(--green);}
+.stat-val.indigo{color:var(--indigo);}
+.stats-divider{height:1px;background:var(--border);margin:6px 0;}
+
+/* ── LIST AREA ── */
+#list-area{display:flex;flex-direction:column;min-height:0;position:relative;}
+#list-header{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px;flex-shrink:0;flex-wrap:wrap;}
+.urg-stat{display:flex;align-items:center;gap:4px;font-size:12px;font-weight:700;}
+.urg-stat.red{color:var(--red);}
+.urg-stat.yellow{color:var(--yellow);}
+.urg-stat.gray{color:var(--muted);}
+.list-header-sep{flex:1;}
+#demo-toggle{font-size:11px;color:var(--muted);background:transparent;border:none;cursor:pointer;padding:3px 6px;border-radius:4px;transition:color .15s;}
+#demo-toggle:hover{color:var(--text);}
+
+#list-scroll{flex:1;overflow-y:auto;padding:12px 14px;display:flex;flex-direction:column;gap:8px;}
+
+/* ── LEAD CARD ── */
+.lead-card{background:var(--surface);border:1px solid var(--border);border-left:3px solid transparent;border-radius:var(--radius);padding:11px 13px;cursor:pointer;transition:border-color .15s,transform .15s;}
+.lead-card:hover{border-color:var(--border-2);transform:translateX(2px);}
+.lead-card.red{border-left-color:var(--red);background:color-mix(in srgb,var(--surface) 94%,var(--red) 6%);}
+.lead-card.yellow{border-left-color:var(--yellow);}
+.lead-card.gray{border-left-color:transparent;}
+.lead-card.selected{border-color:var(--indigo-bdr)!important;}
+.lead-card.is-demo{opacity:.75;}
+
+.card-row1{display:flex;align-items:center;justify-content:space-between;margin-bottom:3px;}
+.urgency-badge{font-size:10px;font-weight:800;letter-spacing:.05em;}
+.urgency-badge.red{color:var(--red);}
+.urgency-badge.yellow{color:var(--yellow);}
+.urgency-badge.gray{color:var(--muted);}
+.action-chip{font-size:11px;background:var(--surface-2);color:var(--muted);padding:2px 8px;border-radius:20px;}
+
+.card-name{font-size:14px;font-weight:700;color:var(--text);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.card-meta{font-size:11px;color:var(--muted);margin-bottom:4px;}
+.card-detail{font-size:12px;color:#cbd5e1;font-style:italic;margin-bottom:8px;line-height:1.4;}
+.card-actions{display:flex;gap:6px;align-items:center;}
+
+/* Inline "Am contactat" form */
+.inline-form{background:var(--surface-2);border-radius:var(--radius-sm);padding:10px;margin-top:8px;display:none;flex-direction:column;gap:8px;}
+.inline-form.open{display:flex;}
+.inline-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+.inline-select,.inline-date{background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:5px 8px;font-size:12px;outline:none;font-family:inherit;flex:1;}
+.inline-select:focus,.inline-date:focus{border-color:var(--indigo);}
+
+/* ── PANEL ── */
+#panel{position:absolute;top:0;right:0;bottom:0;width:370px;background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .25s cubic-bezier(.4,0,.2,1);z-index:10;box-shadow:-8px 0 32px rgba(0,0,0,.35);}
+#panel.open{transform:translateX(0);}
+#panel-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;gap:10px;}
+#panel-title-block{flex:1;min-width:0;}
+#panel-name{font-size:15px;font-weight:800;color:var(--text);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.stage-pills{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px;}
+.stage-pill{padding:3px 9px;border-radius:20px;font-size:10px;font-weight:700;border:1px solid var(--border);cursor:pointer;background:transparent;color:var(--muted);transition:all .15s;font-family:inherit;}
+.stage-pill.active{background:var(--indigo-bg);color:var(--text);border-color:var(--indigo-bdr);}
+.stage-pill.won{border-color:var(--green-bg);color:var(--green);}
+.stage-pill.won.active{background:var(--green-bg);}
+.stage-pill.lost{border-color:var(--red-bdr);color:var(--red);}
+.stage-pill.lost.active{background:var(--red-bg);}
+.stage-pill:hover:not(.active){background:var(--surface-2);color:var(--text);}
+
+#panel-body{flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:14px;}
+.panel-section{}
+.panel-section-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px;}
+.p-field{margin-bottom:8px;}
+.p-field-lbl{font-size:11px;color:var(--muted);margin-bottom:3px;}
+.p-field-val{font-size:13px;color:var(--text);}
+.p-field-input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:6px 9px;font-size:13px;outline:none;font-family:inherit;transition:border-color .2s;resize:vertical;}
+.p-field-input:focus{border-color:var(--indigo);}
+.history-item{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);padding:5px 0;border-bottom:1px solid var(--border);}
+.history-item:last-child{border-bottom:none;}
+.history-date{color:#64748b;}
+
+#panel-footer{padding:10px 16px;border-top:1px solid var(--border);display:flex;gap:8px;}
+
+/* ── BRIEFING OVERLAY ── */
+#briefing-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;z-index:100;backdrop-filter:blur(6px);}
+#briefing-overlay.hidden{display:none;}
+.briefing-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px 30px;max-width:390px;width:90%;box-shadow:var(--shadow);animation:fadeUp .4s ease;}
+.briefing-title{font-size:20px;font-weight:800;margin-bottom:16px;}
+.briefing-row{display:flex;align-items:center;gap:8px;font-size:14px;margin-bottom:8px;}
+.briefing-urgent{margin:12px 0;padding:10px 12px;background:var(--red-bg);border:1px solid var(--red-bdr);border-radius:var(--radius-sm);font-size:13px;}
+.briefing-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;}
+.briefing-progress{height:3px;background:var(--surface-2);border-radius:2px;margin-top:16px;overflow:hidden;}
+.briefing-progress-bar{height:100%;background:var(--indigo);border-radius:2px;width:100%;transition:width linear;}
+
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.65);display:flex;align-items:center;justify-content:center;z-index:200;backdrop-filter:blur(4px);}
+.modal-overlay.hidden{display:none;}
+.modal-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:22px 24px;max-width:480px;width:92%;box-shadow:var(--shadow);animation:fadeUp .28s ease;max-height:92vh;overflow-y:auto;}
+.modal-title{font-size:16px;font-weight:800;color:var(--text);margin-bottom:18px;}
+.form-group{margin-bottom:13px;}
+.form-group label{display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.04em;}
+.form-control{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--text);padding:8px 10px;font-size:13px;outline:none;transition:border-color .2s;font-family:inherit;}
+.form-control:focus{border-color:var(--indigo);}
+.form-control::placeholder{color:var(--muted);}
+select.form-control option{background:var(--surface);}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:18px;}
+.char-count{font-size:10px;color:var(--muted);text-align:right;margin-top:3px;}
+
+/* ── TOAST ── */
+#toast-container{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);z-index:999;display:flex;flex-direction:column;gap:8px;align-items:center;pointer-events:none;}
+.toast{background:#1e293b;border:1px solid var(--border-2);border-radius:10px;padding:9px 14px;font-size:13px;color:var(--text);box-shadow:var(--shadow);display:flex;align-items:center;gap:10px;pointer-events:all;animation:slideUp .25s ease;max-width:380px;}
+.toast-action{background:transparent;border:none;color:var(--indigo);cursor:pointer;font-size:13px;font-weight:700;padding:0;font-family:inherit;}
+
+/* ── EMPTY STATE ── */
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;text-align:center;gap:10px;}
+.empty-state .es-icon{font-size:42px;}
+.empty-state h3{font-size:16px;font-weight:800;}
+.empty-state p{font-size:13px;color:var(--muted);max-width:260px;line-height:1.5;}
+
+/* ── SNOOZE MENU ── */
+#snooze-menu{position:fixed;background:var(--surface);border:1px solid var(--border-2);border-radius:10px;box-shadow:var(--shadow);z-index:300;padding:6px;display:none;min-width:160px;}
+#snooze-menu.open{display:block;}
+.snooze-opt{display:block;width:100%;padding:7px 12px;font-size:13px;color:var(--text);background:transparent;border:none;cursor:pointer;text-align:left;border-radius:6px;transition:background .1s;font-family:inherit;}
+.snooze-opt:hover{background:var(--surface-2);}
+
+/* ── INLINE BANNER ── */
+.banner{padding:10px 14px;font-size:12px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.banner.yellow{background:rgba(234,179,8,.08);color:#fde68a;}
+.banner.blue{background:var(--indigo-bg);color:#a5b4fc;}
+.banner.hidden{display:none;}
+.banner-close{margin-left:auto;background:transparent;border:none;cursor:pointer;color:inherit;opacity:.6;font-size:14px;}
+
+/* ── CONFETTI ── */
+@keyframes confettiFall{0%{opacity:1;transform:translateY(0) rotate(0deg) scale(1);}100%{opacity:0;transform:translateY(-80px) rotate(720deg) scale(0);}}
+.confetti-piece{position:fixed;width:7px;height:7px;border-radius:2px;pointer-events:none;animation:confettiFall .9s ease forwards;z-index:9999;}
+
+/* ── ANIMATIONS ── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(18px);}to{opacity:1;transform:translateY(0);}}
+@keyframes slideUp{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:5px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--surface-2);border-radius:3px;}
+
+/* ── BACKUP REMINDER BANNER ── */
+#backup-banner{display:none;}
+#backup-banner.show{display:flex;}
+
+/* ── PRINT ── */
+@media print{
+  #nav,#sidebar,#panel,#briefing-overlay,.modal-overlay,#toast-container,#snooze-menu,.card-actions,#backup-banner,#ics-hint,#bookmark-hint,#email-banner{display:none!important;}
+  #main{display:block!important;}
+  #list-area{overflow:visible!important;}
+  #list-scroll{overflow:visible!important;}
+  body,#list-scroll{background:#fff!important;color:#000!important;}
+  .lead-card{border:1px solid #ccc!important;background:#fff!important;margin-bottom:8px;page-break-inside:avoid;break-inside:avoid;}
+  .card-name,.card-detail{color:#000!important;}
+  .urgency-badge.red{color:#dc2626!important;}
+  .urgency-badge.yellow{color:#92400e!important;}
+  .card-meta,.urgency-badge.gray{color:#666!important;}
+  #list-header::before{content:"Pipeline FollowUp Board — " attr(data-date);display:block;font-weight:700;font-size:14px;margin-bottom:8px;}
+}
+
+/* ── RESPONSIVE ── */
+@media(max-width:640px){
+  #main{grid-template-columns:1fr;}
+  #sidebar{display:none;}
+  #panel{width:100%;}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════
+     M02 — HTML SKELETON
+═══════════════════════════════════════════════════ -->
+
+<!-- NAV -->
+<nav id="nav">
+  <a class="nav-logo" href="#">
+    <div class="nav-logo-icon">📋</div>
+    FollowUp Board
+  </a>
+  <input id="search-input" type="text" placeholder="/ Caută lead-uri..." autocomplete="off"/>
+  <div class="nav-sep"></div>
+  <button class="btn btn-ghost btn-sm" id="btn-templates" title="Șabloane mesaje">📋 Șabloane</button>
+  <button class="btn btn-ghost btn-sm" id="btn-ics" title="Reminder calendar">📅 Calendar</button>
+  <button class="btn btn-ghost btn-sm" id="btn-backup" title="Backup JSON">💾 Backup</button>
+  <button class="btn btn-ghost btn-sm" id="btn-import" title="Import JSON">⬆ Import</button>
+  <button class="btn btn-ghost btn-sm" id="btn-export-csv" title="Export CSV">📊 CSV</button>
+  <button class="btn btn-primary btn-sm" id="btn-add-lead">+ Lead nou</button>
+  <input type="file" id="file-import" accept=".json" style="display:none"/>
+</nav>
+
+<!-- BANNERS (backup reminder, bookmark hint, email capture) -->
+<div id="backup-banner" class="banner yellow">
+  💾 <span id="backup-banner-msg"></span>
+  <button class="btn btn-xs btn-ghost" style="border-color:rgba(234,179,8,.4);color:#fde68a;" onclick="Backup.exportJSON()">Salvează acum</button>
+  <button class="banner-close" onclick="document.getElementById('backup-banner').classList.remove('show')">&times;</button>
+</div>
+<div id="bookmark-hint" class="banner blue hidden">
+  💡 Sfat: Adaugă această pagină la Favorite (<kbd>Ctrl+D</kbd>) pentru acces rapid în fiecare dimineață.
+  <button class="banner-close" id="btn-dismiss-bookmark">&times;</button>
+</div>
+<div id="lost-insight-banner" class="banner yellow hidden">
+  💡 <span id="lost-insight-text"></span>
+  <button class="banner-close" id="btn-dismiss-lost-insight">&times;</button>
+</div>
+<div id="email-banner" class="banner blue hidden">
+  🎁 Îți trimit gratuit 10 șabloane avansate + ghid reactivare lead-uri reci.
+  &nbsp;<input id="email-input" type="email" placeholder="email@firma.ro" style="background:rgba(0,0,0,.3);border:1px solid rgba(99,102,241,.4);border-radius:6px;color:#fff;padding:4px 8px;font-size:12px;outline:none;width:180px;font-family:inherit;"/>
+  <button class="btn btn-xs btn-primary" id="btn-email-submit">Trimite-mi ghidul</button>
+  <button class="banner-close" id="btn-dismiss-email">&times;</button>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+
+  <!-- SIDEBAR -->
+  <div id="sidebar">
+    <div>
+      <div class="sb-section-title">Vizualizare</div>
+      <button class="filter-btn active" data-filter="toate"><span>📋</span> Toate<span class="cnt" id="cnt-toate">0</span></button>
+      <button class="filter-btn" data-filter="restante"><span>🔴</span> Restante<span class="cnt" id="cnt-restante">0</span></button>
+      <button class="filter-btn" data-filter="azi"><span>🟡</span> Azi<span class="cnt" id="cnt-azi">0</span></button>
+    </div>
+    <div>
+      <div class="sb-section-title">Etapă</div>
+      <button class="filter-btn" data-filter="Nou"><span>🆕</span> Nou<span class="cnt" id="cnt-nou">0</span></button>
+      <button class="filter-btn" data-filter="Activ"><span>⚡</span> Activ<span class="cnt" id="cnt-activ">0</span></button>
+      <button class="filter-btn" data-filter="Propunere"><span>📄</span> Propunere<span class="cnt" id="cnt-prop">0</span></button>
+      <button class="filter-btn" data-filter="Won"><span>✅</span> Won<span class="cnt" id="cnt-won">0</span></button>
+      <button class="filter-btn" data-filter="Lost"><span>❌</span> Lost<span class="cnt" id="cnt-lost">0</span></button>
+    </div>
+    <div>
+      <div class="sb-section-title">Statistici</div>
+      <div class="stats-box">
+        <div class="stat-row"><span class="stat-lbl">Won</span><span class="stat-val green" id="stat-won">0</span></div>
+        <div class="stat-row"><span class="stat-lbl">Lost</span><span class="stat-val" id="stat-lost">0</span></div>
+        <div class="stat-row"><span class="stat-lbl">Rată</span><span class="stat-val indigo" id="stat-rate">—</span></div>
+        <div class="stats-divider"></div>
+        <div class="stat-row"><span class="stat-lbl">Câștigat</span><span class="stat-val green" id="stat-value">0 lei</span></div>
+      </div>
+    </div>
+    <div style="margin-top:auto;padding-top:8px;border-top:1px solid var(--border);">
+      <div style="font-size:10px;color:var(--muted);line-height:1.8;">
+        <kbd style="background:var(--surface-2);border-radius:3px;padding:1px 4px;">N</kbd> nou &nbsp;
+        <kbd style="background:var(--surface-2);border-radius:3px;padding:1px 4px;">/</kbd> search &nbsp;
+        <kbd style="background:var(--surface-2);border-radius:3px;padding:1px 4px;">Esc</kbd> închide
+      </div>
+    </div>
+  </div>
+
+  <!-- LIST AREA -->
+  <div id="list-area">
+    <!-- List header -->
+    <div id="list-header">
+      <span class="urg-stat red" id="stat-restante">🔴 0 restante</span>
+      <span class="urg-stat yellow" id="stat-azi">🟡 0 azi</span>
+      <span class="urg-stat gray" id="stat-upcoming">⚪ 0 upcoming</span>
+      <div class="list-header-sep"></div>
+      <button id="demo-toggle" onclick="App.toggleDemo()">Ascunde demo</button>
+    </div>
+
+    <!-- List scroll -->
+    <div id="list-scroll"></div>
+
+    <!-- PANEL (slide-in from right inside list-area) -->
+    <div id="panel">
+      <div id="panel-header">
+        <div id="panel-title-block">
+          <div id="panel-name">—</div>
+          <div class="stage-pills" id="panel-stages"></div>
+        </div>
+        <button class="btn-icon" id="btn-close-panel" title="Închide (Esc)">✕</button>
+      </div>
+      <div id="panel-body">
+        <!-- Populated by Panel.render() -->
+      </div>
+      <div id="panel-footer">
+        <button class="btn btn-green btn-sm" id="panel-btn-contact">✓ Am contactat</button>
+        <button class="btn btn-ghost btn-sm" id="panel-btn-edit">✏ Editează</button>
+        <div style="flex:1"></div>
+        <button class="btn btn-danger btn-sm" id="panel-btn-delete">🗑 Șterge</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ BRIEFING OVERLAY ══════════════════ -->
+<div id="briefing-overlay" class="hidden">
+  <div class="briefing-card">
+    <div class="briefing-title" id="briefing-title">☀️ Bună dimineața!</div>
+    <div id="briefing-body"></div>
+    <div class="briefing-actions">
+      <button class="btn btn-ghost btn-sm" onclick="Briefing.dismiss()">Închide</button>
+      <button class="btn btn-primary btn-sm" onclick="Briefing.dismiss()">Începe ziua →</button>
+    </div>
+    <div class="briefing-progress"><div class="briefing-progress-bar" id="briefing-bar"></div></div>
+  </div>
+</div>
+
+<!-- ══════════════════ MODAL: ADD/EDIT LEAD ══════════════════ -->
+<div id="modal-lead" class="modal-overlay hidden">
+  <div class="modal-card">
+    <div class="modal-title" id="modal-lead-title">+ Lead nou</div>
+    <div class="form-row">
+      <div class="form-group" style="grid-column:1/-1">
+        <label>Nume contact / firmă *</label>
+        <input class="form-control" id="f-name" type="text" placeholder="ex. Ionescu Alexandru — Cabinet Alpha" maxlength="100"/>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Tip acțiune *</label>
+        <select class="form-control" id="f-actiontype">
+          <option>Apel</option><option>Email</option><option>WhatsApp</option><option>Întâlnire</option><option>Ofertă</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Data acțiunii *</label>
+        <input class="form-control" id="f-nextdate" type="date"/>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Detaliu acțiune <span id="f-detail-cnt" style="font-weight:400;">(0/80)</span></label>
+      <input class="form-control" id="f-detail" type="text" placeholder="ex. Trimite oferta revizuită cu 10% reducere" maxlength="80"/>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Sursă lead</label>
+        <select class="form-control" id="f-source">
+          <option value="">— niciuna —</option>
+          <option>Referință</option><option>LinkedIn</option><option>Telefon</option><option>Site</option><option>Altele</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Valoare estimată (lei)</label>
+        <input class="form-control" id="f-value" type="number" placeholder="ex. 3600" min="0"/>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Notițe</label>
+      <textarea class="form-control" id="f-notes" rows="2" placeholder="orice informație utilă..."></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="Modal.closeLead()">Anulează</button>
+      <button class="btn btn-primary" id="btn-save-lead">Salvează</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ MODAL: TEMPLATES ══════════════════ -->
+<div id="modal-templates" class="modal-overlay hidden">
+  <div class="modal-card" style="max-width:540px;">
+    <div class="modal-title">📋 Șabloane mesaje</div>
+    <div id="template-lead-name" style="font-size:12px;color:var(--muted);margin-bottom:12px;"></div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;" id="template-tabs"></div>
+    <textarea id="template-text" class="form-control" rows="10" style="font-size:12px;line-height:1.6;resize:vertical;"></textarea>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="Modal.closeTemplates()">Închide</button>
+      <button class="btn btn-primary" id="btn-copy-template">📋 Copiază</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ MODAL: WON/LOST ══════════════════ -->
+<div id="modal-wonlost" class="modal-overlay hidden">
+  <div class="modal-card" style="max-width:380px;">
+    <div class="modal-title" id="wonlost-title">Marchează Won</div>
+    <div class="form-group">
+      <label id="wonlost-reason-lbl">Motiv</label>
+      <select class="form-control" id="wonlost-reason"></select>
+    </div>
+    <div id="wonlost-value-block" class="form-group">
+      <label>Valoare câștigată (lei)</label>
+      <input class="form-control" id="wonlost-value" type="number" min="0" placeholder="0"/>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="Modal.closeWonLost()">Anulează</button>
+      <button class="btn btn-primary" id="btn-confirm-wonlost">Confirmă</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ MODAL: AM CONTACTAT (panel) ══════════════════ -->
+<div id="modal-contact" class="modal-overlay hidden">
+  <div class="modal-card" style="max-width:380px;">
+    <div class="modal-title">✓ Am contactat</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Tip acțiune</label>
+        <select class="form-control" id="contact-type">
+          <option>Apel</option><option>Email</option><option>WhatsApp</option><option>Întâlnire</option><option>Ofertă</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Următoarea acțiune</label>
+        <input class="form-control" id="contact-nextdate" type="date"/>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Tip următoare acțiune</label>
+      <select class="form-control" id="contact-nexttype">
+        <option>Apel</option><option>Email</option><option>WhatsApp</option><option>Întâlnire</option><option>Ofertă</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="Modal.closeContact()">Anulează</button>
+      <button class="btn btn-green" id="btn-confirm-contact">✓ Confirmă</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ MODAL: ICS ══════════════════ -->
+<div id="modal-ics" class="modal-overlay hidden">
+  <div class="modal-card" style="max-width:360px;">
+    <div class="modal-title">📅 Reminder zilnic în calendar</div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:16px;line-height:1.5;">Generează un fișier .ics pe care îl poți importa în Google Calendar, Outlook sau Apple Calendar.</p>
+    <div class="form-group">
+      <label>Ora reminder-ului</label>
+      <input class="form-control" id="ics-hour" type="time" value="08:30"/>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="Modal.closeICS()">Anulează</button>
+      <button class="btn btn-primary" id="btn-confirm-ics">📥 Descarcă .ics</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════ SNOOZE MENU ══════════════════ -->
+<div id="snooze-menu">
+  <button class="snooze-opt" data-days="1">Mâine</button>
+  <button class="snooze-opt" data-days="3">Peste 3 zile</button>
+  <button class="snooze-opt" data-days="7">Peste 1 săptămână</button>
+  <button class="snooze-opt" data-days="14">Peste 2 săptămâni</button>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div id="toast-container"></div>
+
+<script>
+'use strict';
+// ═══════════════════════════════════════════════════
+// M03 — STORAGE
+// ═══════════════════════════════════════════════════
+const Storage = {
+  KEY: 'followupboard_v4',
+  defaultState() {
+    return {
+      schemaVersion: '4.0',
+      leads: [],
+      insights: { shownLostReasons: [] },
+      meta: {
+        sessionCount: 0, lastBackupAt: null, emailCaptured: false,
+        newsletterDismissed: false, demoHidden: false, bookmarkHintShown: false,
+        schemaVersion: '4.0'
+      }
+    };
+  },
+  load() {
+    try {
+      const raw = localStorage.getItem(this.KEY);
+      if (!raw) return this.defaultState();
+      const parsed = JSON.parse(raw);
+      // Merge with defaults to handle missing keys
+      const def = this.defaultState();
+      parsed.meta = Object.assign({}, def.meta, parsed.meta || {});
+      parsed.insights = Object.assign({}, def.insights, parsed.insights || {});
+      if (!Array.isArray(parsed.leads)) parsed.leads = [];
+      return parsed;
+    } catch(e) { return this.defaultState(); }
+  },
+  save(st) {
+    try { localStorage.setItem(this.KEY, JSON.stringify(st)); } catch(e) {}
+  },
+  generateId() {
+    return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
+  }
+};
+
+// ═══════════════════════════════════════════════════
+// M04 — DEMO DATA
+// ═══════════════════════════════════════════════════
+const Demo = {
+  getLeads() {
+    const today = new Date();
+    const d = (offset) => {
+      const dt = new Date(today);
+      dt.setDate(dt.getDate() + offset);
+      return dt.toISOString().split('T')[0];
+    };
+    return [
+      {
+        id: 'demo-1', name: 'Ionescu Alexandru — Cabinet Contabilitate Alpha',
+        source: 'Referință', value: 3600, stage: 'Propunere',
+        actionType: 'Apel', actionDetail: 'Trimite oferta revizuită cu reducerea de 10%',
+        nextDate: d(-9), lastContact: d(-9), notes: 'Interesat, a cerut timp să analizeze oferta. Discount posibil dacă semnează până la 30.',
+        contactHistory: [{date: d(-16), actionType: 'Apel'},{date: d(-9), actionType: 'Email'}],
+        closeReason: null, isDemo: true, createdAt: d(-20)+'T08:00:00Z', updatedAt: d(-9)+'T10:00:00Z'
+      },
+      {
+        id: 'demo-2', name: 'Gheorghe Mihai — TechBuild Construct SRL',
+        source: 'LinkedIn', value: 8000, stage: 'Activ',
+        actionType: 'Email', actionDetail: 'Follow-up după demo — a cerut timp să discute cu asociatul',
+        nextDate: d(-6), lastContact: d(-6), notes: 'Demo live pe Zoom, 45 min. Au 3 asociați, decizia finală necesită consens.',
+        contactHistory: [{date: d(-12), actionType: 'Apel'},{date: d(-6), actionType: 'Întâlnire'}],
+        closeReason: null, isDemo: true, createdAt: d(-15)+'T09:00:00Z', updatedAt: d(-6)+'T14:00:00Z'
+      },
+      {
+        id: 'demo-3', name: 'Popescu Ana — Salon Beauty Nova',
+        source: 'Telefon', value: 1200, stage: 'Activ',
+        actionType: 'WhatsApp', actionDetail: 'Confirmă întâlnirea de joi la 14:00',
+        nextDate: d(0), lastContact: d(-3), notes: 'Clientă nouă, recomandată de Ionescu. Interesată de pachetul starter.',
+        contactHistory: [{date: d(-3), actionType: 'Apel'}],
+        closeReason: null, isDemo: true, createdAt: d(-5)+'T10:00:00Z', updatedAt: d(-3)+'T11:00:00Z'
+      },
+      {
+        id: 'demo-4', name: 'Dumitru Constantin — Florărie Primăvara',
+        source: 'Site', value: 900, stage: 'Nou',
+        actionType: 'Apel', actionDetail: 'Primul apel de prezentare',
+        nextDate: d(1), lastContact: null, notes: 'A completat formularul de contact pe site. Afacere mică, 2 angajați.',
+        contactHistory: [],
+        closeReason: null, isDemo: true, createdAt: d(-1)+'T16:00:00Z', updatedAt: d(-1)+'T16:00:00Z'
+      }
+    ];
+  },
+  isVisible(st) { return !st.meta.demoHidden; }
+};
+
+// ═══════════════════════════════════════════════════
+// M05 — STATE + INIT
+// ═══════════════════════════════════════════════════
+let state = Storage.defaultState();
+let currentFilter = 'toate';
+let currentSearch = '';
+let panelLeadId = null;
+let snoozeTargetId = null;
+let pendingDeleteLead = null;
+let undoTimer = null;
+let wonLostTarget = { id: null, type: null };
+let contactTargetId = null;
+
+const App = {
+  init() {
+    state = Storage.load();
+    state.meta.sessionCount = (state.meta.sessionCount || 0) + 1;
+    Storage.save(state);
+    App.render();
+    Briefing.show();
+    Retention.updateFavicon();
+    Retention.showBookmarkHint();
+    Email.check();
+    Backup.checkReminder();
+    Keyboard.setup();
+  },
+  getVisibleLeads() {
+    let leads = [...state.leads];
+    if (Demo.isVisible(state)) {
+      const demoIds = leads.map(l => l.id);
+      Demo.getLeads().forEach(dl => {
+        if (!demoIds.includes(dl.id)) leads.unshift(dl);
+      });
+    }
+    // Apply filter
+    if (currentFilter !== 'toate') {
+      if (currentFilter === 'restante') {
+        leads = leads.filter(l => Urgency.calc(l).level === 'red');
+      } else if (currentFilter === 'azi') {
+        leads = leads.filter(l => Urgency.calc(l).level === 'yellow');
+      } else {
+        leads = leads.filter(l => l.stage === currentFilter);
+      }
+    }
+    // Apply search
+    if (currentSearch.trim()) {
+      const q = currentSearch.trim().toLowerCase();
+      leads = leads.filter(l =>
+        (l.name||'').toLowerCase().includes(q) ||
+        (l.actionDetail||'').toLowerCase().includes(q) ||
+        (l.notes||'').toLowerCase().includes(q) ||
+        (l.source||'').toLowerCase().includes(q)
+      );
+    }
+    return Urgency.sort(leads);
+  },
+  render() {
+    const leads = App.getVisibleLeads();
+    Render.list(leads);
+    Stats.render();
+    Sidebar.renderCounts();
+    Retention.updateFavicon();
+  },
+  saveAndRender() {
+    Storage.save(state);
+    App.render();
+    if (panelLeadId) {
+      const l = App.findLead(panelLeadId);
+      if (l) Panel.render(l);
+    }
+  },
+  findLead(id) {
+    const real = state.leads.find(l => l.id === id);
+    if (real) return real;
+    return Demo.getLeads().find(l => l.id === id) || null;
+  },
+  toggleDemo() {
+    state.meta.demoHidden = !state.meta.demoHidden;
+    Storage.save(state);
+    document.getElementById('demo-toggle').textContent =
+      state.meta.demoHidden ? 'Arată demo' : 'Ascunde demo';
+    App.render();
+  }
+};
+
+// ═══════════════════════════════════════════════════
+// M06 — LEAD CRUD
+// ═══════════════════════════════════════════════════
+const Leads = {
+  add(data) {
+    const lead = {
+      id: Storage.generateId(),
+      name: data.name.trim(),
+      source: data.source || '',
+      value: data.value ? parseFloat(data.value) : null,
+      stage: 'Nou',
+      actionType: data.actionType || 'Apel',
+      actionDetail: (data.actionDetail || '').trim(),
+      nextDate: data.nextDate,
+      lastContact: null,
+      contactHistory: [],
+      notes: (data.notes || '').trim(),
+      closeReason: null,
+      isDemo: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    state.leads.unshift(lead);
+    App.saveAndRender();
+    return lead;
+  },
+  update(id, changes) {
+    const idx = state.leads.findIndex(l => l.id === id);
+    if (idx === -1) return;
+    state.leads[idx] = Object.assign({}, state.leads[idx], changes, {
+      updatedAt: new Date().toISOString()
+    });
+    App.saveAndRender();
+  },
+  delete(id) {
+    const lead = state.leads.find(l => l.id === id);
+    if (!lead) return;
+    pendingDeleteLead = lead;
+    state.leads = state.leads.filter(l => l.id !== id);
+    Panel.close();
+    App.saveAndRender();
+    Toast.showUndo(lead);
+  },
+  markContacted(id, actionType, nextDate, nextActionType) {
+    const today = new Date().toISOString().split('T')[0];
+    const isDemoLead = id.startsWith('demo-');
+    if (isDemoLead) {
+      Toast.show('Lead-urile demo nu pot fi modificate. Adaugă un lead real!');
+      return;
+    }
+    const idx = state.leads.findIndex(l => l.id === id);
+    if (idx === -1) return;
+    const lead = state.leads[idx];
+    const wasNou = lead.stage === 'Nou';
+    lead.lastContact = today;
+    lead.contactHistory = lead.contactHistory || [];
+    lead.contactHistory.push({ date: today, actionType });
+    lead.nextDate = nextDate;
+    lead.actionType = nextActionType || lead.actionType;
+    lead.updatedAt = new Date().toISOString();
+    if (wasNou) {
+      lead.stage = 'Activ';
+      Toast.show('✓ Contactat! Lead mutat în Activ.');
+    } else {
+      Toast.show('✓ Contact înregistrat.');
+    }
+    App.saveAndRender();
+  },
+  snooze(id, days) {
+    if (id.startsWith('demo-')) { Toast.show('Lead-urile demo nu pot fi modificate.'); return; }
+    const dt = new Date();
+    dt.setDate(dt.getDate() + days);
+    const newDate = dt.toISOString().split('T')[0];
+    Leads.update(id, { nextDate: newDate });
+    const label = days === 1 ? 'Mâine' : `+${days} zile`;
+    Toast.show(`⏩ Amânat pentru ${label}.`);
+  },
+  changeStage(id, stage) {
+    if (id.startsWith('demo-')) { Toast.show('Lead-urile demo nu pot fi modificate.'); return; }
+    if (stage === 'Won' || stage === 'Lost') {
+      wonLostTarget = { id, type: stage };
+      Modal.openWonLost(stage);
+      return;
+    }
+    Leads.update(id, { stage });
+    Toast.show(`Etapă schimbată: ${stage}`);
+  }
+};
+
+// ═══════════════════════════════════════════════════
+// M07 — URGENCY ENGINE
+// ═══════════════════════════════════════════════════
+const Urgency = {
+  calc(lead) {
+    const today = new Date().toISOString().split('T')[0];
+    const nd = lead.nextDate;
+    if (!nd) return { level: 'gray', days: 0, label: '—' };
+    if (nd < today) {
+      const diff = Math.round((new Date(today) - new Date(nd)) / 86400000);
+      return { level: 'red', days: diff, label: diff === 1 ? '🔴 1 ZI' : `🔴 ${diff} ZILE` };
+    }
+    if (nd === today) return { level: 'yellow', days: 0, label: '🟡 AZI' };
+    const diff = Math.round((new Date(nd) - new Date(today)) / 86400000);
+    const lbl = diff === 1 ? '⚪ MÂINE' : `⚪ ${diff} ZILE`;
+    return { level: 'gray', days: -diff, label: lbl };
+  },
+  sort(leads) {
+    const order = { red: 0, yellow: 1, gray: 2 };
+    return [...leads].sort((a, b) => {
+      const ua = Urgency.calc(a), ub = Urgency.calc(b);
+      if (order[ua.level] !== order[ub.level]) return order[ua.level] - order[ub.level];
+      return ub.days - ua.days;
+    });
+  }
+};
+
+// ═══════════════════════════════════════════════════
+// M08 — TOAST SYSTEM
+// ═══════════════════════════════════════════════════
+const Toast = {
+  show(msg, duration = 3200, action = null) {
+    const tc = document.getElementById('toast-container');
+    const t = document.createElement('div');
+    t.className = 'toast';
+    t.innerHTML = `<span>${msg}</span>`;
+    if (action) {
+      const btn = document.createElement('button');
+      btn.className = 'toast-action';
+      btn.textContent = action.label;
+      btn.onclick = () => { action.fn(); t.remove(); };
+      t.appendChild(btn);
+    }
+    tc.appendChild(t);
+    setTimeout(() => t.style.opacity = '0', duration);
+    setTimeout(() => t.remove(), duration + 300);
+    return t;
+  },
+  showUndo(lead) {
+    if (undoTimer) clearTimeout(undoTimer);
+    Toast.show(`Lead șters: ${lead.name.split('—')[0].trim()}`, 5000, {
+      label: 'Anulează',
+      fn() {
+        state.leads.unshift(lead);
+        pendingDeleteLead = null;
+        App.saveAndRender();
+        Toast.show('✓ Lead restaurat.');
+      }
+    });
+  }
+};
+
+// ═══════════════════════════════════════════════════
+// M09 — RENDER: LIST
+// ═══════════════════════════════════════════════════
+const Render = {
+  list(leads) {
+    const scroll = document.getElementById('list-scroll');
+    if (!leads.length) {
+      const demoHidden = state.meta.demoHidden;
+      scroll.innerHTML = `
+        <div class="empty-state">
+          <div class="es-icon">📋</div>
+          <h3>Niciun follow-up pentru azi</h3>
+          <p>Adaugă primul tău lead și află pe cine trebuie să suni mâine.</p>
+          <button class="btn btn-primary" onclick="Modal.openLead()">+ Adaugă primul lead</button>
+          ${demoHidden ? `<button class="btn btn-ghost btn-sm" style="margin-top:4px;" onclick="state.meta.demoHidden=false;Storage.save(state);App.render()">Arată datele demo</button>` : ''}
+        </div>`;
+      Render.updateHeader([]);
+      return;
+    }
+    scroll.innerHTML = leads.map(l => Render.card(l)).join('');
+    // Re-attach inline form listeners
+    scroll.querySelectorAll('[data-contact-id]').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        const id = btn.dataset.contactId;
+        contactTargetId = id;
+        Modal.openContact(id);
+      });
+    });
+    scroll.querySelectorAll('[data-snooze-id]').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        snoozeTargetId = btn.dataset.snoozeId;
+        const rect = btn.getBoundingClientRect();
+        const menu = document.getElementById('snooze-menu');
+        menu.style.left = rect.left + 'px';
+        menu.style.top = (rect.bottom + 4) + 'px';
+        menu.classList.add('open');
+      });
+    });
+    scroll.querySelectorAll('[data-open-id]').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.stopPropagation();
+        Panel.open(btn.dataset.openId);
+      });
+    });
+    scroll.querySelectorAll('.lead-card').forEach(card => {
+      card.addEventListener('click', e => {
+        if (e.target.closest('button')) return;
+        Panel.open(card.dataset.id);
+      });
+    });
+    if (panelLeadId) {
+      const sel = scroll.querySelector(`[data-id="${panelLeadId}"]`);
+      if (sel) sel.classList.add('selected');
+    }
+    Render.updateHeader(leads);
+  },
+
+  card(l) {
+    const u = Urgency.calc(l);
+    const meta = [l.source, l.value ? `${l.value.toLocaleString()} lei` : null, l.stage]
+      .filter(Boolean).join(' · ');
+    return `
+    <div class="lead-card ${u.level}${l.isDemo?' is-demo':''}" data-id="${l.id}">
+      <div class="card-row1">
+        <span class="urgency-badge ${u.level}">${u.label}</span>
+        <span class="action-chip">${l.actionType}</span>
+      </div>
+      <div class="card-name">${Render.esc(l.name)}</div>
+      ${meta ? `<div class="card-meta">${Render.esc(meta)}</div>` : ''}
+      ${l.actionDetail ? `<div class="card-detail">"${Render.esc(l.actionDetail)}"</div>` : ''}
+      <div class="card-actions">
+        <button class="btn btn-green btn-xs" data-contact-id="${l.id}">✓ Am contactat</button>
+        <button class="btn btn-ghost btn-xs" data-snooze-id="${l.id}">⏩ Amână</button>
+        <button class="btn btn-ghost btn-xs" data-open-id="${l.id}" style="margin-left:auto;">→</button>
+      </div>
+    </div>`;
+  },
+
+  updateHeader(leads) {
+    const allLeads = (() => {
+      let all = [...state.leads];
+      if (Demo.isVisible(state)) {
+        const ids = all.map(l=>l.id);
+        Demo.getLeads().forEach(dl => { if(!ids.includes(dl.id)) all.push(dl); });
+      }
+      return all;
+    })();
+    const red = allLeads.filter(l => Urgency.calc(l).level === 'red').length;
+    const yel = allLeads.filter(l => Urgency.calc(l).level === 'yellow').length;
+    const gray = allLeads.filter(l => Urgency.calc(l).level === 'gray').length;
+    document.getElementById('stat-restante').textContent = `🔴 ${red} restante`;
+    document.getElementById('stat-azi').textContent = `🟡 ${yel} azi`;
+    document.getElementById('stat-upcoming').textContent = `⚪ ${gray} upcoming`;
+    const lh = document.getElementById('list-header');
+    lh.setAttribute('data-date', new Date().toLocaleDateString('ro-RO'));
+  },
+
+  esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+};
+
+// ═══════════════════════════════════════════════════
+// M10 — RENDER: PANEL
+// ═══════════════════════════════════════════════════
+const Panel = {
+  open(id) {
+    panelLeadId = id;
+    const lead = App.findLead(id);
+    if (!lead) return;
+    Panel.render(lead);
+    document.getElementById('panel').classList.add('open');
+    App.render();
+  },
+  close() {
+    panelLeadId = null;
+    document.getElementById('panel').classList.remove('open');
+    App.render();
+  },
+  render(lead) {
+    document.getElementById('panel-name').textContent = lead.name;
+    // Stage pills
+    const stages = ['Nou','Activ','Propunere','Won','Lost'];
+    document.getElementById('panel-stages').innerHTML = stages.map(s => {
+      const cls = s === lead.stage ? 'active' : '';
+      const extra = s === 'Won' ? ' won' : s === 'Lost' ? ' lost' : '';
+      return `<button class="stage-pill ${cls}${extra}" data-stage="${s}" data-lead-id="${lead.id}">${s}</button>`;
+    }).join('');
+    document.querySelectorAll('.stage-pill').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (btn.dataset.stage === lead.stage) return;
+        Leads.changeStage(btn.dataset.leadId, btn.dataset.stage);
+      });
+    });
+
+    const today = new Date().toISOString().split('T')[0];
+    const lastContactDays = lead.lastContact
+      ? Math.round((new Date(today) - new Date(lead.lastContact)) / 86400000)
+      : null;
+
+    const histHTML = lead.contactHistory && lead.contactHistory.length
+      ? lead.contactHistory.slice().reverse().map(h =>
+          `<div class="history-item"><span>${h.actionType}</span><span class="history-date">${h.date}</span></div>`
+        ).join('')
+      : `<div style="font-size:12px;color:var(--muted);">Niciun contact înregistrat</div>`;
+
+    document.getElementById('panel-body').innerHTML = `
+      <div class="panel-section">
+        <div class="panel-section-title">Acțiune curentă</div>
+        <div class="p-field"><div class="p-field-lbl">Tip</div>
+          <select class="p-field-input" id="pe-actiontype" onchange="Panel.saveField('${lead.id}','actionType',this.value)">
+            ${['Apel','Email','WhatsApp','Întâlnire','Ofertă'].map(t=>`<option${t===lead.actionType?' selected':''}>${t}</option>`).join('')}
+          </select>
+        </div>
+        <div class="p-field"><div class="p-field-lbl">Data</div>
+          <input type="date" class="p-field-input" value="${lead.nextDate||''}" onchange="Panel.saveField('${lead.id}','nextDate',this.value)"/>
+        </div>
+        <div class="p-field"><div class="p-field-lbl">Detaliu</div>
+          <input type="text" class="p-field-input" value="${(lead.actionDetail||'').replace(/"/g,'&quot;')}" maxlength="80"
+            onchange="Panel.saveField('${lead.id}','actionDetail',this.value)"/>
+        </div>
+      </div>
+      <div class="panel-section">
+        <div class="panel-section-title">Informații lead</div>
+        <div class="p-field"><div class="p-field-lbl">Sursă</div>
+          <select class="p-field-input" onchange="Panel.saveField('${lead.id}','source',this.value)">
+            ${['','Referință','LinkedIn','Telefon','Site','Altele'].map(s=>`<option value="${s}"${s===lead.source?' selected':''}>${s||'— niciuna —'}</option>`).join('')}
+          </select>
+        </div>
+        <div class="p-field"><div class="p-field-lbl">Valoare estimată (lei)</div>
+          <input type="number" class="p-field-input" value="${lead.value||''}" min="0"
+            onchange="Panel.saveField('${lead.id}','value',this.value?parseFloat(this.value):null)"/>
+        </div>
+      </div>
+      <div class="panel-section">
+        <div class="panel-section-title">Ultim contact</div>
+        <div class="p-field-val" style="font-size:13px;">
+          ${lead.lastContact
+            ? `${lead.lastContact} <span style="color:var(--muted);">(acum ${lastContactDays} ${lastContactDays===1?'zi':'zile'})</span>`
+            : '<span style="color:var(--muted);">Niciun contact înregistrat</span>'}
+        </div>
+      </div>
+      <div class="panel-section">
+        <div class="panel-section-title">Istoric contacte</div>
+        ${histHTML}
+      </div>
+      <div class="panel-section">
+        <div class="panel-section-title">Notițe</div>
+        <textarea class="p-field-input" rows="4"
+          onchange="Panel.saveField('${lead.id}','notes',this.value)">${(lead.notes||'').replace(/</g,'&lt;')}</textarea>
+      </div>
+      ${lead.closeReason ? `<div class="panel-section"><div class="panel-section-title">Motiv închidere</div><div class="p-field-val">${Render.esc(lead.closeReason)}</div></div>` : ''}
+    `;
+
+    // Footer buttons
+    document.getElementById('panel-btn-contact').onclick = () => {
+      contactTargetId = lead.id;
+      Modal.openContact(lead.id);
+    };
+    document.getElementById('panel-btn-edit').onclick = () => Modal.openLead(lead.id);
+    document.getElementById('panel-btn-delete').onclick = () => {
+      if (lead.id.startsWith('demo-')) { Toast.show('Lead-urile demo nu se pot șterge. Apasă "Ascunde demo".'); return; }
+      Leads.delete(lead.id);
+    };
+  },
+  saveField(id, field, value) {
+    if (id.startsWith('demo-')) { Toast.show('Lead-urile demo nu pot fi modificate.'); App.render(); return; }
+    Leads.update(id, { [field]: value });
+  }
+};
+
+// ═══════════════════════════════════════════════════
+// M11 — MORNING BRIEFING
+// ═══════════════════════════════════════════════════
+const Briefing = {
+  timer: null,
+  show() {
+    const all = App.getVisibleLeads();
+    const red = all.filter(l => Urgency.calc(l).level === 'red');
+    const yel = all.filter(l => Urgency.calc(l).level === 'yellow');
+    if (!red.length && !yel.length) return;
+    const overlay = document.getElementById('briefing-overlay');
+    const hour = new Date().getHours();
+    const greeting = hour < 12 ? '☀️ Bună dimineața!' : hour < 18 ? '👋 Bună ziua!' : '🌙 Bună seara!';
+    document.getElementById('briefing-title').textContent = greeting;
+    const most = red[0] || yel[0];
+    const mostU = most ? Urgency.calc(most) : null;
+    document.getElementById('briefing-body').innerHTML = `
+      ${red.length ? `<div class="briefing-row">🔴 <strong>${red.length}</strong> follow-up${red.length>1?'uri':''} restante</div>` : ''}
+      ${yel.length ? `<div class="briefing-row">🟡 <strong>${yel.length}</strong> scadente azi</div>` : ''}
+      ${most ? `<div class="briefing-urgent">Cel mai urgent: <strong>${most.name.split('—')[0].trim()}</strong>${mostU.level==='red'?' — '+mostU.days+(mostU.days===1?' zi':' zile')+' fără contact':''}</div>` : ''}
+    `;
+    overlay.classList.remove('hidden');
+    // Progress bar countdown 4s
+    const bar = document.getElementById('briefing-bar');
+    bar.style.transition = 'none';
+    bar.style.width = '100%';
+    setTimeout(() => { bar.style.transition = 'width 4s linear'; bar.style.width = '0%'; }, 50);
+    Briefing.timer = setTimeout(() => Briefing.dismiss(), 4000);
+  },
+  dismiss() {
+    clearTimeout(Briefing.timer);
+    document.getElementById('briefing-overlay').classList.add('hidden');
+  }
+};
+
+// ═══════════════════════════════════════════════════
+// M12 — SEARCH + FILTERS SIDEBAR
+// ═══════════════════════════════════════════════════
+const Sidebar = {
+  renderCounts() {
+    const all = (() => {
+      let leads = [...state.leads];
+      if (Demo.isVisible(state)) {
+        const ids = leads.map(l=>l.id);
+        Demo.getLeads().forEach(dl => { if(!ids.includes(dl.id)) leads.push(dl); });
+      }
+      return leads;
+    })();
+    const set = (id, val) => { const el=document.getElementById(id); if(el) el.textContent=val; };
+    set('cnt-toate', all.length);
+    set('cnt-restante', all.filter(l=>Urgency.calc(l).level==='red').length);
+    set('cnt-azi', all.filter(l=>Urgency.calc(l).level==='yellow').length);
+    set('cnt-nou', all.filter(l=>l.stage==='Nou').length);
+    set('cnt-activ', all.filter(l=>l.stage==='Activ').length);
+    set('cnt-prop', all.filter(l=>l.stage==='Propunere').length);
+    set('cnt-won', all.filter(l=>l.stage==='Won').length);
+    set('cnt-lost', all.filter(l=>l.stage==='Lost').length);
+  }
+};
+
+// ═══════════════════════════════════════════════════
+// M13 — WON / LOST + CELEBRARE
+// ═══════════════════════════════════════════════════
+const WonLost = {
+  markWon(id, reason, value) {
+    const changes = { stage: 'Won', closeReason: reason, updatedAt: new Date().toISOString() };
+    if (value) changes.value = parseFloat(value);
+    Leads.update(id, changes);
+    WonLost.celebrate(changes.value || App.findLead(id)?.value || 0);
+    WonLost.checkInsight();
+  },
+  markLost(id, reason) {
+    Leads.update(id, { stage: 'Lost', closeReason: reason });
+    Toast.show('Lead marcat Lost.');
+    WonLost.checkInsight();
+  },
+  celebrate(value) {
+    const msg = value ? `🎉 Felicitări! +${Number(value).toLocaleString()} lei câștigați!` : '🎉 Felicitări! Lead Won!';
+    Toast.show(msg, 4000);
+    const colors = ['#6366f1','#10b981','#f59e0b','#ec4899','#38bdf8'];
+    const cx = window.innerWidth / 2, cy = window.innerHeight / 2;
+    for (let i = 0; i < 22; i++) {
+      const piece = document.createElement('div');
+      piece.className = 'confetti-piece';
+      piece.style.cssText = `
+        left:${cx + (Math.random()-0.5)*300}px;
+        top:${cy + (Math.random()-0.5)*200}px;
+        background:${colors[Math.floor(Math.random()*colors.length)]};
+        animation-delay:${Math.random()*0.4}s;
+        animation-duration:${0.7+Math.random()*0.5}s;
+        transform:rotate(${Math.random()*360}deg);
+      `;
+      document.body.appendChild(piece);
+      setTimeout(() => piece.remove(), 1400);
+    }
+  },
+  checkInsight() {
+    const lostLeads = state.leads.filter(l => l.stage === 'Lost' && l.closeReason);
+    const freq = {};
+    lostLeads.forEach(l => { freq[l.closeReason] = (freq[l.closeReason]||0)+1; });
+    const shownReasons = state.insights.shownLostReasons || [];
+    for (const [reason, count] of Object.entries(freq)) {
+      if (count >= 3 && !shownReasons.includes(reason)) {
+        state.insights.shownLostReasons.push(reason);
+        Storage.save(state);
+        const tips = {
+          'Preț prea mare': 'Poate merită revizuită oferta sau un pachet intro mai accesibil?',
+          'A ales concurent': 'Ce diferențiator poți evidenția mai bine în viitoarele discuții?',
+          'Nu e momentul': 'Programează un follow-up la 3 luni — timing-ul se poate schimba.',
+          'Nu a mai răspuns': 'Încearcă un alt canal de comunicare (WhatsApp vs email).',
+        };
+        const tip = tips[reason] || 'Analizează ce ai putea face diferit în viitoarele negocieri.';
+        document.getElementById('lost-insight-text').textContent = `${count} leaduri pierdute: "${reason}". ${tip}`;
+        document.getElementById('lost-insight-banner').classList.remove('hidden');
+        break;
+      }
+    }
+  }
+};
+
+// ═══════════════════════════════════════════════════
+// M14 — TEMPLATES
+// ═══════════════════════════════════════════════════
+const Templates = {
+  texts: [
+    { label: 'Primul contact', text(name) { return `Bună ziua, ${name},\n\nAm primit datele de contact de la [persoana care v-a recomandat] și am vrut să iau legătura direct cu dumneavoastră.\n\nLucrez cu firme din domeniu și de obicei ajut cu [beneficiu scurt]. Credeți că merită 15 minute să vedem dacă există o potrivire?\n\nSunt disponibil [zi] sau [zi alternativă] — ce vă convine?\n\nCu stimă,\n[Numele tău]`; } },
+    { label: 'Follow-up ofertă', text(name) { return `Bună ziua, ${name},\n\nV-am trimis oferta acum câteva zile și voiam să verific dacă ați avut ocazia să o parcurgeți.\n\nDacă aveți întrebări sau doriți să ajustăm ceva, sunt disponibil oricând pentru o discuție scurtă.\n\nAștept cu drag răspunsul dumneavoastră.\n\nCu stimă,\n[Numele tău]`; } },
+    { label: 'Reactivare rece', text(name) { return `Bună ziua, ${name},\n\nA trecut ceva timp de când am vorbit ultima dată și am vrut să reiau legătura.\n\nÎntre timp am lucrat cu câteva firme similare și am câteva idei care ar putea fi relevante și pentru dumneavoastră.\n\nMai este de actualitate subiectul pe care îl discutam? Dacă da, când am putea vorbi 10 minute?\n\nCu stimă,\n[Numele tău]`; } },
+    { label: 'Confirmare întâlnire', text(name) { return `Bună ziua, ${name},\n\nRevin să confirm întâlnirea noastră de [zi] la ora [ora].\n\nLocație / link: [locație sau link Meet/Zoom]\n\nDacă apare ceva și trebuie să reprogramăm, vă rog să mă anunțați în avans. Altfel, ne vedem atunci!\n\nCu stimă,\n[Numele tău]`; } },
+    { label: 'Mulțumire Won', text(name) { return `Bună ziua, ${name},\n\nVă mulțumesc pentru încrederea acordată. Suntem bucuroși să lucrăm împreună și vom face tot posibilul să livrăm exact ce am discutat.\n\nPașii următori: [primul pas concret]\n\nOrice întrebare sau nelămurire, nu ezitați să mă contactați direct.\n\nCu stimă,\n[Numele tău]`; } }
+  ],
+  currentLeadName: '',
+  activeIdx: 0,
+  open(leadId) {
+    const lead = App.findLead(leadId);
+    Templates.currentLeadName = lead ? lead.name.split('—')[0].trim() : '[Nume]';
+    document.getElementById('template-lead-name').textContent = `Lead: ${Templates.currentLeadName}`;
+    Templates.activeIdx = 0;
+    Templates.renderTabs();
+    Templates.renderText();
+    document.getElementById('modal-templates').classList.remove('hidden');
+  },
+  renderTabs() {
+    document.getElementById('template-tabs').innerHTML = Templates.texts.map((t,i) =>
+      `<button class="btn btn-sm ${i===Templates.activeIdx?'btn-primary':'btn-ghost'}" onclick="Templates.selectTab(${i})">${t.label}</button>`
+    ).join('');
+  },
+  selectTab(i) {
+    Templates.activeIdx = i;
+    Templates.renderTabs();
+    Templates.renderText();
+  },
+  renderText() {
+    document.getElementById('template-text').value = Templates.texts[Templates.activeIdx].text(Templates.currentLeadName);
+  },
+  copy() {
+    const text = document.getElementById('template-text').value;
+    navigator.clipboard.writeText(text).then(() => Toast.show('📋 Copiat în clipboard!')).catch(() => {
+      document.getElementById('template-text').select();
+      Toast.show('Selectează textul și copiază manual (Ctrl+C)');
+    });
+  }
+};
+
+// ═══════════════════════════════════════════════════
+// M15 — BACKUP + EXPORT
+// ═══════════════════════════════════════════════════
+const Backup = {
+  exportJSON() {
+    const data = JSON.stringify(state, null, 2);
+    const blob = new Blob([data], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url;
+    a.download = `followup-backup-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    state.meta.lastBackupAt = new Date().toISOString();
+    Storage.save(state);
+    document.getElementById('backup-banner').classList.remove('show');
+    Toast.show('💾 Backup salvat!');
+  },
+  importJSON(file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const imported = JSON.parse(e.target.result);
+        if (!Array.isArray(imported.leads)) { Toast.show('❌ Fișier invalid.'); return; }
+        let updated = 0, added = 0;
+        imported.leads.forEach(il => {
+          const idx = state.leads.findIndex(l => l.id === il.id);
+          if (idx !== -1) { state.leads[idx] = il; updated++; }
+          else { state.leads.push(il); added++; }
+        });
+        App.saveAndRender();
+        Toast.show(`✓ ${updated} actualizate, ${added} noi adăugate.`);
+      } catch { Toast.show('❌ Eroare la citirea fișierului.'); }
+    };
+    reader.readAsText(file);
+  },
+  exportCSV() {
+    const BOM = '﻿';
+    const cols = ['Nume','Sursă','Valoare','Etapă','Tip acțiune','Data acțiunii','Detaliu','Ultim contact','Notițe'];
+    const rows = state.leads.map(l => [
+      l.name, l.source||'', l.value||'', l.stage, l.actionType, l.nextDate||'',
+      l.actionDetail||'', l.lastContact||'', (l.notes||'').replace(/\n/g,' ')
+    ].map(v => `"${String(v).replace(/"/g,'""')}"`).join(','));
+    const csv = BOM + [cols.join(','), ...rows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url;
+    a.download = `followup-export-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    Toast.show('📊 CSV exportat!');
+  },
+  checkReminder() {
+    const sessions = state.meta.sessionCount || 0;
+    const lastBackup = state.meta.lastBackupAt;
+    if (sessions > 0 && sessions % 7 === 0 && !lastBackup) {
+      const banner = document.getElementById('backup-banner');
+      document.getElementById('backup-banner-msg').textContent = `${sessions} sesiuni fără backup — salvează datele în 2 secunde.`;
+      banner.classList.add('show');
+    }
+  }
+};
+
+// ═══════════════════════════════════════════════════
+// M16 — RETENTION: ICS + FAVICON + BOOKMARK HINT
+// ═══════════════════════════════════════════════════
+const Retention = {
+  generateICS(timeStr) {
+    const [h, m] = (timeStr || '08:30').split(':');
+    const pad = n => String(n).padStart(2,'0');
+    const now = new Date();
+    const dtStart = `${now.getFullYear()}${pad(now.getMonth()+1)}${pad(now.getDate())}T${pad(h)}${pad(m)}00`;
+    const ics = [
+      'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//FollowUp Board//RO',
+      'BEGIN:VEVENT',
+      `DTSTART;TZID=Europe/Bucharest:${dtStart}`,
+      'DURATION:PT5M',
+      'RRULE:FREQ=DAILY',
+      'SUMMARY:FollowUp Board — verifică pipeline-ul de azi',
+      'DESCRIPTION:Deschide followup-board.html în browser și verifică cine trebuie contactat azi.',
+      `UID:followupboard-daily-${Date.now()}@app`,
+      'END:VEVENT', 'END:VCALENDAR'
+    ].join('\r\n');
+    const blob = new Blob([ics], { type: 'text/calendar' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url;
+    a.download = 'followup-board-reminder.ics';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    Toast.show('📅 Fișier .ics descărcat! Importă-l în Google Calendar / Outlook.');
+  },
+  updateFavicon() {
+    try {
+      const all = [...state.leads];
+      if (Demo.isVisible(state)) {
+        const ids = all.map(l=>l.id);
+        Demo.getLeads().forEach(dl => { if(!ids.includes(dl.id)) all.push(dl); });
+      }
+      const redCount = all.filter(l => Urgency.calc(l).level === 'red').length;
+      const canvas = document.createElement('canvas');
+      canvas.width = 32; canvas.height = 32;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = redCount > 0 ? '#ef4444' : '#6366f1';
+      ctx.beginPath(); ctx.arc(16,16,14,0,2*Math.PI); ctx.fill();
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 14px sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(redCount > 0 ? String(Math.min(redCount, 99)) : '✓', 16, 16);
+      let link = document.querySelector("link[rel='icon']");
+      if (!link) { link = document.createElement('link'); link.rel = 'icon'; document.head.appendChild(link); }
+      link.href = canvas.toDataURL();
+    } catch(e) {}
+  },
+  showBookmarkHint() {
+    if (state.meta.bookmarkHintShown) return;
+    if (state.meta.sessionCount !== 1) return;
+    const el = document.getElementById('bookmark-hint');
+    el.classList.remove('hidden');
+    state.meta.bookmarkHintShown = true;
+    Storage.save(state);
+  }
+};
+
+// ═══════════════════════════════════════════════════
+// M17 — STATS + EMAIL CAPTURE + KEYBOARD
+// ═══════════════════════════════════════════════════
+const Stats = {
+  calc() {
+    const all = state.leads;
+    const won = all.filter(l => l.stage === 'Won');
+    const lost = all.filter(l => l.stage === 'Lost');
+    const total = won.length + lost.length;
+    const rate = total > 0 ? Math.round(won.length / total * 100) : null;
+    const value = won.reduce((s, l) => s + (l.value || 0), 0);
+    return { won: won.length, lost: lost.length, rate, value };
+  },
+  render() {
+    const s = Stats.calc();
+    const set = (id, v) => { const el = document.getElementById(id); if(el) el.textContent = v; };
+    set('stat-won', s.won);
+    set('stat-lost', s.lost);
+    set('stat-rate', s.rate !== null ? s.rate + '%' : '—');
+    set('stat-value', s.value.toLocaleString() + ' lei');
+  }
+};
+
+const Email = {
+  check() {
+    if (state.meta.emailCaptured || state.meta.newsletterDismissed) return;
+    if (state.meta.sessionCount === 3) {
+      document.getElementById('email-banner').classList.remove('hidden');
+    }
+  }
+};
+
+const Keyboard = {
+  setup() {
+    document.addEventListener('keydown', e => {
+      const tag = document.activeElement.tagName.toLowerCase();
+      const inInput = ['input','textarea','select'].includes(tag);
+      if (e.key === 'Escape') {
+        if (!document.getElementById('briefing-overlay').classList.contains('hidden')) { Briefing.dismiss(); return; }
+        if (!document.getElementById('modal-lead').classList.contains('hidden')) { Modal.closeLead(); return; }
+        if (!document.getElementById('modal-templates').classList.contains('hidden')) { Modal.closeTemplates(); return; }
+        if (!document.getElementById('modal-wonlost').classList.contains('hidden')) { Modal.closeWonLost(); return; }
+        if (!document.getElementById('modal-contact').classList.contains('hidden')) { Modal.closeContact(); return; }
+        if (!document.getElementById('modal-ics').classList.contains('hidden')) { Modal.closeICS(); return; }
+        if (document.getElementById('panel').classList.contains('open')) { Panel.close(); return; }
+        document.getElementById('snooze-menu').classList.remove('open');
+      }
+      if (inInput) return;
+      if (e.key === 'n' || e.key === 'N') { e.preventDefault(); Modal.openLead(); }
+      if (e.key === '/') { e.preventDefault(); document.getElementById('search-input').focus(); }
+    });
+  }
+};
+
+// ═══════════════════════════════════════════════════
+// M18 — MODAL HELPERS + APP CONTROLLER
+// ═══════════════════════════════════════════════════
+const Modal = {
+  openLead(editId = null) {
+    const lead = editId ? App.findLead(editId) : null;
+    document.getElementById('modal-lead-title').textContent = lead ? '✏ Editează lead' : '+ Lead nou';
+    const defaultDate = (() => {
+      const d = new Date(); d.setDate(d.getDate() + 2);
+      return d.toISOString().split('T')[0];
+    })();
+    document.getElementById('f-name').value = lead ? lead.name : '';
+    document.getElementById('f-actiontype').value = lead ? lead.actionType : 'Apel';
+    document.getElementById('f-nextdate').value = lead ? lead.nextDate : defaultDate;
+    document.getElementById('f-detail').value = lead ? lead.actionDetail : '';
+    document.getElementById('f-source').value = lead ? (lead.source||'') : '';
+    document.getElementById('f-value').value = lead ? (lead.value||'') : '';
+    document.getElementById('f-notes').value = lead ? (lead.notes||'') : '';
+    document.getElementById('f-detail-cnt').textContent = `(${(lead?.actionDetail||'').length}/80)`;
+    document.getElementById('btn-save-lead').dataset.editId = editId || '';
+    document.getElementById('modal-lead').classList.remove('hidden');
+    setTimeout(() => document.getElementById('f-name').focus(), 50);
+  },
+  closeLead() { document.getElementById('modal-lead').classList.add('hidden'); },
+
+  openContact(leadId) {
+    const lead = App.findLead(leadId);
+    const defaultDate = (() => {
+      const d = new Date(); d.setDate(d.getDate() + 3);
+      return d.toISOString().split('T')[0];
+    })();
+    document.getElementById('contact-type').value = lead ? lead.actionType : 'Apel';
+    document.getElementById('contact-nextdate').value = defaultDate;
+    document.getElementById('contact-nexttype').value = lead ? lead.actionType : 'Apel';
+    document.getElementById('modal-contact').classList.remove('hidden');
+  },
+  closeContact() { document.getElementById('modal-contact').classList.add('hidden'); },
+
+  openTemplates(leadId) { Templates.open(leadId || panelLeadId || (state.leads[0]?.id)); },
+  closeTemplates() { document.getElementById('modal-templates').classList.add('hidden'); },
+
+  openWonLost(type) {
+    document.getElementById('wonlost-title').textContent = type === 'Won' ? '🎉 Marchează Won' : '❌ Marchează Lost';
+    const wonReasons = ['Preț bun','Relație de încredere','Timing perfect','Calitate percepută','Altul'];
+    const lostReasons = ['Preț prea mare','A ales concurent','Nu e momentul','Nu a mai răspuns','Altul'];
+    const reasons = type === 'Won' ? wonReasons : lostReasons;
+    document.getElementById('wonlost-reason').innerHTML = reasons.map(r=>`<option>${r}</option>`).join('');
+    document.getElementById('wonlost-reason-lbl').textContent = type === 'Won' ? 'Motiv câștig' : 'Motiv pierdere';
+    const vb = document.getElementById('wonlost-value-block');
+    if (type === 'Won') {
+      vb.style.display = '';
+      const lead = App.findLead(wonLostTarget.id);
+      document.getElementById('wonlost-value').value = lead?.value || '';
+    } else { vb.style.display = 'none'; }
+    document.getElementById('modal-wonlost').classList.remove('hidden');
+  },
+  closeWonLost() { document.getElementById('modal-wonlost').classList.add('hidden'); },
+
+  openICS() { document.getElementById('modal-ics').classList.remove('hidden'); },
+  closeICS() { document.getElementById('modal-ics').classList.add('hidden'); }
+};
+
+// ── EVENT WIRING ──
+document.addEventListener('DOMContentLoaded', () => {
+
+  // Lead form save
+  document.getElementById('btn-save-lead').addEventListener('click', () => {
+    const name = document.getElementById('f-name').value.trim();
+    if (!name) { Toast.show('Introdu un nume.'); return; }
+    const nextDate = document.getElementById('f-nextdate').value;
+    if (!nextDate) { Toast.show('Alege data acțiunii.'); return; }
+    const data = {
+      name, actionType: document.getElementById('f-actiontype').value,
+      nextDate, actionDetail: document.getElementById('f-detail').value.trim(),
+      source: document.getElementById('f-source').value,
+      value: document.getElementById('f-value').value,
+      notes: document.getElementById('f-notes').value
+    };
+    const editId = document.getElementById('btn-save-lead').dataset.editId;
+    if (editId) {
+      Leads.update(editId, data);
+      Toast.show('✓ Lead actualizat.');
+    } else {
+      Leads.add(data);
+      Toast.show('✓ Lead adăugat!');
+    }
+    Modal.closeLead();
+  });
+
+  // Detail char count
+  document.getElementById('f-detail').addEventListener('input', function() {
+    document.getElementById('f-detail-cnt').textContent = `(${this.value.length}/80)`;
+  });
+
+  // Nav buttons
+  document.getElementById('btn-add-lead').addEventListener('click', () => Modal.openLead());
+  document.getElementById('btn-templates').addEventListener('click', () => Modal.openTemplates());
+  document.getElementById('btn-backup').addEventListener('click', () => Backup.exportJSON());
+  document.getElementById('btn-export-csv').addEventListener('click', () => Backup.exportCSV());
+  document.getElementById('btn-import').addEventListener('click', () => document.getElementById('file-import').click());
+  document.getElementById('btn-ics').addEventListener('click', () => Modal.openICS());
+  document.getElementById('file-import').addEventListener('change', e => {
+    if (e.target.files[0]) { Backup.importJSON(e.target.files[0]); e.target.value = ''; }
+  });
+
+  // Panel close
+  document.getElementById('btn-close-panel').addEventListener('click', () => Panel.close());
+
+  // Confirm contact
+  document.getElementById('btn-confirm-contact').addEventListener('click', () => {
+    const type = document.getElementById('contact-type').value;
+    const nextDate = document.getElementById('contact-nextdate').value;
+    const nextType = document.getElementById('contact-nexttype').value;
+    if (!nextDate) { Toast.show('Alege data următoarei acțiuni.'); return; }
+    Leads.markContacted(contactTargetId, type, nextDate, nextType);
+    Modal.closeContact();
+  });
+
+  // Confirm Won/Lost
+  document.getElementById('btn-confirm-wonlost').addEventListener('click', () => {
+    const reason = document.getElementById('wonlost-reason').value;
+    const { id, type } = wonLostTarget;
+    if (!id) return;
+    if (type === 'Won') {
+      const value = document.getElementById('wonlost-value').value;
+      WonLost.markWon(id, reason, value);
+    } else {
+      WonLost.markLost(id, reason);
+    }
+    Modal.closeWonLost();
+  });
+
+  // Confirm ICS
+  document.getElementById('btn-confirm-ics').addEventListener('click', () => {
+    Retention.generateICS(document.getElementById('ics-hour').value);
+    Modal.closeICS();
+  });
+
+  // Copy template
+  document.getElementById('btn-copy-template').addEventListener('click', () => Templates.copy());
+
+  // Snooze menu
+  document.getElementById('snooze-menu').querySelectorAll('.snooze-opt').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (snoozeTargetId) Leads.snooze(snoozeTargetId, parseInt(btn.dataset.days));
+      document.getElementById('snooze-menu').classList.remove('open');
+      snoozeTargetId = null;
+    });
+  });
+  document.addEventListener('click', e => {
+    if (!e.target.closest('#snooze-menu') && !e.target.closest('[data-snooze-id]')) {
+      document.getElementById('snooze-menu').classList.remove('open');
+    }
+  });
+
+  // Sidebar filter buttons
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      currentFilter = btn.dataset.filter;
+      document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      App.render();
+    });
+  });
+
+  // Search
+  document.getElementById('search-input').addEventListener('input', e => {
+    currentSearch = e.target.value;
+    App.render();
+  });
+
+  // Dismiss buttons
+  document.getElementById('btn-dismiss-bookmark').addEventListener('click', () => {
+    document.getElementById('bookmark-hint').classList.add('hidden');
+  });
+  document.getElementById('btn-dismiss-lost-insight').addEventListener('click', () => {
+    document.getElementById('lost-insight-banner').classList.add('hidden');
+  });
+  document.getElementById('btn-dismiss-email').addEventListener('click', () => {
+    state.meta.newsletterDismissed = true;
+    Storage.save(state);
+    document.getElementById('email-banner').classList.add('hidden');
+  });
+  document.getElementById('btn-email-submit').addEventListener('click', () => {
+    const email = document.getElementById('email-input').value.trim();
+    if (!email.includes('@')) { Toast.show('Introdu un email valid.'); return; }
+    state.meta.emailCaptured = true;
+    Storage.save(state);
+    document.getElementById('email-banner').classList.add('hidden');
+    Toast.show('✓ Mulțumim! Ghidul va fi trimis pe email.');
+  });
+
+  // Briefing overlay click outside
+  document.getElementById('briefing-overlay').addEventListener('click', e => {
+    if (e.target === document.getElementById('briefing-overlay')) Briefing.dismiss();
+  });
+
+  // Modal overlays click outside
+  ['modal-lead','modal-templates','modal-wonlost','modal-contact','modal-ics'].forEach(id => {
+    document.getElementById(id).addEventListener('click', e => {
+      if (e.target.id === id) {
+        if (id === 'modal-lead') Modal.closeLead();
+        else if (id === 'modal-templates') Modal.closeTemplates();
+        else if (id === 'modal-wonlost') Modal.closeWonLost();
+        else if (id === 'modal-contact') Modal.closeContact();
+        else if (id === 'modal-ics') Modal.closeICS();
+      }
+    });
+  });
+
+  // INIT
+  App.init();
+});
+</script>
+</body>
+</html>

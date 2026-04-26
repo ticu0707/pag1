@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FollowUp Board — Știi pe cine trebuie să suni azi?</title>
+  <meta name="description" content="Tool gratuit de urmărire lead-uri pentru antreprenori. Descarcă, deschide în browser, folosește offline. Fără cont, fără instalare, fără internet." />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] },
+        }
+      }
+    }
+  </script>
+
+  <style>
+    * { box-sizing: border-box; }
+
+    /* ---------- Animations ---------- */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(28px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes floatY {
+      0%, 100% { transform: translateY(0px); }
+      50%       { transform: translateY(-10px); }
+    }
+    @keyframes pulseGlow {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(99,102,241,.4); }
+      50%       { box-shadow: 0 0 0 12px rgba(99,102,241,0); }
+    }
+    @keyframes shimmer {
+      0%   { background-position: -400px 0; }
+      100% { background-position: 400px 0; }
+    }
+    @keyframes blink {
+      0%,100% { opacity:1; } 50% { opacity:.3; }
+    }
+    @keyframes countUp {
+      from { opacity:0; transform: scale(.8); }
+      to   { opacity:1; transform: scale(1); }
+    }
+    @keyframes slideIn {
+      from { opacity:0; transform: translateX(20px); }
+      to   { opacity:1; transform: translateX(0); }
+    }
+
+    .fade-up  { animation: fadeUp .65s ease both; }
+    .d1 { animation-delay:.05s; }
+    .d2 { animation-delay:.15s; }
+    .d3 { animation-delay:.25s; }
+    .d4 { animation-delay:.38s; }
+    .d5 { animation-delay:.50s; }
+
+    .float { animation: floatY 4s ease-in-out infinite; }
+
+    /* Gradient text */
+    .grad-text {
+      background: linear-gradient(135deg, #818cf8 0%, #38bdf8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .grad-text-green {
+      background: linear-gradient(135deg, #34d399, #10b981);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* Hero glow orb */
+    .glow-orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      pointer-events: none;
+    }
+
+    /* Feature card hover */
+    .f-card {
+      transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease;
+    }
+    .f-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 24px 48px -12px rgba(99,102,241,.18);
+      border-color: rgba(99,102,241,.4);
+    }
+
+    /* Pill badge shimmer */
+    .badge-shimmer {
+      background: linear-gradient(90deg, rgba(99,102,241,.15) 25%, rgba(99,102,241,.3) 50%, rgba(99,102,241,.15) 75%);
+      background-size: 400px 100%;
+      animation: shimmer 2.5s infinite;
+    }
+
+    /* CTA button pulse */
+    .btn-primary {
+      animation: pulseGlow 2.5s ease infinite;
+    }
+    .btn-primary:hover { animation: none; transform: scale(1.03); }
+    .btn-primary { transition: transform .15s ease; }
+
+    /* Scroll reveal via JS */
+    .reveal { opacity:0; transform: translateY(24px); transition: opacity .6s ease, transform .6s ease; }
+    .reveal.visible { opacity:1; transform: none; }
+
+    /* Dot blink */
+    .dot-blink { animation: blink 1.8s ease infinite; }
+
+    /* Nav glass */
+    .nav-glass {
+      background: rgba(15,23,42,.85);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid rgba(255,255,255,.06);
+    }
+
+    /* Mockup card */
+    .mockup-card {
+      background: rgba(30,41,59,.95);
+      border: 1px solid rgba(255,255,255,.08);
+      box-shadow: 0 40px 80px -20px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.04);
+    }
+
+    /* Table row hover */
+    tr.trow:hover td { background: rgba(255,255,255,.03); }
+
+    /* Quote gradient bg */
+    .quote-bg {
+      background: linear-gradient(135deg, #4338ca 0%, #0284c7 100%);
+    }
+
+    /* Step connector */
+    .step-line::after {
+      content: '';
+      position: absolute;
+      top: 48px;
+      left: calc(50% + 48px);
+      right: calc(-50% + 48px);
+      height: 2px;
+      background: linear-gradient(90deg, #6366f1, #38bdf8);
+      opacity: .3;
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+
+    @media (max-width: 768px) {
+      .step-line::after { display: none; }
+    }
+  </style>
+</head>
+<body class="font-sans bg-white text-slate-900 antialiased overflow-x-hidden">
+
+<!-- ═══════════════════════ NAV ═══════════════════════ -->
+<nav class="nav-glass fixed top-0 left-0 right-0 z-50">
+  <div class="max-w-6xl mx-auto px-5 sm:px-8 flex items-center justify-between h-16">
+    <!-- Logo -->
+    <a href="#" class="flex items-center gap-2.5 group">
+      <div class="w-9 h-9 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/30 group-hover:shadow-indigo-500/50 transition-shadow">
+        <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>
+        </svg>
+      </div>
+      <span class="text-white font-bold text-lg tracking-tight">FollowUp Board</span>
+    </a>
+
+    <!-- Nav CTA -->
+    <a href="followup-board.html" download
+       class="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold px-4 py-2 rounded-lg transition-colors shadow-lg shadow-indigo-600/25">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+      </svg>
+      Descarcă Gratuit
+    </a>
+  </div>
+</nav>
+
+
+<!-- ═══════════════════════ HERO ═══════════════════════ -->
+<section class="relative bg-slate-900 pt-32 pb-28 px-5 sm:px-8 overflow-hidden">
+
+  <!-- Background orbs -->
+  <div class="glow-orb w-[500px] h-[500px] bg-indigo-600/20 top-[-100px] left-1/2 -translate-x-1/2"></div>
+  <div class="glow-orb w-[300px] h-[300px] bg-blue-500/15 top-32 left-[10%]"></div>
+  <div class="glow-orb w-[250px] h-[250px] bg-violet-600/15 top-40 right-[8%]"></div>
+
+  <!-- Grid pattern overlay -->
+  <div class="absolute inset-0 pointer-events-none" style="background-image: linear-gradient(rgba(99,102,241,.04) 1px, transparent 1px), linear-gradient(90deg, rgba(99,102,241,.04) 1px, transparent 1px); background-size: 40px 40px;"></div>
+
+  <div class="max-w-6xl mx-auto relative">
+
+    <!-- Badge -->
+    <div class="flex justify-center mb-7 fade-up d1">
+      <div class="badge-shimmer inline-flex items-center gap-2.5 border border-indigo-500/30 text-indigo-300 text-sm font-medium px-5 py-2 rounded-full">
+        <span class="dot-blink w-2 h-2 bg-green-400 rounded-full inline-block"></span>
+        100% Gratuit &nbsp;·&nbsp; Fără cont &nbsp;·&nbsp; Fără internet
+      </div>
+    </div>
+
+    <!-- Headline -->
+    <h1 class="text-center text-5xl sm:text-6xl lg:text-7xl font-black text-white leading-[1.1] tracking-tight mb-7 fade-up d2">
+      Știi pe cine<br class="hidden sm:block"/>
+      trebuie să suni <span class="grad-text">azi?</span>
+    </h1>
+
+    <!-- Sub-headline -->
+    <p class="text-center text-lg sm:text-xl text-slate-400 max-w-xl mx-auto mb-10 leading-relaxed fade-up d3">
+      FollowUp Board îți arată în <strong class="text-white font-semibold">30 de secunde</strong> care lead-uri
+      sunt urgente. Descarcă, deschide în browser, folosește imediat.
+    </p>
+
+    <!-- CTA buttons -->
+    <div class="flex flex-col sm:flex-row gap-4 justify-center items-center mb-20 fade-up d4">
+      <a href="followup-board.html" download
+         class="btn-primary inline-flex items-center gap-2.5 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white font-bold text-lg px-8 py-4 rounded-xl shadow-xl shadow-indigo-600/35">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+        </svg>
+        Descarcă Gratuit — 1 click
+      </a>
+      <a href="#cum-functioneaza"
+         class="inline-flex items-center gap-2 border border-white/15 hover:border-white/30 text-slate-300 hover:text-white font-semibold text-lg px-8 py-4 rounded-xl transition-colors">
+        Cum funcționează?
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+        </svg>
+      </a>
+    </div>
+
+    <!-- App Mockup -->
+    <div class="max-w-2xl mx-auto fade-up d5 float">
+      <div class="mockup-card rounded-2xl overflow-hidden">
+
+        <!-- Window chrome bar -->
+        <div class="px-5 py-3.5 flex items-center justify-between" style="background:rgba(15,23,42,.8); border-bottom:1px solid rgba(255,255,255,.05)">
+          <div class="flex items-center gap-4">
+            <div class="flex gap-1.5">
+              <span class="w-3 h-3 rounded-full bg-red-500/60"></span>
+              <span class="w-3 h-3 rounded-full bg-yellow-500/60"></span>
+              <span class="w-3 h-3 rounded-full bg-green-500/60"></span>
+            </div>
+            <span class="text-slate-500 text-sm">FollowUp Board — Pipeline</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs bg-red-500/20 text-red-400 px-2.5 py-1 rounded-md font-semibold">🔴 2 restante</span>
+            <span class="text-xs bg-yellow-500/20 text-yellow-400 px-2.5 py-1 rounded-md font-semibold">🟡 3 azi</span>
+          </div>
+        </div>
+
+        <!-- Briefing daily card -->
+        <div class="mx-4 mt-4 px-4 py-3.5 rounded-xl" style="background:rgba(99,102,241,.15); border:1px solid rgba(99,102,241,.25)">
+          <p class="text-indigo-300 font-semibold text-sm mb-1">Bună dimineața! ☀️</p>
+          <p class="text-slate-300 text-sm">Cel mai urgent: <span class="text-white font-semibold">Ionescu Alexandru — 9 zile fără contact</span></p>
+        </div>
+
+        <!-- Search + filters -->
+        <div class="mx-4 mt-3 flex items-center gap-2">
+          <div class="flex-1 flex items-center gap-2 bg-slate-800/70 border border-white/8 rounded-lg px-3 py-2">
+            <svg class="w-4 h-4 text-slate-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0"/></svg>
+            <span class="text-slate-500 text-sm">Caută lead-uri...</span>
+          </div>
+          <button class="text-xs bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 px-3 py-2 rounded-lg font-medium">Toate</button>
+          <button class="text-xs bg-red-500/20 text-red-400 border border-red-500/20 px-3 py-2 rounded-lg font-medium">🔴</button>
+        </div>
+
+        <!-- Lead list -->
+        <div class="px-4 pt-3 pb-4 space-y-2.5">
+          <!-- Lead 1 — RED urgent -->
+          <div class="rounded-xl p-4" style="background:rgba(239,68,68,.08); border:1px solid rgba(239,68,68,.2)">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-red-400 text-xs font-bold tracking-wide">🔴 9 ZILE FĂRĂ CONTACT</span>
+              <span class="text-slate-500 text-xs bg-slate-800 px-2 py-0.5 rounded">Apel</span>
+            </div>
+            <p class="text-white text-sm font-bold mb-0.5">Ionescu Alexandru</p>
+            <p class="text-slate-400 text-xs mb-3">Cabinet Contabilitate Alpha &nbsp;·&nbsp; 3.600 lei &nbsp;·&nbsp; Propunere trimisă</p>
+            <p class="text-slate-300 text-xs mb-3 italic">"Trimite oferta revizuită cu reducerea de 10%"</p>
+            <div class="flex gap-2">
+              <button class="text-xs bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg font-semibold transition-colors">✓ Am contactat</button>
+              <button class="text-xs bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg font-medium">⏩ Amână</button>
+              <button class="text-xs bg-slate-700 text-slate-400 px-3 py-1.5 rounded-lg ml-auto">→</button>
+            </div>
+          </div>
+
+          <!-- Lead 2 — YELLOW today -->
+          <div class="rounded-xl p-4" style="background:rgba(234,179,8,.07); border:1px solid rgba(234,179,8,.2)">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-yellow-400 text-xs font-bold tracking-wide">🟡 AZI</span>
+              <span class="text-slate-500 text-xs bg-slate-800 px-2 py-0.5 rounded">WhatsApp</span>
+            </div>
+            <p class="text-white text-sm font-bold mb-0.5">Popescu Ana</p>
+            <p class="text-slate-400 text-xs mb-3">Salon Beauty Nova &nbsp;·&nbsp; 1.200 lei &nbsp;·&nbsp; Activ</p>
+            <p class="text-slate-300 text-xs mb-3 italic">"Confirmă întâlnirea de joi la 14:00"</p>
+            <div class="flex gap-2">
+              <button class="text-xs bg-emerald-600 text-white px-3 py-1.5 rounded-lg font-semibold">✓ Am contactat</button>
+              <button class="text-xs bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg font-medium">⏩ Amână</button>
+              <button class="text-xs bg-slate-700 text-slate-400 px-3 py-1.5 rounded-lg ml-auto">→</button>
+            </div>
+          </div>
+
+          <!-- Lead 3 — GRAY upcoming -->
+          <div class="rounded-xl p-3" style="background:rgba(71,85,105,.3); border:1px solid rgba(255,255,255,.06)">
+            <div class="flex items-center justify-between mb-1.5">
+              <span class="text-slate-400 text-xs font-bold tracking-wide">⚪ MÂINE</span>
+              <span class="text-slate-500 text-xs bg-slate-800 px-2 py-0.5 rounded">Apel</span>
+            </div>
+            <p class="text-slate-300 text-sm font-semibold">Dumitru Constantin — Florărie Primăvara</p>
+            <p class="text-slate-500 text-xs mt-1">"Primul apel de prezentare"</p>
+          </div>
+        </div>
+
+        <!-- Status bar -->
+        <div class="px-4 py-3 flex items-center justify-between text-xs text-slate-600" style="border-top:1px solid rgba(255,255,255,.05)">
+          <span>N nou &nbsp;&nbsp; / search &nbsp;&nbsp; Esc închide</span>
+          <span class="text-emerald-500 font-semibold">Won: 7 · Rată: 64% · 23.400 lei</span>
+        </div>
+      </div>
+
+      <!-- Social proof under mockup -->
+      <div class="flex items-center justify-center gap-6 mt-6 text-slate-500 text-sm">
+        <span class="flex items-center gap-1.5"><span class="text-green-400">✓</span> Fără cont</span>
+        <span class="flex items-center gap-1.5"><span class="text-green-400">✓</span> Fără instalare</span>
+        <span class="flex items-center gap-1.5"><span class="text-green-400">✓</span> 100% offline</span>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ═══════════════════════ PAIN POINTS ═══════════════════════ -->
+<section class="bg-white py-24 px-5 sm:px-8">
+  <div class="max-w-6xl mx-auto">
+    <div class="text-center mb-14 reveal">
+      <p class="text-indigo-600 font-bold text-sm tracking-widest uppercase mb-3">Problema reală</p>
+      <h2 class="text-4xl sm:text-5xl font-black text-slate-900 mb-4">Recunoști situația?</h2>
+      <p class="text-xl text-slate-500">Fiecare owner care face vânzări a trecut prin asta</p>
+    </div>
+
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div class="reveal p-8 rounded-2xl border-2 border-red-100 bg-gradient-to-br from-red-50 to-orange-50">
+        <div class="text-5xl mb-5">😬</div>
+        <h3 class="text-xl font-black text-slate-900 mb-3">„Am uitat să sun..."</h3>
+        <p class="text-slate-600 leading-relaxed">Un lead calificat din referință, dispărut în inbox. Suni după 2 săptămâni — a ales concurentul <em>ieri</em>. Și tu nu știai.</p>
+      </div>
+
+      <div class="reveal p-8 rounded-2xl border-2 border-yellow-100 bg-gradient-to-br from-yellow-50 to-amber-50">
+        <div class="text-5xl mb-5">📱</div>
+        <h3 class="text-xl font-black text-slate-900 mb-3">Informații în 5 locuri</h3>
+        <p class="text-slate-600 leading-relaxed">WhatsApp, email, notițe pe telefon, un Excel cu 3 versiuni, un sticky note pe monitor. Nu e un sistem — e haos organizat.</p>
+      </div>
+
+      <div class="reveal p-8 rounded-2xl border-2 border-blue-100 bg-gradient-to-br from-blue-50 to-indigo-50 sm:col-span-2 lg:col-span-1">
+        <div class="text-5xl mb-5">🌅</div>
+        <h3 class="text-xl font-black text-slate-900 mb-3">„Azi cu cine încep?"</h3>
+        <p class="text-slate-600 leading-relaxed">Dimineața, în loc să vinzi, petreci 20 de minute să descoperi cine e cel mai urgent. Ziua se pierde înainte să înceapă.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════ HOW IT WORKS ═══════════════════════ -->
+<section id="cum-functioneaza" class="bg-slate-50 py-24 px-5 sm:px-8">
+  <div class="max-w-6xl mx-auto">
+    <div class="text-center mb-16 reveal">
+      <p class="text-indigo-600 font-bold text-sm tracking-widest uppercase mb-3">Setup în 5 minute</p>
+      <h2 class="text-4xl sm:text-5xl font-black text-slate-900 mb-4">De la download la primul lead real</h2>
+      <p class="text-xl text-slate-500">Fără tutorial. Fără onboarding. Fără asistență tehnică.</p>
+    </div>
+
+    <div class="grid md:grid-cols-3 gap-8 md:gap-4 lg:gap-8 relative">
+      <!-- Step 1 -->
+      <div class="reveal text-center relative step-line">
+        <div class="w-24 h-24 bg-gradient-to-br from-indigo-600 to-indigo-700 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-indigo-600/30">
+          <svg class="w-11 h-11 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+          </svg>
+        </div>
+        <div class="inline-block text-xs font-black text-indigo-600 tracking-widest uppercase mb-3 bg-indigo-50 px-3 py-1 rounded-full">Pasul 1 — 10 secunde</div>
+        <h3 class="text-xl font-black text-slate-900 mb-3">Descarcă — 1 click</h3>
+        <p class="text-slate-500 leading-relaxed">Un singur fișier HTML. Nicio instalare, niciun setup, nicio parolă. Îl pui pe desktop și gata.</p>
+      </div>
+
+      <!-- Step 2 -->
+      <div class="reveal text-center relative step-line">
+        <div class="w-24 h-24 bg-gradient-to-br from-violet-600 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-violet-600/25">
+          <svg class="w-11 h-11 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+          </svg>
+        </div>
+        <div class="inline-block text-xs font-black text-violet-600 tracking-widest uppercase mb-3 bg-violet-50 px-3 py-1 rounded-full">Pasul 2 — 5 secunde</div>
+        <h3 class="text-xl font-black text-slate-900 mb-3">Deschide în browser</h3>
+        <p class="text-slate-500 leading-relaxed">Dublu-click pe fișier. Chrome, Firefox, Edge — orice funcționează. Nu ai nevoie de internet.</p>
+      </div>
+
+      <!-- Step 3 -->
+      <div class="reveal text-center">
+        <div class="w-24 h-24 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-emerald-600/25">
+          <svg class="w-11 h-11 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+          </svg>
+        </div>
+        <div class="inline-block text-xs font-black text-emerald-600 tracking-widest uppercase mb-3 bg-emerald-50 px-3 py-1 rounded-full">Pasul 3 — 4 minute</div>
+        <h3 class="text-xl font-black text-slate-900 mb-3">Adaugă primele lead-uri</h3>
+        <p class="text-slate-500 leading-relaxed">Datele demo sunt deja acolo ca să înțelegi imediat cum funcționează. În 5 minute știi deja pe cine suni azi.</p>
+      </div>
+    </div>
+
+    <!-- Timeline bar -->
+    <div class="mt-16 reveal max-w-2xl mx-auto">
+      <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+        <p class="text-center text-slate-500 text-sm font-semibold mb-4 uppercase tracking-wide">Primele 5 minute — ce simți</p>
+        <div class="space-y-3">
+          <div class="flex items-center gap-3">
+            <span class="text-xs text-slate-400 w-10 shrink-0 text-right font-mono">0:10</span>
+            <div class="w-2 h-2 bg-indigo-500 rounded-full shrink-0"></div>
+            <p class="text-sm text-slate-700">Deschizi aplicația. Apare cardul "Bună dimineața!" cu briefingul zilei.</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="text-xs text-slate-400 w-10 shrink-0 text-right font-mono">0:40</span>
+            <div class="w-2 h-2 bg-red-500 rounded-full shrink-0"></div>
+            <p class="text-sm text-slate-700">Observi "9 zile" pe primul lead roșu. Înțelegi imediat urgența.</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="text-xs text-slate-400 w-10 shrink-0 text-right font-mono">1:30</span>
+            <div class="w-2 h-2 bg-yellow-500 rounded-full shrink-0"></div>
+            <p class="text-sm text-slate-700">Adaugi primul lead real. 6 câmpuri simple, 30 de secunde.</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="text-xs text-slate-400 w-10 shrink-0 text-right font-mono">4:00</span>
+            <div class="w-2 h-2 bg-blue-500 rounded-full shrink-0"></div>
+            <p class="text-sm text-slate-700">Descarci fișierul ICS și îl adaugi în Google Calendar — reminder zilnic setat.</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="text-xs text-slate-400 w-10 shrink-0 text-right font-mono">5:00</span>
+            <div class="w-2 h-2 bg-emerald-500 rounded-full shrink-0"></div>
+            <p class="text-sm text-slate-700 font-semibold text-slate-900">„Asta e exact ce aveam nevoie."</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════ FEATURES ═══════════════════════ -->
+<section class="bg-white py-24 px-5 sm:px-8">
+  <div class="max-w-6xl mx-auto">
+    <div class="text-center mb-16 reveal">
+      <p class="text-indigo-600 font-bold text-sm tracking-widest uppercase mb-3">Funcționalități</p>
+      <h2 class="text-4xl sm:text-5xl font-black text-slate-900 mb-4">Tot ce ai nevoie.</h2>
+      <p class="text-xl text-slate-500">Construit pentru owner-ul care face vânzările singur, nu pentru o echipă de sales cu CRM enterprise.</p>
+    </div>
+
+    <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+
+      <div class="f-card reveal border border-slate-200 rounded-2xl p-7">
+        <div class="w-12 h-12 bg-amber-100 rounded-xl flex items-center justify-center mb-5">
+          <span class="text-2xl">🌅</span>
+        </div>
+        <h3 class="text-lg font-black text-slate-900 mb-2">Briefing zilnic automat</h3>
+        <p class="text-slate-500 text-sm leading-relaxed">La fiecare deschidere: câte follow-up-uri restante, cine e cel mai urgent. Ziua ta începe cu claritate, nu cu haos.</p>
+      </div>
+
+      <div class="f-card reveal border border-slate-200 rounded-2xl p-7">
+        <div class="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center mb-5">
+          <span class="text-2xl">🔴</span>
+        </div>
+        <h3 class="text-lg font-black text-slate-900 mb-2">Urgența e vizibilă</h3>
+        <p class="text-slate-500 text-sm leading-relaxed">„9 zile fără contact" — badge direct în listă, fără să intri în lead. Știi instantaneu cine a așteptat prea mult.</p>
+      </div>
+
+      <div class="f-card reveal border border-slate-200 rounded-2xl p-7">
+        <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-5">
+          <span class="text-2xl">⚡</span>
+        </div>
+        <h3 class="text-lg font-black text-slate-900 mb-2">Acțiuni în 2 secunde</h3>
+        <p class="text-slate-500 text-sm leading-relaxed">„Am contactat" sau „Amână" direct din listă. Nu deschizi nimic, nu navighezi nicăieri. Acționezi instant.</p>
+      </div>
+
+      <div class="f-card reveal border border-slate-200 rounded-2xl p-7">
+        <div class="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center mb-5">
+          <span class="text-2xl">🎉</span>
+        </div>
+        <h3 class="text-lg font-black text-slate-900 mb-2">Celebrare Won</h3>
+        <p class="text-slate-500 text-sm leading-relaxed">Marchezi un lead Won și primești animație + toast „🎉 +8.000 lei câștigați". Vinzi cu plăcere, nu cu obligație.</p>
+      </div>
+
+      <div class="f-card reveal border border-slate-200 rounded-2xl p-7">
+        <div class="w-12 h-12 bg-violet-100 rounded-xl flex items-center justify-center mb-5">
+          <span class="text-2xl">📋</span>
+        </div>
+        <h3 class="text-lg font-black text-slate-900 mb-2">5 șabloane gata de trimis</h3>
+        <p class="text-slate-500 text-sm leading-relaxed">Primul contact, follow-up după ofertă, reactivare lead rece, confirmare întâlnire, mulțumire după semnare. Copy-paste în 3 secunde.</p>
+      </div>
+
+      <div class="f-card reveal border border-slate-200 rounded-2xl p-7">
+        <div class="w-12 h-12 bg-slate-100 rounded-xl flex items-center justify-center mb-5">
+          <span class="text-2xl">💾</span>
+        </div>
+        <h3 class="text-lg font-black text-slate-900 mb-2">Date 100% ale tale</h3>
+        <p class="text-slate-500 text-sm leading-relaxed">Backup JSON, export CSV, print pentru ședințe. Datele rămân pe laptopul tău — niciun server nu le atinge vreodată.</p>
+      </div>
+
+      <div class="f-card reveal border border-slate-200 rounded-2xl p-7">
+        <div class="w-12 h-12 bg-sky-100 rounded-xl flex items-center justify-center mb-5">
+          <span class="text-2xl">📅</span>
+        </div>
+        <h3 class="text-lg font-black text-slate-900 mb-2">Reminder zilnic în calendar</h3>
+        <p class="text-slate-500 text-sm leading-relaxed">Generează un fișier ICS descărcabil. Adaugă-l în Google Calendar, Outlook sau Apple Calendar — reminder zilnic, offline.</p>
+      </div>
+
+      <div class="f-card reveal border border-slate-200 rounded-2xl p-7">
+        <div class="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center mb-5">
+          <span class="text-2xl">💡</span>
+        </div>
+        <h3 class="text-lg font-black text-slate-900 mb-2">Insight automat din Lost</h3>
+        <p class="text-slate-500 text-sm leading-relaxed">3 lead-uri pierdute din același motiv? Apare un sfat acționabil o singură dată: „Poate merită revizuită oferta?"</p>
+      </div>
+
+      <div class="f-card reveal border border-slate-200 rounded-2xl p-7">
+        <div class="w-12 h-12 bg-teal-100 rounded-xl flex items-center justify-center mb-5">
+          <span class="text-2xl">⌨️</span>
+        </div>
+        <h3 class="text-lg font-black text-slate-900 mb-2">Keyboard shortcuts</h3>
+        <p class="text-slate-500 text-sm leading-relaxed">N = lead nou · / = search · Esc = închide. Pentru cel care deschide aplicația în fiecare dimineață și vrea viteză.</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════ COMPARISON ═══════════════════════ -->
+<section class="bg-slate-900 py-24 px-5 sm:px-8">
+  <div class="max-w-5xl mx-auto">
+    <div class="text-center mb-14 reveal">
+      <p class="text-indigo-400 font-bold text-sm tracking-widest uppercase mb-3">Comparație</p>
+      <h2 class="text-4xl sm:text-5xl font-black text-white mb-4">De ce nu merge altceva</h2>
+      <p class="text-xl text-slate-400">Ai mai încercat o soluție și s-a dovedit prea complicată sau prea scumpă?</p>
+    </div>
+
+    <div class="reveal overflow-x-auto rounded-2xl border border-white/8 overflow-hidden">
+      <table class="w-full min-w-[520px]">
+        <thead>
+          <tr style="background:rgba(255,255,255,.04); border-bottom:1px solid rgba(255,255,255,.08)">
+            <th class="text-left px-6 py-5 text-slate-400 font-semibold text-sm">Soluție</th>
+            <th class="text-center px-4 py-5 text-slate-400 font-semibold text-sm">Fără cont</th>
+            <th class="text-center px-4 py-5 text-slate-400 font-semibold text-sm">Offline</th>
+            <th class="text-center px-4 py-5 text-slate-400 font-semibold text-sm">Urgența vizibilă</th>
+            <th class="text-center px-4 py-5 text-slate-400 font-semibold text-sm">Gratuit</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-white/5">
+          <tr class="trow" style="background:rgba(99,102,241,.12)">
+            <td class="px-6 py-4">
+              <div class="flex items-center gap-2">
+                <div class="w-7 h-7 bg-indigo-600 rounded-lg flex items-center justify-center">
+                  <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2"/></svg>
+                </div>
+                <span class="text-white font-bold">FollowUp Board</span>
+              </div>
+            </td>
+            <td class="px-4 py-4 text-center text-emerald-400 font-black text-xl">✓</td>
+            <td class="px-4 py-4 text-center text-emerald-400 font-black text-xl">✓</td>
+            <td class="px-4 py-4 text-center text-emerald-400 font-black text-xl">✓</td>
+            <td class="px-4 py-4 text-center text-emerald-400 font-black text-xl">✓</td>
+          </tr>
+          <tr class="trow">
+            <td class="px-6 py-4 text-slate-300">Google Sheets</td>
+            <td class="px-4 py-4 text-center text-red-400 font-bold text-lg">✗</td>
+            <td class="px-4 py-4 text-center text-red-400 font-bold text-lg">✗</td>
+            <td class="px-4 py-4 text-center text-red-400 font-bold text-lg">✗</td>
+            <td class="px-4 py-4 text-center text-emerald-400 font-bold text-lg">✓</td>
+          </tr>
+          <tr class="trow">
+            <td class="px-6 py-4 text-slate-300">HubSpot Free</td>
+            <td class="px-4 py-4 text-center text-red-400 font-bold text-lg">✗</td>
+            <td class="px-4 py-4 text-center text-red-400 font-bold text-lg">✗</td>
+            <td class="px-4 py-4 text-center text-emerald-400 font-bold text-lg">✓</td>
+            <td class="px-4 py-4 text-center text-red-400 font-bold text-lg">✗</td>
+          </tr>
+          <tr class="trow">
+            <td class="px-6 py-4 text-slate-300">Pipedrive / Bigin</td>
+            <td class="px-4 py-4 text-center text-red-400 font-bold text-lg">✗</td>
+            <td class="px-4 py-4 text-center text-red-400 font-bold text-lg">✗</td>
+            <td class="px-4 py-4 text-center text-emerald-400 font-bold text-lg">✓</td>
+            <td class="px-4 py-4 text-center text-red-400 font-bold text-lg">✗</td>
+          </tr>
+          <tr class="trow">
+            <td class="px-6 py-4 text-slate-300">Notițe / telefon</td>
+            <td class="px-4 py-4 text-center text-emerald-400 font-bold text-lg">✓</td>
+            <td class="px-4 py-4 text-center text-emerald-400 font-bold text-lg">✓</td>
+            <td class="px-4 py-4 text-center text-red-400 font-bold text-lg">✗</td>
+            <td class="px-4 py-4 text-center text-emerald-400 font-bold text-lg">✓</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════ QUOTE ═══════════════════════ -->
+<section class="quote-bg py-20 px-5 sm:px-8">
+  <div class="max-w-3xl mx-auto text-center reveal">
+    <div class="text-6xl mb-6 opacity-50">"</div>
+    <blockquote class="text-2xl sm:text-3xl md:text-4xl font-black text-white leading-tight mb-6">
+      Un spreadsheet te face să te simți copleșit.<br/>
+      FollowUp Board te face să te simți în control.
+    </blockquote>
+    <p class="text-indigo-200 text-lg">Diferența nu e în funcționalități — e în felul în care te simți la sfârșitul zilei de vânzări.</p>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════ FINAL CTA ═══════════════════════ -->
+<section id="download" class="bg-slate-900 py-28 px-5 sm:px-8 relative overflow-hidden">
+  <div class="glow-orb w-[400px] h-[400px] bg-indigo-600/15 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"></div>
+
+  <div class="max-w-2xl mx-auto text-center relative">
+    <div class="text-7xl mb-6 reveal">🚀</div>
+    <h2 class="text-5xl sm:text-6xl font-black text-white mb-5 reveal">Începe azi.</h2>
+    <p class="text-xl text-slate-400 mb-12 leading-relaxed reveal">
+      Descarcă gratuit. Deschide în browser. Adaugă primele 3 lead-uri.<br/>
+      <strong class="text-white">5 minute — și ai deja un sistem de vânzări.</strong>
+    </p>
+
+    <div class="reveal">
+      <a href="followup-board.html" download
+         class="btn-primary inline-flex items-center justify-center gap-3 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white font-black text-xl px-10 py-5 rounded-2xl shadow-2xl shadow-indigo-600/40 mb-8">
+        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+        </svg>
+        Descarcă FollowUp Board — Gratuit
+      </a>
+
+      <div class="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 text-slate-500 text-sm">
+        <span class="flex items-center gap-1.5"><span class="text-emerald-400">✓</span> Fără cont</span>
+        <span class="flex items-center gap-1.5"><span class="text-emerald-400">✓</span> Fără instalare</span>
+        <span class="flex items-center gap-1.5"><span class="text-emerald-400">✓</span> Funcționează offline</span>
+        <span class="flex items-center gap-1.5"><span class="text-emerald-400">✓</span> Datele rămân la tine</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════ FOOTER ═══════════════════════ -->
+<footer class="bg-slate-950 py-10 px-5 sm:px-8 text-center">
+  <div class="flex items-center justify-center gap-2 mb-3">
+    <div class="w-7 h-7 bg-gradient-to-br from-indigo-500 to-blue-600 rounded-lg flex items-center justify-center">
+      <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2m-6 9l2 2 4-4"/>
+      </svg>
+    </div>
+    <span class="text-white font-bold">FollowUp Board</span>
+  </div>
+  <p class="text-slate-600 text-sm">Tool gratuit pentru antreprenori români care fac vânzări serioase.</p>
+  <p class="text-slate-700 text-xs mt-2">Construit cu drag pentru IMM-uri din România.</p>
+</footer>
+
+
+<!-- ═══════════════════════ Scroll Reveal JS ═══════════════════════ -->
+<script>
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('visible');
+        observer.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+
+  document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+  // Smooth scroll for anchor links
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+      e.preventDefault();
+      const target = document.querySelector(a.getAttribute('href'));
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+</script>
+
+</body>
+</html>
