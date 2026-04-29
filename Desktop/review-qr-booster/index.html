@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Review QR Booster — Afiș gata de print în 5 minute</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --red: #E63946;
+    --red-dark: #C1121F;
+    --navy: #1D3557;
+    --bg: #F8F9FA;
+    --white: #FFFFFF;
+    --gray-100: #F1F3F5;
+    --gray-300: #DEE2E6;
+    --gray-500: #6C757D;
+    --gray-700: #343A40;
+    --radius: 12px;
+    --shadow: 0 4px 24px rgba(0,0,0,0.08);
+    --shadow-lg: 0 12px 40px rgba(0,0,0,0.14);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--gray-700);
+    line-height: 1.6;
+  }
+
+  /* ── NAV ── */
+  nav {
+    background: var(--white);
+    border-bottom: 1px solid var(--gray-300);
+    padding: 0 24px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .nav-logo {
+    font-weight: 800;
+    font-size: 18px;
+    color: var(--navy);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .nav-logo span { color: var(--red); }
+  .nav-badge {
+    background: var(--red);
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 20px;
+    letter-spacing: 0.5px;
+  }
+
+  /* ── HERO ── */
+  .hero {
+    background: linear-gradient(135deg, var(--navy) 0%, #2D4A6E 100%);
+    color: white;
+    padding: 80px 24px 90px;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero::before {
+    content: '';
+    position: absolute;
+    top: -60px; right: -80px;
+    width: 300px; height: 300px;
+    background: rgba(230,57,70,0.15);
+    border-radius: 50%;
+  }
+  .hero::after {
+    content: '';
+    position: absolute;
+    bottom: -80px; left: -60px;
+    width: 250px; height: 250px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 50%;
+  }
+  .hero-inner { max-width: 720px; margin: 0 auto; position: relative; z-index: 1; }
+  .hero-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(230,57,70,0.2);
+    border: 1px solid rgba(230,57,70,0.4);
+    color: #FF8A94;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 6px 14px;
+    border-radius: 20px;
+    margin-bottom: 24px;
+    letter-spacing: 0.3px;
+  }
+  .hero h1 {
+    font-size: clamp(28px, 5vw, 52px);
+    font-weight: 900;
+    line-height: 1.1;
+    margin-bottom: 20px;
+    letter-spacing: -1px;
+  }
+  .hero h1 em {
+    font-style: normal;
+    color: #FF8A94;
+  }
+  .hero-sub {
+    font-size: clamp(16px, 2.5vw, 20px);
+    color: rgba(255,255,255,0.8);
+    margin-bottom: 36px;
+    max-width: 560px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--red);
+    color: white;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 17px;
+    font-weight: 700;
+    padding: 16px 36px;
+    border-radius: var(--radius);
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+    box-shadow: 0 4px 20px rgba(230,57,70,0.4);
+  }
+  .btn-primary:hover {
+    background: var(--red-dark);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 28px rgba(230,57,70,0.5);
+  }
+  .btn-primary:active { transform: translateY(0); }
+  .hero-note {
+    margin-top: 16px;
+    font-size: 13px;
+    color: rgba(255,255,255,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .hero-note span { display: flex; align-items: center; gap: 5px; }
+
+  /* ── POSTER MOCKUP ── */
+  .poster-section {
+    background: var(--white);
+    padding: 60px 24px;
+    display: flex;
+    justify-content: center;
+  }
+  .poster-mockup-wrap {
+    display: flex;
+    align-items: center;
+    gap: 48px;
+    max-width: 900px;
+    width: 100%;
+  }
+  .poster-mockup {
+    width: 200px;
+    min-width: 200px;
+    height: 283px;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: var(--shadow-lg);
+    display: flex;
+    flex-direction: column;
+  }
+  .mockup-top {
+    background: white;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 16px 12px 10px;
+    gap: 6px;
+    border: 1px solid var(--gray-300);
+    border-bottom: none;
+    border-radius: 8px 8px 0 0;
+  }
+  .mockup-logo-circle {
+    width: 36px; height: 36px;
+    background: var(--navy);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-weight: 800; font-size: 16px;
+  }
+  .mockup-biz-name {
+    font-weight: 700; font-size: 11px; color: var(--navy); text-align: center;
+  }
+  .mockup-message {
+    font-size: 8px; color: var(--gray-500); text-align: center; line-height: 1.4;
+  }
+  .mockup-bottom {
+    background: var(--red);
+    height: 110px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px;
+  }
+  .mockup-qr {
+    width: 64px; height: 64px;
+    background: white;
+    border-radius: 4px;
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 1px;
+    padding: 4px;
+  }
+  .mockup-qr-cell {
+    background: #1D3557;
+    border-radius: 1px;
+  }
+  .mockup-qr-cell.empty { background: transparent; }
+  .mockup-instruction {
+    font-size: 7px; color: rgba(255,255,255,0.9); text-align: center; line-height: 1.3;
+  }
+  .mockup-attribution {
+    font-size: 5px; color: rgba(255,255,255,0.4); margin-top: 2px;
+  }
+  .poster-desc { flex: 1; }
+  .poster-desc h2 {
+    font-size: 26px; font-weight: 800; color: var(--navy); margin-bottom: 12px; line-height: 1.2;
+  }
+  .poster-desc p { color: var(--gray-500); margin-bottom: 20px; font-size: 15px; }
+  .poster-features { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+  .poster-features li {
+    display: flex; align-items: flex-start; gap: 10px; font-size: 14px; color: var(--gray-700);
+  }
+  .poster-features li::before {
+    content: '✓';
+    background: #D4EDDA; color: #155724;
+    width: 22px; height: 22px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  /* ── BENEFITS ── */
+  .benefits {
+    background: var(--bg);
+    padding: 70px 24px;
+  }
+  .benefits-inner { max-width: 960px; margin: 0 auto; }
+  .section-label {
+    text-align: center;
+    font-size: 12px; font-weight: 700; letter-spacing: 2px;
+    color: var(--red); text-transform: uppercase; margin-bottom: 12px;
+  }
+  .section-title {
+    text-align: center; font-size: clamp(22px, 4vw, 34px);
+    font-weight: 800; color: var(--navy); margin-bottom: 48px; line-height: 1.2;
+  }
+  .benefits-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 24px;
+  }
+  .benefit-card {
+    background: var(--white);
+    border-radius: var(--radius);
+    padding: 28px 24px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--gray-300);
+  }
+  .benefit-icon {
+    width: 48px; height: 48px;
+    background: #FEE2E4;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 16px;
+  }
+  .benefit-card h3 { font-size: 17px; font-weight: 700; color: var(--navy); margin-bottom: 8px; }
+  .benefit-card p { font-size: 14px; color: var(--gray-500); line-height: 1.6; }
+
+  /* ── SOCIAL PROOF ── */
+  .social-proof {
+    background: var(--navy);
+    padding: 60px 24px;
+    color: white;
+  }
+  .social-proof-inner {
+    max-width: 800px; margin: 0 auto; text-align: center;
+  }
+  .proof-number {
+    font-size: 56px; font-weight: 900; color: #FF8A94; line-height: 1;
+    margin-bottom: 8px;
+  }
+  .proof-subtitle { font-size: 18px; color: rgba(255,255,255,0.7); margin-bottom: 40px; }
+  .testimonial {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: var(--radius);
+    padding: 28px 32px;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+  .testimonial-text {
+    font-size: 17px; font-style: italic; color: rgba(255,255,255,0.9);
+    line-height: 1.7; margin-bottom: 16px;
+  }
+  .testimonial-author {
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+  }
+  .author-avatar {
+    width: 36px; height: 36px; background: var(--red);
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-weight: 700; font-size: 14px;
+  }
+  .author-info { text-align: left; }
+  .author-name { font-weight: 600; font-size: 14px; }
+  .author-role { font-size: 12px; color: rgba(255,255,255,0.5); }
+  .stars { color: #FFD700; font-size: 16px; letter-spacing: 2px; margin-bottom: 6px; }
+
+  /* ── HOW IT WORKS ── */
+  .how {
+    background: var(--white);
+    padding: 70px 24px;
+  }
+  .how-inner { max-width: 800px; margin: 0 auto; }
+  .steps { display: flex; flex-direction: column; gap: 0; position: relative; }
+  .steps::before {
+    content: '';
+    position: absolute;
+    left: 23px; top: 46px; bottom: 20px;
+    width: 2px; background: var(--gray-300);
+    z-index: 0;
+  }
+  .step {
+    display: flex; gap: 20px; align-items: flex-start;
+    padding-bottom: 32px; position: relative; z-index: 1;
+  }
+  .step:last-child { padding-bottom: 0; }
+  .step-num {
+    width: 48px; height: 48px; border-radius: 50%;
+    background: var(--navy); color: white;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 18px; flex-shrink: 0;
+    border: 3px solid var(--white);
+    box-shadow: 0 0 0 2px var(--navy);
+  }
+  .step-content { padding-top: 10px; }
+  .step-content h3 { font-size: 17px; font-weight: 700; color: var(--navy); margin-bottom: 4px; }
+  .step-content p { font-size: 14px; color: var(--gray-500); }
+  .step-time {
+    display: inline-block;
+    background: var(--gray-100); color: var(--gray-500);
+    font-size: 11px; font-weight: 600;
+    padding: 2px 8px; border-radius: 20px; margin-top: 6px;
+  }
+
+  /* ── DOWNLOAD CTA ── */
+  .download-cta {
+    background: linear-gradient(135deg, var(--red) 0%, #C1121F 100%);
+    padding: 70px 24px;
+    text-align: center;
+    color: white;
+  }
+  .download-cta h2 {
+    font-size: clamp(24px, 4vw, 38px); font-weight: 900;
+    margin-bottom: 12px; line-height: 1.2;
+  }
+  .download-cta p {
+    font-size: 17px; color: rgba(255,255,255,0.8); margin-bottom: 32px;
+  }
+  .btn-white {
+    display: inline-flex; align-items: center; gap: 10px;
+    background: white; color: var(--red);
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 17px; font-weight: 700;
+    padding: 16px 36px; border-radius: var(--radius);
+    text-decoration: none; border: none; cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+  }
+  .btn-white:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(0,0,0,0.25); }
+  .download-note { margin-top: 16px; font-size: 13px; color: rgba(255,255,255,0.6); }
+
+  /* ── FOOTER ── */
+  footer {
+    background: var(--navy);
+    padding: 32px 24px;
+    text-align: center;
+  }
+  .footer-series {
+    font-size: 14px; color: rgba(255,255,255,0.6); margin-bottom: 12px;
+  }
+  .footer-series strong { color: #FF8A94; }
+  .footer-cta {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(255,255,255,0.1); color: white;
+    font-family: 'Inter', system-ui, sans-serif;
+    font-size: 14px; font-weight: 600;
+    padding: 10px 20px; border-radius: 8px;
+    text-decoration: none; border: 1px solid rgba(255,255,255,0.15);
+    transition: background 0.15s;
+  }
+  .footer-cta:hover { background: rgba(255,255,255,0.18); }
+  .footer-copy {
+    margin-top: 20px; font-size: 12px; color: rgba(255,255,255,0.3);
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 700px) {
+    .poster-mockup-wrap { flex-direction: column; align-items: center; text-align: center; }
+    .poster-features li { justify-content: flex-start; text-align: left; }
+    .poster-desc h2 { font-size: 22px; }
+    .steps::before { left: 23px; }
+  }
+  @media (max-width: 480px) {
+    .hero { padding: 60px 20px 70px; }
+    .btn-primary, .btn-white { font-size: 15px; padding: 14px 28px; }
+    .poster-mockup { width: 160px; min-width: 160px; height: 226px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+      <rect width="20" height="20" rx="5" fill="#E63946"/>
+      <path d="M10 4L11.8 8.2L16 8.7L13 11.6L13.8 16L10 13.8L6.2 16L7 11.6L4 8.7L8.2 8.2L10 4Z" fill="white"/>
+    </svg>
+    Review QR <span>Booster</span>
+  </div>
+  <div class="nav-badge">GRATUIT</div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-inner">
+    <div class="hero-tag">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+        <circle cx="7" cy="7" r="7" fill="#FF8A94"/>
+        <path d="M7 3L7.9 5.4L10.5 5.6L8.6 7.3L9.2 10L7 8.7L4.8 10L5.4 7.3L3.5 5.6L6.1 5.4L7 3Z" fill="#1D3557"/>
+      </svg>
+      Instrumentul #1 din 5 — 100% gratuit
+    </div>
+    <h1>Afiș gata de print + scripturi<br>pentru echipă — în <em>5 minute</em></h1>
+    <p class="hero-sub">Generezi un QR code de recenzii Google, un afiș A5 profesional și texte gata de folosit pentru personal. Offline, fără cont, fără complicații.</p>
+    <a href="app.html" download="review-qr-booster.html" class="btn-primary">
+      <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+        <path d="M10 13L6 9H9V4H11V9H14L10 13Z" fill="white"/>
+        <rect x="4" y="14" width="12" height="2" rx="1" fill="white"/>
+      </svg>
+      Descarcă gratuit
+    </a>
+    <div class="hero-note">
+      <span>
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="7" fill="rgba(255,255,255,0.3)"/><path d="M4 7L6 9L10 5" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Fără internet după descărcare
+      </span>
+      <span>
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="7" fill="rgba(255,255,255,0.3)"/><path d="M4 7L6 9L10 5" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg>
+        Fără cont sau înregistrare
+      </span>
+      <span>
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="7" fill="rgba(255,255,255,0.3)"/><path d="M4 7L6 9L10 5" stroke="white" stroke-width="1.5" stroke-linecap="round"/></svg>
+        PDF gata de print în aceeași zi
+      </span>
+    </div>
+  </div>
+</section>
+
+<!-- POSTER PREVIEW -->
+<section class="poster-section">
+  <div class="poster-mockup-wrap">
+    <div class="poster-mockup">
+      <div class="mockup-top">
+        <div class="mockup-logo-circle">R</div>
+        <div class="mockup-biz-name">Restaurant La Mama</div>
+        <div class="mockup-message">Sperăm că ai plecat cu stomacul<br>plin și sufletul vesel.</div>
+      </div>
+      <div class="mockup-bottom">
+        <div class="mockup-qr">
+          <!-- QR pattern decorativ -->
+          <div class="mockup-qr-cell"></div><div class="mockup-qr-cell"></div><div class="mockup-qr-cell"></div><div class="mockup-qr-cell empty"></div><div class="mockup-qr-cell"></div><div class="mockup-qr-cell"></div><div class="mockup-qr-cell"></div>
+          <div class="mockup-qr-cell"></div><div class="mockup-qr-cell empty"></div><div class="mockup-qr-cell"></div><div class="mockup-qr-cell empty"></div><div class="mockup-qr-cell"></div><div class="mockup-qr-cell empty"></div><div class="mockup-qr-cell"></div>
+          <div class="mockup-qr-cell"></div><div class="mockup-qr-cell empty"></div><div class="mockup-qr-cell"></div><div class="mockup-qr-cell"></div><div class="mockup-qr-cell"></div><div class="mockup-qr-cell empty"></div><div class="mockup-qr-cell"></div>
+          <div class="mockup-qr-cell empty"></div><div class="mockup-qr-cell"></div><div class="mockup-qr-cell empty"></div><div class="mockup-qr-cell"></div><div class="mockup-qr-cell empty"></div><div class="mockup-qr-cell"></div><div class="mockup-qr-cell empty"></div>
+          <div class="mockup-qr-cell"></div><div class="mockup-qr-cell empty"></div><div class="mockup-qr-cell"></div><div class="mockup-qr-cell empty"></div><div class="mockup-qr-cell"></div><div class="mockup-qr-cell empty"></div><div class="mockup-qr-cell"></div>
+          <div class="mockup-qr-cell"></div><div class="mockup-qr-cell empty"></div><div class="mockup-qr-cell empty"></div><div class="mockup-qr-cell"></div><div class="mockup-qr-cell empty"></div><div class="mockup-qr-cell empty"></div><div class="mockup-qr-cell"></div>
+          <div class="mockup-qr-cell"></div><div class="mockup-qr-cell"></div><div class="mockup-qr-cell"></div><div class="mockup-qr-cell empty"></div><div class="mockup-qr-cell"></div><div class="mockup-qr-cell"></div><div class="mockup-qr-cell"></div>
+        </div>
+        <div class="mockup-instruction">Scanează și spune-ne cum a fost<br>— durează 1 minut!</div>
+        <div class="mockup-attribution">Creat cu Review QR Booster</div>
+      </div>
+    </div>
+    <div class="poster-desc">
+      <h2>Ce primești după 5 minute</h2>
+      <p>Un set complet de materiale, personalizate pentru afacerea ta, gata de folosit în aceeași zi.</p>
+      <ul class="poster-features">
+        <li>Afiș A5 cu QR code, print-ready la orice imprimantă sau print shop</li>
+        <li>QR code care duce direct la pagina de recenzii Google a afacerii tale</li>
+        <li>3 scripturi copy-paste pentru personal, adaptate după industrie și ton</li>
+        <li>Personalizare completă: logo, culoare, ton de comunicare</li>
+        <li>Funcționează 100% offline — fără internet după descărcare</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- BENEFITS -->
+<section class="benefits">
+  <div class="benefits-inner">
+    <div class="section-label">De ce contează</div>
+    <h2 class="section-title">Clienții mulțumiți nu lasă recenzii<br>dacă nu li se cere corect</h2>
+    <div class="benefits-grid">
+      <div class="benefit-card">
+        <div class="benefit-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2L14.4 8.2L21 8.7L16.2 13L17.8 20L12 16.6L6.2 20L7.8 13L3 8.7L9.6 8.2L12 2Z" fill="#E63946"/>
+          </svg>
+        </div>
+        <h3>Afiș vizibil la casă sau masă</h3>
+        <p>Un afiș bine plasat cere recenzia în momentul potrivit — când clientul e încă în locație și experiența e proaspătă.</p>
+      </div>
+      <div class="benefit-card">
+        <div class="benefit-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <rect x="3" y="5" width="18" height="14" rx="2" stroke="#E63946" stroke-width="2"/>
+            <path d="M7 10H17M7 14H13" stroke="#E63946" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <h3>Scripturi gata de folosit</h3>
+        <p>Personalul știe exact ce să spună și când. Fără improvizație, fără jenă — cererea devine un reflex natural.</p>
+      </div>
+      <div class="benefit-card">
+        <div class="benefit-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="9" stroke="#E63946" stroke-width="2"/>
+            <path d="M12 7V12L15 15" stroke="#E63946" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <h3>Rezultat în aceeași zi</h3>
+        <p>5 minute pentru completat, un click pentru descărcat. Afișul pleacă la print astăzi, nu săptămâna viitoare.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SOCIAL PROOF -->
+<section class="social-proof">
+  <div class="social-proof-inner">
+    <div class="proof-number">50+</div>
+    <div class="proof-subtitle">afaceri locale au folosit deja acest instrument</div>
+    <div class="testimonial">
+      <div class="stars">★★★★★</div>
+      <p class="testimonial-text">„Am descărcat, am completat în 4 minute, am trimis la print. A doua zi aveam afișul la casă. În prima săptămână am primit 6 recenzii noi pe Google — mai mult decât în ultima lună."</p>
+      <div class="testimonial-author">
+        <div class="author-avatar">M</div>
+        <div class="author-info">
+          <div class="author-name">Mihai D.</div>
+          <div class="author-role">Proprietar restaurant, Cluj-Napoca</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how">
+  <div class="how-inner">
+    <div class="section-label">Cum funcționează</div>
+    <h2 class="section-title" style="text-align:center; margin-bottom:40px;">3 pași simpli</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <h3>Descarcă fișierul și deschide-l pe laptop</h3>
+          <p>Un singur fișier HTML. Fără instalare, fără cont, fără internet după descărcare.</p>
+          <span class="step-time">~ 30 secunde</span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <h3>Completează profilul afacerii tale</h3>
+          <p>Nume, link Google Review, industrie, ton preferat, culoare și logo opțional. Preview live pe măsură ce completezi.</p>
+          <span class="step-time">~ 3 minute</span>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <h3>Descarcă PDF-ul și trimite-l la print</h3>
+          <p>Afișul A5 + scripturile pentru echipă — gata de trimis la orice imprimantă sau print shop.</p>
+          <span class="step-time">~ 1 minut</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DOWNLOAD CTA -->
+<section class="download-cta">
+  <h2>Gata să obții mai multe recenzii<br>începând de astăzi?</h2>
+  <p>Gratuit. Offline. Rezultate în 5 minute.</p>
+  <a href="app.html" download="review-qr-booster.html" class="btn-white">
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+      <path d="M10 13L6 9H9V4H11V9H14L10 13Z" fill="#E63946"/>
+      <rect x="4" y="14" width="12" height="2" rx="1" fill="#E63946"/>
+    </svg>
+    Descarcă gratuit — fără cont
+  </a>
+  <div class="download-note">Fișier HTML · Funcționează offline · Compatibil Chrome, Edge, Firefox</div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-series">
+    Acesta e <strong>Instrumentul #1 din 5</strong> instrumente gratuite pentru afaceri locale.<br>
+    Urmărește-mă să nu ratezi următoarele.
+  </div>
+  <a href="https://instagram.com/" target="_blank" class="footer-cta">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <rect x="1" y="1" width="14" height="14" rx="4" stroke="white" stroke-width="1.5"/>
+      <circle cx="8" cy="8" r="3" stroke="white" stroke-width="1.5"/>
+      <circle cx="11.5" cy="4.5" r="0.75" fill="white"/>
+    </svg>
+    Urmărește pe Instagram
+  </a>
+  <div class="footer-copy">© 2026 Review QR Booster · Instrument gratuit pentru marketing local</div>
+</footer>
+
+</body>
+</html>
