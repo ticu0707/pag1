@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Review QR Booster — Generează afișul tău</title>
+  <style>
+    :root {
+      --red: #E63946;
+      --navy: #1D3557;
+      --bg: #F8F9FA;
+      --white: #fff;
+      --border: #e2e8f0;
+      --text: #2d3748;
+      --muted: #718096;
+      --radius: 12px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    /* Mobile guard */
+    #mobile-guard {
+      display: none; position: fixed; inset: 0;
+      background: var(--navy); color: white;
+      align-items: center; justify-content: center;
+      text-align: center; padding: 2rem; z-index: 999; flex-direction: column; gap: 1rem;
+    }
+    #mobile-guard.active { display: flex; }
+    #mobile-guard h2 { font-size: 1.4rem; margin-bottom: 0.5rem; }
+    #mobile-guard p { opacity: 0.8; line-height: 1.6; }
+
+    /* Header */
+    .app-header {
+      background: var(--navy); color: white;
+      padding: 0.85rem 2rem; display: flex;
+      align-items: center; justify-content: space-between;
+      position: sticky; top: 0; z-index: 10;
+    }
+    .app-header h1 { font-size: 1rem; font-weight: 700; }
+    .step-indicator { font-size: 0.82rem; opacity: 0.75; background: rgba(255,255,255,0.1); padding: 0.3rem 0.75rem; border-radius: 20px; }
+
+    /* Layout */
+    .app-main { display: flex; min-height: calc(100vh - 52px); }
+    .form-panel {
+      width: 42%; background: white; padding: 1.75rem;
+      border-right: 1px solid var(--border); overflow-y: auto;
+      max-height: calc(100vh - 52px);
+    }
+    .preview-panel {
+      width: 58%; background: var(--bg); padding: 1.75rem;
+      display: flex; flex-direction: column; align-items: center;
+      overflow-y: auto; max-height: calc(100vh - 52px);
+    }
+
+    /* Form elements */
+    .form-group { margin-bottom: 1.1rem; }
+    .form-group label {
+      display: flex; align-items: center; gap: 0.4rem;
+      font-size: 0.85rem; font-weight: 600; margin-bottom: 0.35rem;
+    }
+    .form-group select, .form-group input[type="text"], .form-group input[type="url"] {
+      width: 100%; padding: 0.55rem 0.75rem; border: 1.5px solid var(--border);
+      border-radius: 8px; font-size: 0.88rem; font-family: inherit; background: white;
+      transition: border-color 0.2s;
+    }
+    .form-group select:focus, .form-group input:focus { outline: none; border-color: var(--red); }
+
+    /* Tone radio */
+    .tone-group { display: flex; gap: 0.5rem; }
+    .tone-option { display: none; }
+    .tone-label {
+      padding: 0.38rem 0.9rem; border: 1.5px solid var(--border);
+      border-radius: 20px; font-size: 0.83rem; cursor: pointer;
+      transition: all 0.15s; user-select: none;
+    }
+    .tone-option:checked + .tone-label { background: var(--red); color: white; border-color: var(--red); }
+
+    /* Color swatches */
+    .color-swatches { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .color-swatch {
+      width: 34px; height: 34px; border-radius: 50%; cursor: pointer;
+      border: 3px solid transparent; transition: transform 0.15s, border-color 0.15s;
+    }
+    .color-swatch:hover { transform: scale(1.12); }
+    .color-swatch.active { border-color: #2d3748; }
+
+    /* URL feedback */
+    .url-feedback { font-size: 0.79rem; margin-top: 0.3rem; min-height: 1.1em; }
+    .url-feedback.valid { color: #2D6A4F; }
+    .url-feedback.invalid { color: var(--red); }
+
+    /* Logo upload */
+    .logo-upload {
+      border: 2px dashed var(--border); border-radius: 8px;
+      padding: 0.9rem; text-align: center; cursor: pointer;
+      transition: border-color 0.2s; background: var(--bg);
+    }
+    .logo-upload:hover { border-color: var(--red); }
+    .logo-upload input { display: none; }
+    .logo-upload small { color: var(--muted); font-size: 0.75rem; display: block; margin-top: 3px; }
+
+    /* Profile actions */
+    .profile-actions { display: flex; gap: 0.5rem; margin-bottom: 1.1rem; }
+    .btn-outline {
+      flex: 1; padding: 0.45rem 0.5rem; border: 1.5px solid var(--border);
+      border-radius: 8px; background: white; font-size: 0.8rem;
+      cursor: pointer; font-family: inherit; transition: all 0.2s;
+    }
+    .btn-outline:hover { border-color: var(--red); color: var(--red); }
+
+    /* Primary button */
+    .btn-primary {
+      display: inline-block; width: 100%; padding: 0.8rem;
+      background: var(--red); color: white; border: none;
+      border-radius: 10px; font-size: 0.95rem; font-weight: 700;
+      cursor: pointer; font-family: inherit; text-align: center;
+      transition: opacity 0.2s; text-decoration: none;
+    }
+    .btn-primary:hover { opacity: 0.9; }
+    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    /* Char counter */
+    .char-counter { font-size: 0.72rem; color: var(--muted); margin-left: auto; }
+    .char-counter.warn { color: var(--red); }
+
+    /* Tooltip */
+    .tooltip-wrapper { position: relative; display: inline-flex; align-items: center; }
+    .tooltip-btn { background: none; border: 1px solid var(--border); color: var(--muted); cursor: pointer; font-size: 0.72rem; padding: 0.1rem 0.35rem; border-radius: 4px; }
+    .tooltip-content {
+      display: none; position: absolute; bottom: 130%; left: 0;
+      background: var(--navy); color: white; padding: 0.5rem 0.75rem;
+      border-radius: 6px; font-size: 0.76rem; white-space: nowrap;
+      z-index: 20; line-height: 1.5; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    .tooltip-wrapper:hover .tooltip-content { display: block; }
+
+    /* Preview label */
+    .preview-label { font-size: 0.75rem; color: var(--muted); text-align: center; margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; }
+
+    /* Poster wrapper */
+    .poster-wrapper { width: 100%; max-width: 320px; box-shadow: 0 8px 40px rgba(0,0,0,0.18); border-radius: 4px; overflow: hidden; }
+
+    /* ===== POSTER (html2canvas safe — no gradients, no @font-face) ===== */
+    #poster-preview { width: 100%; font-family: system-ui, sans-serif; background-color: #ffffff; }
+
+    #poster-top {
+      background-color: #ffffff; padding: 22px 18px 14px;
+      display: flex; flex-direction: column; align-items: center;
+      min-height: 190px; justify-content: center; gap: 8px;
+    }
+    #logo-area {
+      width: 64px; height: 64px; border-radius: 50%;
+      overflow: hidden; display: flex; align-items: center; justify-content: center;
+      background-color: #f1f5f9; flex-shrink: 0;
+    }
+    #preview-logo { width: 100%; height: 100%; object-fit: cover; display: none; }
+    #preview-fallback {
+      font-size: 26px; font-weight: 800; color: #1D3557;
+      display: flex; align-items: center; justify-content: center;
+      width: 100%; height: 100%;
+    }
+    #preview-message { font-size: 10px; color: #718096; text-align: center; font-style: italic; max-width: 270px; line-height: 1.4; }
+    #preview-name { font-size: 22px; font-weight: 800; color: #1D3557; text-align: center; line-height: 1.2; max-width: 270px; }
+
+    #poster-bottom {
+      padding: 18px 16px; display: flex; flex-direction: column;
+      align-items: center; gap: 8px; min-height: 170px; justify-content: center;
+    }
+    #qr-container {
+      background-color: #ffffff; padding: 6px; border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      min-width: 106px; min-height: 106px;
+    }
+    #qr-container canvas { display: block; }
+    #preview-instruction { font-size: 11px; color: #ffffff; text-align: center; font-weight: 600; line-height: 1.35; max-width: 250px; }
+    #preview-attribution { font-size: 7px; color: rgba(255,255,255,0.45); text-align: center; }
+
+    /* Step 2 */
+    #step2 { display: none; }
+    .scripts-header { margin-bottom: 1.25rem; }
+    .scripts-header h2 { font-size: 1.15rem; margin-bottom: 0.25rem; }
+    .scripts-header p { color: var(--muted); font-size: 0.85rem; }
+    .script-card { background: white; border: 1.5px solid var(--border); border-radius: var(--radius); padding: 1rem; margin-bottom: 0.7rem; }
+    .script-card p { font-size: 0.875rem; line-height: 1.65; margin-bottom: 0.7rem; color: var(--text); }
+    .script-card button {
+      padding: 0.38rem 0.9rem; background: var(--navy); color: white;
+      border: none; border-radius: 6px; font-size: 0.8rem;
+      cursor: pointer; font-family: inherit; transition: background 0.2s;
+    }
+    .script-card button:hover { background: #0f2338; }
+    .script-card button.copied { background: #2D6A4F; }
+    .generate-section { margin-top: 1.25rem; }
+    .generate-section p { font-size: 0.8rem; color: var(--muted); margin-top: 0.4rem; text-align: center; }
+    .btn-back { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 0.83rem; margin-bottom: 1rem; padding: 0; font-family: inherit; }
+    .btn-back:hover { color: var(--text); }
+
+    /* Final screen */
+    #final-screen { display: none; }
+    .final-inner h2 { font-size: 1.3rem; margin-bottom: 0.4rem; color: #2D6A4F; }
+    .final-inner > p { color: var(--muted); margin-bottom: 1.25rem; font-size: 0.9rem; }
+    .checklist { background: white; border: 1.5px solid var(--border); border-radius: var(--radius); padding: 1.1rem; margin-bottom: 1.25rem; }
+    .checklist label { display: flex; align-items: flex-start; gap: 0.6rem; padding: 0.45rem 0; cursor: pointer; font-size: 0.875rem; }
+    .checklist label + label { border-top: 1px solid var(--border); }
+    .checklist input[type="checkbox"] { margin-top: 3px; flex-shrink: 0; }
+    .checklist small { display: block; color: var(--muted); font-size: 0.77rem; margin-top: 2px; }
+    .cta-box { background: var(--navy); color: white; border-radius: var(--radius); padding: 1.25rem; text-align: center; margin-bottom: 0.75rem; }
+    .cta-box p { margin-bottom: 0.9rem; line-height: 1.55; opacity: 0.9; font-size: 0.9rem; }
+    .cta-box .btn-primary { background: var(--red); width: auto; display: inline-block; padding: 0.65rem 1.5rem; }
+    .btn-redownload { width: 100%; padding: 0.65rem; border: 1.5px solid var(--border); background: white; border-radius: 8px; cursor: pointer; font-family: inherit; font-size: 0.875rem; color: var(--text); }
+    .btn-redownload:hover { border-color: var(--red); color: var(--red); }
+  </style>
+</head>
+<body>
+
+<div id="mobile-guard">
+  <h2>Deschide pe laptop sau desktop</h2>
+  <p>Aplicația este optimizată pentru ecrane mai mari de 900px.<br>Te rugăm să o accesezi de pe un computer.</p>
+</div>
+
+<header class="app-header">
+  <h1>Review QR Booster — Instrumentul #1 din 5</h1>
+  <span class="step-indicator" id="step-indicator">Pasul 1 din 2</span>
+</header>
+
+<main class="app-main">
+  <!-- FORM PANEL -->
+  <div class="form-panel">
+
+    <!-- STEP 1 -->
+    <div id="step1">
+      <div class="profile-actions">
+        <button class="btn-outline" onclick="saveProfile()">💾 Salvează profil</button>
+        <button class="btn-outline" onclick="document.getElementById('load-profile-input').click()">📂 Încarcă profil</button>
+        <input type="file" id="load-profile-input" accept=".json" style="display:none" onchange="loadProfile(event)">
+      </div>
+
+      <div class="form-group">
+        <label for="sel-industry">Tipul afacerii</label>
+        <select id="sel-industry" onchange="setState('industry', this.value)"></select>
+      </div>
+
+      <div class="form-group">
+        <label>Tonul comunicării</label>
+        <div class="tone-group" id="tone-group"></div>
+      </div>
+
+      <div class="form-group">
+        <label for="inp-name">
+          Numele businessului
+          <span class="char-counter" id="name-counter">0/40</span>
+        </label>
+        <input type="text" id="inp-name" maxlength="40" placeholder="ex: La Mama Acasă"
+          oninput="setState('name', this.value); updateNameCounter()">
+      </div>
+
+      <div class="form-group">
+        <label for="inp-link">
+          Link Google Review
+          <span class="tooltip-wrapper">
+            <button class="tooltip-btn" type="button">? Unde găsești</button>
+            <span class="tooltip-content">Google Maps → caută businessul → Share → Copy link<br>sau Google Business Profile → Primește recenzii</span>
+          </span>
+        </label>
+        <input type="url" id="inp-link" placeholder="https://g.page/... sau https://maps.google.com/..."
+          oninput="validateLink(this.value)">
+        <div class="url-feedback" id="url-feedback"></div>
+      </div>
+
+      <div class="form-group">
+        <label>Culoarea accentului</label>
+        <div class="color-swatches" id="color-swatches"></div>
+      </div>
+
+      <div class="form-group">
+        <label>Logo (opțional)</label>
+        <div class="logo-upload" onclick="document.getElementById('logo-input').click()">
+          <input type="file" id="logo-input" accept="image/png,image/jpeg,image/jpg" onchange="handleLogo(event)">
+          <div id="logo-upload-label">🖼️ Click pentru a încărca<small>PNG sau JPG, max 2MB</small></div>
+          <div id="logo-preview-thumb" style="display:none; text-align:center;">
+            <img id="logo-thumb" style="max-height:56px; max-width:110px; border-radius:6px; margin-top:4px;">
+            <button type="button" onclick="removeLogo(event)" style="display:block; margin:4px auto 0; font-size:0.72rem; background:none; border:none; color:#E63946; cursor:pointer;">✕ Șterge logo</button>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn-primary" onclick="goToStep2()">Continuă → Scripturi și PDF</button>
+    </div>
+
+    <!-- STEP 2 -->
+    <div id="step2">
+      <button class="btn-back" onclick="goToStep1()">← Înapoi la configurare</button>
+      <div class="scripts-header">
+        <h2>Scripturile pentru echipă</h2>
+        <p>Copiază varianta care ți se potrivește și trimite-o angajaților.</p>
+      </div>
+      <div id="scripts-container"></div>
+      <div class="generate-section">
+        <button class="btn-primary" id="btn-generate" onclick="generatePDF()">Generează și descarcă PDF (A5)</button>
+        <p>Pagina 1: afișul print-ready · Pagina 2: scripturile echipei</p>
+      </div>
+    </div>
+
+    <!-- FINAL SCREEN -->
+    <div id="final-screen">
+      <div class="final-inner">
+        <h2>✓ Afișul tău e gata de print!</h2>
+        <p>PDF descărcat. Urmează pașii de mai jos:</p>
+        <div class="checklist">
+          <label><input type="checkbox"><div>Printează afișul<small>Selectează „Fit to page" dacă printezi pe A4</small></div></label>
+          <label><input type="checkbox"><div>Pune-l la casă / recepție / masă</div></label>
+          <label><input type="checkbox"><div>Trimite scriptul echipei</div></label>
+        </div>
+        <div class="cta-box">
+          <p>Acesta e Instrumentul #1 dintr-o serie de 5.<br>Urmărește-mă să nu ratezi instrumentul #2 →</p>
+          <a id="cta-follow-link" href="#" target="_blank" class="btn-primary">Urmărește pe <span id="cta-label"></span></a>
+        </div>
+        <button class="btn-redownload" onclick="generatePDF()">↻ Descarcă din nou</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- PREVIEW PANEL -->
+  <div class="preview-panel">
+    <p class="preview-label">Preview afiș A5 (live)</p>
+    <div class="poster-wrapper">
+      <div id="poster-preview">
+        <div id="poster-top">
+          <div id="logo-area">
+            <img id="preview-logo" src="" alt="logo">
+            <div id="preview-fallback">?</div>
+          </div>
+          <div id="preview-message">Sperăm că ai plecat cu stomacul plin și sufletul vesel.</div>
+          <div id="preview-name">Numele Businessului</div>
+        </div>
+        <div id="poster-bottom" style="background-color:#E63946;">
+          <div id="qr-container">
+            <svg id="qr-placeholder" width="94" height="94" viewBox="0 0 94 94" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect width="38" height="38" rx="4" fill="#ccc"/>
+              <rect x="8" y="8" width="22" height="22" rx="2" fill="#f8f9fa"/>
+              <rect x="15" y="15" width="8" height="8" fill="#ccc"/>
+              <rect x="48" width="38" height="38" rx="4" fill="#ccc"/>
+              <rect x="56" y="8" width="22" height="22" rx="2" fill="#f8f9fa"/>
+              <rect x="63" y="15" width="8" height="8" fill="#ccc"/>
+              <rect y="48" width="38" height="38" rx="4" fill="#ccc"/>
+              <rect x="8" y="56" width="22" height="22" rx="2" fill="#f8f9fa"/>
+              <rect x="15" y="63" width="8" height="8" fill="#ccc"/>
+              <rect x="48" y="48" width="8" height="8" fill="#ccc"/>
+              <rect x="62" y="48" width="8" height="8" fill="#ccc"/>
+              <rect x="76" y="48" width="8" height="8" fill="#ccc"/>
+              <rect x="48" y="62" width="8" height="8" fill="#ccc"/>
+              <rect x="76" y="62" width="8" height="8" fill="#ccc"/>
+              <rect x="48" y="76" width="8" height="8" fill="#ccc"/>
+              <rect x="62" y="76" width="8" height="8" fill="#ccc"/>
+            </svg>
+          </div>
+          <div id="preview-instruction">Scanează și spune-ne cum a fost — durează 1 minut!</div>
+          <div id="preview-attribution">Creat cu Review QR Booster · @handle</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+// ==================== LIBRARIES ====================
+/* __QRCODE_JS__ */
+/* __HTML2CANVAS_JS__ */
+/* __JSPDF_JS__ */
+
+// ==================== M1: CONFIG & DATA ====================
+const CONFIG = {
+  creatorName: "Numele Tău",
+  creatorSocialURL: "https://instagram.com/yourhandle",
+  creatorSocialLabel: "@yourhandle",
+  toolNumber: "1",
+  totalTools: "5"
+};
+
+const INDUSTRIES = [
+  "Restaurant/Cafenea", "Salon/Coafor", "Clinică/Cabinet",
+  "Magazin/Retail", "Hotel/Cazare", "Servicii generale"
+];
+
+const TONES = ["Prietenos", "Profesional", "Direct"];
+
+const COLORS = [
+  { name: "Roșu vibrant",        hex: "#E63946" },
+  { name: "Albastru navy",       hex: "#1D3557" },
+  { name: "Verde smarald",       hex: "#2D6A4F" },
+  { name: "Violet premium",      hex: "#6D2B8A" },
+  { name: "Albastru ocean",      hex: "#0077B6" },
+  { name: "Roșu închis",         hex: "#D62828" },
+  { name: "Verde-albastru",      hex: "#264653" },
+  { name: "Portocaliu business", hex: "#CA6702" }
+];
+
+const EMOTIONAL_MESSAGES = {
+  "Restaurant/Cafenea": "Sperăm că ai plecat cu stomacul plin și sufletul vesel.",
+  "Salon/Coafor":       "Sperăm că te-ai simțit ca acasă — și că arăți minunat.",
+  "Clinică/Cabinet":    "Sănătatea ta a fost în mâini bune astăzi.",
+  "Magazin/Retail":     "Sperăm că ai găsit exact ce căutai — și poate ceva în plus.",
+  "Hotel/Cazare":       "Sperăm că ai dormit bine și pleci cu amintiri frumoase.",
+  "Servicii generale":  "A fost o plăcere să lucrăm pentru tine."
+};
+
+const POSTER_INSTRUCTIONS = {
+  "Prietenos":   "Scanează și spune-ne cum a fost — durează 1 minut!",
+  "Profesional": "Scanează pentru a ne lăsa feedback pe Google.",
+  "Direct":      "Scanează. Scrie două rânduri. Gata."
+};
+
+const SCRIPTS = {
+  "Restaurant/Cafenea": {
+    "Prietenos": [
+      "Dacă ne-ați recomanda unui prieten să vină la noi, am fi recunoscători să o spuneți și pe Google — ajunge la mult mai mulți oameni! Codul e pe masă.",
+      "Știți care e cel mai simplu mod să ne ajutați să creștem? O recenzie pe Google! Dacă ați avut o experiență plăcută, scaneați codul — o apreciem enorm.",
+      "Mulți oameni caută un loc bun să mănânce și se uită la recenzii. O recenzie de la dvs. îi ajută să ne găsească. Durează un minut!"
+    ],
+    "Profesional": [
+      "Recenziile pe Google ajută alți clienți să facă alegeri informate. Dacă experiența dvs. a fost pozitivă, o recenzie scurtă este apreciată.",
+      "Feedback-ul clienților noștri ne ajută să menținem standardele. Dacă ați fost mulțumit de vizita de astăzi, vă invităm să lăsați o recenzie pe Google.",
+      "Vă invităm să lăsați un feedback pe Google — experiența dvs. contează atât pentru noi, cât și pentru cei care doresc să ne viziteze."
+    ],
+    "Direct": [
+      "Dacă ne-ați recomanda unui prieten, scrieți asta și pe Google. Scanați, două rânduri, gata.",
+      "O recenzie pe Google ne ajută mai mult decât orice reclamă. Scanați codul — 60 de secunde.",
+      "Recenzie Google? Durează mai puțin decât cafeaua. Scanați codul de pe masă."
+    ]
+  },
+  "Salon/Coafor": {
+    "Prietenos": [
+      "Dacă ești mulțumit/ă de rezultat și ne-ai recomanda unei prietene, spune-le și pe Google — ajuți alte persoane să ne descopere!",
+      "Cel mai frumos compliment pe care ni-l poți face e o recenzie pe Google. Dacă ți-a plăcut, scanează codul — durează un minut!",
+      "Mulți clienți ne găsesc citind recenzii. O recenzie de la tine îi ajută pe alții să aleagă în cunoștință de cauză. Îți mulțumim!"
+    ],
+    "Profesional": [
+      "Dacă ați fost mulțumit de serviciile de astăzi, o recenzie pe Google este cel mai valoros feedback pe care ni-l puteți oferi.",
+      "Recenziile clienților noștri ajută alți oameni să facă alegeri informate. Vă invităm să lăsați câteva cuvinte pe Google.",
+      "Feedback-ul dvs. ne ajută să menținem standardele de calitate și să fim descoperiți de clienți noi. Apreciem orice recenzie pe Google."
+    ],
+    "Direct": [
+      "Mulțumit/ă de rezultat? O recenzie pe Google ne ajută enorm. Scanează, scrie două rânduri, gata.",
+      "Dacă ne-ai recomanda unei prietene, scrie asta și pe Google. Durează 60 de secunde.",
+      "Recenzie rapidă pe Google? Scanează codul. Două rânduri sunt de ajuns."
+    ]
+  },
+  "Clinică/Cabinet": {
+    "Prietenos": [
+      "Mulți pacienți caută un cabinet în care să se simtă în siguranță. O recenzie de la tine îi poate ajuta să ne găsească. Îți mulțumim!",
+      "Dacă experiența de astăzi a fost pozitivă și ne-ai recomanda unui prieten, spune-o și pe Google — ajunge mai departe!",
+      "O recenzie scurtă pe Google ne ajută să ajutăm mai mulți oameni care caută îngrijire de calitate. Îți mulțumim că ne acorzi un minut!"
+    ],
+    "Profesional": [
+      "Dacă ați fost mulțumit de îngrijirea primită astăzi, o recenzie pe Google ne ajută să fim găsiți de pacienți care au nevoie de serviciile noastre.",
+      "Feedback-ul pacienților noștri contribuie la îmbunătățirea continuă a serviciilor. Vă invităm să lăsați o recenzie pe Google.",
+      "O recenzie pe Google ajută alți pacienți să aleagă în cunoștință de cauză. Experiența dvs. contează pentru întreaga comunitate."
+    ],
+    "Direct": [
+      "Experiență pozitivă? O recenzie pe Google ne ajută să ajutăm mai mulți oameni. Scanați, 60 de secunde.",
+      "Dacă ne-ați recomanda unui cunoscut, scrieți asta și pe Google. Scanați codul.",
+      "Recenzie Google? Două rânduri sunt de ajuns. Scanați și scrieți ce ați simțit."
+    ]
+  },
+  "Magazin/Retail": {
+    "Prietenos": [
+      "Dacă ai găsit ce căutai și ne-ai recomanda unui prieten, spune-o și pe Google — ajuți alți cumpărători să ne descopere!",
+      "Mulți oameni citesc recenzii înainte să viziteze un magazin. O recenzie de la tine face diferența pentru ei. Îți mulțumim!",
+      "Cel mai bun mod să ne ajuți să creștem? O recenzie pe Google! Dacă ești mulțumit/ă, scanează codul — un minut de timp, un impact mare."
+    ],
+    "Profesional": [
+      "Dacă ați fost mulțumit de produsele și serviciile noastre, o recenzie pe Google ajută alți clienți să ia decizii informate.",
+      "Recenziile clienților noștri sunt cel mai valoros indicator al calității pe care o oferim. Vă invităm să lăsați câteva cuvinte pe Google.",
+      "Feedback-ul dvs. ne ajută să îmbunătățim continuu oferta și serviciile. O recenzie pe Google este apreciată."
+    ],
+    "Direct": [
+      "Mulțumit/ă de cumpărătură? O recenzie rapidă pe Google ne ajută enorm. Scanați, două rânduri, gata.",
+      "Dacă ne-ați recomanda unui prieten, scrieți asta și pe Google. Durează 60 de secunde.",
+      "Recenzie Google? Scanați codul. Mai rapid decât un SMS."
+    ]
+  },
+  "Hotel/Cazare": {
+    "Prietenos": [
+      "Dacă ți-a plăcut sejurul și ne-ai recomanda unui prieten, spune-o și pe Google — ajuți alți călători să ne descopere!",
+      "Mulți călători aleg un hotel citind recenzii. O recenzie de la tine îi ajută să facă alegerea potrivită. Îți mulțumim!",
+      "Cel mai frumos 'mulțumesc' pe care ni-l poți oferi e o recenzie pe Google. Dacă ți-a plăcut, scanează codul — durează un minut!"
+    ],
+    "Profesional": [
+      "Dacă ați fost mulțumit de ședere, o recenzie pe Google ajută alți călători să aleagă în cunoștință de cauză și ne motivează să menținem standardele.",
+      "Feedback-ul oaspeților noștri este esențial pentru îmbunătățirea continuă a serviciilor. Vă invităm să lăsați o recenzie pe Google.",
+      "O recenzie pe Google reprezintă cel mai valoros feedback pe care ni-l puteți oferi. Experiența dvs. contează pentru fiecare oaspete viitor."
+    ],
+    "Direct": [
+      "Sejur plăcut? O recenzie pe Google ne ajută mai mult decât orice reclamă. Scanați, 60 de secunde.",
+      "Dacă ne-ați recomanda unui prieten, scrieți asta și pe Google. Scanați codul.",
+      "Recenzie Google? Două rânduri sunt de ajuns. Scanați și scrieți ce ați simțit."
+    ]
+  },
+  "Servicii generale": {
+    "Prietenos": [
+      "Dacă ești mulțumit/ă și ne-ai recomanda unui prieten, spune-o și pe Google — ajuți alți oameni să ne găsească!",
+      "Mulți oameni caută servicii de calitate citind recenzii. O recenzie de la tine face diferența pentru ei. Îți mulțumim!",
+      "Cel mai simplu mod să ne ajuți să creștem? O recenzie pe Google! Dacă ești mulțumit/ă, scanează codul — un minut, un impact mare."
+    ],
+    "Profesional": [
+      "Dacă ați fost mulțumit de serviciile noastre, o recenzie pe Google ajută alți clienți să ia decizii informate.",
+      "Recenziile clienților noștri sunt cel mai valoros indicator al calității pe care o oferim. Vă invităm să lăsați câteva cuvinte pe Google.",
+      "Feedback-ul dvs. ne ajută să îmbunătățim continuu calitatea serviciilor. O recenzie pe Google este apreciată."
+    ],
+    "Direct": [
+      "Mulțumit/ă de serviciu? O recenzie rapidă pe Google ne ajută enorm. Scanați, două rânduri, gata.",
+      "Dacă ne-ați recomanda unui prieten, scrieți asta și pe Google. Durează 60 de secunde.",
+      "Recenzie Google? Scanați codul. Mai rapid decât un mesaj."
+    ]
+  }
+};
+
+// ==================== M2: STATE ====================
+let state = {
+  industry: INDUSTRIES[0],
+  tone: TONES[0],
+  name: "",
+  link: "",
+  color: COLORS[0].hex,
+  logoDataURL: null
+};
+
+let linkValid = false;
+
+function setState(key, value) {
+  state[key] = value;
+  renderPreview();
+}
+
+function checkMobile() {
+  const guard = document.getElementById('mobile-guard');
+  if (window.innerWidth < 900) guard.classList.add('active');
+  else guard.classList.remove('active');
+}
+window.addEventListener('resize', checkMobile);
+
+// ==================== M3: FORM ====================
+const GOOGLE_REVIEW_REGEX = /^https:\/\/(g\.page\/r\/|g\.page\/|maps\.google\.|www\.google\.[a-z]{2,}\/maps)/;
+
+function initForm() {
+  const sel = document.getElementById('sel-industry');
+  INDUSTRIES.forEach(ind => {
+    const opt = document.createElement('option');
+    opt.value = opt.textContent = ind;
+    sel.appendChild(opt);
+  });
+
+  const toneGroup = document.getElementById('tone-group');
+  TONES.forEach((tone, i) => {
+    const id = 'tone-' + i;
+    const input = document.createElement('input');
+    input.type = 'radio'; input.name = 'tone'; input.id = id;
+    input.value = tone; input.className = 'tone-option';
+    if (i === 0) input.checked = true;
+    input.addEventListener('change', () => setState('tone', tone));
+    const label = document.createElement('label');
+    label.htmlFor = id; label.className = 'tone-label'; label.textContent = tone;
+    toneGroup.appendChild(input);
+    toneGroup.appendChild(label);
+  });
+
+  const swatchContainer = document.getElementById('color-swatches');
+  COLORS.forEach((c, i) => {
+    const div = document.createElement('div');
+    div.className = 'color-swatch' + (i === 0 ? ' active' : '');
+    div.style.backgroundColor = c.hex;
+    div.title = c.name;
+    div.addEventListener('click', () => {
+      document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('active'));
+      div.classList.add('active');
+      setState('color', c.hex);
+    });
+    swatchContainer.appendChild(div);
+  });
+
+  document.getElementById('cta-follow-link').href = CONFIG.creatorSocialURL;
+  document.getElementById('cta-label').textContent = CONFIG.creatorSocialLabel;
+}
+
+function validateLink(value) {
+  const feedback = document.getElementById('url-feedback');
+  if (!value) {
+    feedback.textContent = ''; feedback.className = 'url-feedback';
+    linkValid = false; state.link = ''; renderQR(); return;
+  }
+  if (GOOGLE_REVIEW_REGEX.test(value)) {
+    feedback.textContent = '✓ Link valid'; feedback.className = 'url-feedback valid';
+    linkValid = true; state.link = value;
+  } else {
+    feedback.textContent = 'Verifică link-ul — ar trebui să înceapă cu maps.google.com sau g.page';
+    feedback.className = 'url-feedback invalid';
+    linkValid = false; state.link = '';
+  }
+  renderQR();
+}
+
+function updateNameCounter() {
+  const val = document.getElementById('inp-name').value;
+  const counter = document.getElementById('name-counter');
+  counter.textContent = val.length + '/40';
+  counter.className = 'char-counter' + (val.length > 35 ? ' warn' : '');
+}
+
+function handleLogo(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  if (file.size > 2 * 1024 * 1024) { alert('Fișierul depășește 2MB.'); return; }
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    state.logoDataURL = e.target.result;
+    document.getElementById('logo-upload-label').style.display = 'none';
+    document.getElementById('logo-preview-thumb').style.display = 'block';
+    document.getElementById('logo-thumb').src = e.target.result;
+    renderPreview();
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeLogo(e) {
+  e.stopPropagation();
+  state.logoDataURL = null;
+  document.getElementById('logo-input').value = '';
+  document.getElementById('logo-upload-label').style.display = 'block';
+  document.getElementById('logo-preview-thumb').style.display = 'none';
+  renderPreview();
+}
+
+function saveProfile() {
+  const profile = { version: "1.0", industry: state.industry, tone: state.tone, name: state.name, link: state.link, color: state.color };
+  const blob = new Blob([JSON.stringify(profile, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'review-qr-profil.json'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function loadProfile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data.version) { alert('Format profil incompatibil.'); return; }
+      if (data.industry && INDUSTRIES.includes(data.industry)) {
+        state.industry = data.industry;
+        document.getElementById('sel-industry').value = data.industry;
+      }
+      if (data.tone && TONES.includes(data.tone)) {
+        state.tone = data.tone;
+        document.querySelectorAll('.tone-option').forEach(r => { r.checked = r.value === data.tone; });
+      }
+      if (data.name) {
+        state.name = data.name;
+        document.getElementById('inp-name').value = data.name;
+        updateNameCounter();
+      }
+      if (data.link) {
+        state.link = data.link;
+        document.getElementById('inp-link').value = data.link;
+        validateLink(data.link);
+      }
+      if (data.color) {
+        state.color = data.color;
+        const idx = COLORS.findIndex(c => c.hex === data.color);
+        document.querySelectorAll('.color-swatch').forEach((s, i) => s.classList.toggle('active', i === idx));
+      }
+      renderPreview();
+    } catch(err) { alert('Eroare la citirea fișierului de profil.'); }
+  };
+  reader.readAsText(file);
+}
+
+function goToStep2() {
+  document.getElementById('step1').style.display = 'none';
+  document.getElementById('step2').style.display = 'block';
+  document.getElementById('final-screen').style.display = 'none';
+  document.getElementById('step-indicator').textContent = 'Pasul 2 din 2';
+  renderScripts();
+}
+
+function goToStep1() {
+  document.getElementById('step1').style.display = 'block';
+  document.getElementById('step2').style.display = 'none';
+  document.getElementById('final-screen').style.display = 'none';
+  document.getElementById('step-indicator').textContent = 'Pasul 1 din 2';
+}
+
+// ==================== M4: PREVIEW ====================
+function renderPreview() {
+  const logoImg = document.getElementById('preview-logo');
+  const fallback = document.getElementById('preview-fallback');
+  if (state.logoDataURL) {
+    logoImg.src = state.logoDataURL; logoImg.style.display = 'block'; fallback.style.display = 'none';
+  } else {
+    logoImg.style.display = 'none'; fallback.style.display = 'flex';
+    fallback.textContent = state.name ? state.name[0].toUpperCase() : '?';
+  }
+
+  document.getElementById('preview-message').textContent = EMOTIONAL_MESSAGES[state.industry];
+
+  const nameEl = document.getElementById('preview-name');
+  nameEl.textContent = state.name || 'Numele Businessului';
+  const len = (state.name || '').length;
+  nameEl.style.fontSize = len > 30 ? '13px' : len > 20 ? '17px' : '22px';
+
+  document.getElementById('poster-bottom').style.backgroundColor = state.color;
+  document.getElementById('preview-instruction').textContent = POSTER_INSTRUCTIONS[state.tone];
+  document.getElementById('preview-attribution').textContent = 'Creat cu Review QR Booster · ' + CONFIG.creatorSocialLabel;
+
+  renderQR();
+}
+
+// ==================== M5: QR ====================
+function renderQR() {
+  const container = document.getElementById('qr-container');
+  const placeholder = document.getElementById('qr-placeholder');
+  const existingCanvas = container.querySelector('canvas');
+  if (existingCanvas) existingCanvas.remove();
+
+  if (!state.link) {
+    if (placeholder) placeholder.style.display = 'block';
+    return;
+  }
+  if (placeholder) placeholder.style.display = 'none';
+
+  new QRCode(container, {
+    text: state.link,
+    width: 100,
+    height: 100,
+    correctLevel: QRCode.CorrectLevel.H
+  });
+}
+
+// ==================== M6: SCRIPTS ====================
+function renderScripts() {
+  const scripts = SCRIPTS[state.industry][state.tone];
+  document.getElementById('scripts-container').innerHTML = scripts.map((s, i) => `
+    <div class="script-card">
+      <p>${s}</p>
+      <button id="copy-btn-${i}" onclick="copyScript(${i})">Copiază varianta ${i + 1}</button>
+    </div>
+  `).join('');
+}
+
+function copyScript(index) {
+  const text = SCRIPTS[state.industry][state.tone][index];
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copy-btn-' + index);
+    const orig = btn.textContent;
+    btn.textContent = '✓ Copiat!'; btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = orig; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+// ==================== M7: PDF ====================
+async function generatePDF() {
+  const btn = document.getElementById('btn-generate');
+  const origText = btn ? btn.textContent : '';
+  if (btn) { btn.textContent = 'Se generează... (5-15 sec)'; btn.disabled = true; }
+
+  try {
+    const posterEl = document.getElementById('poster-preview');
+
+    const canvas = await html2canvas(posterEl, {
+      scale: 4,
+      useCORS: false,
+      allowTaint: true,
+      logging: false,
+      backgroundColor: '#FFFFFF'
+    });
+
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ unit: 'mm', format: 'a5', orientation: 'portrait' });
+
+    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+    pdf.addImage(imgData, 'JPEG', 0, 0, 148, 210);
+
+    // Page 2: scripts
+    pdf.addPage();
+    pdf.setFontSize(16);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Scripturi pentru echipă', 10, 18);
+
+    pdf.setFontSize(9);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setTextColor(100, 100, 100);
+    pdf.text(state.industry + ' · Ton: ' + state.tone + (state.name ? ' · ' + state.name : ''), 10, 27);
+    pdf.setTextColor(0, 0, 0);
+
+    const scripts = SCRIPTS[state.industry][state.tone];
+    let y = 37;
+    scripts.forEach((s, i) => {
+      if (y > 185) return;
+      pdf.setFontSize(10);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Varianta ' + (i + 1) + ':', 10, y); y += 6;
+      pdf.setFont('helvetica', 'normal');
+      const lines = pdf.splitTextToSize(s, 128);
+      pdf.text(lines, 10, y);
+      y += lines.length * 5 + 10;
+    });
+
+    pdf.setFontSize(7);
+    pdf.setTextColor(160, 160, 160);
+    pdf.text('Creat cu Review QR Booster · ' + CONFIG.creatorSocialLabel + ' · Printează la dimensiunea reală (A5) sau "Fit to page" pe A4', 10, 204);
+
+    const filename = 'review-qr-' + (state.name || 'business').replace(/[^a-zA-Z0-9]/g, '-').toLowerCase() + '.pdf';
+    pdf.save(filename);
+
+    showFinalScreen();
+  } catch (err) {
+    console.error('PDF generation error:', err);
+    alert('Eroare la generarea PDF. Verificați consola (F12) pentru detalii.');
+    if (btn) { btn.textContent = origText; btn.disabled = false; }
+  }
+}
+
+// ==================== M8: FINAL ====================
+function showFinalScreen() {
+  document.getElementById('step2').style.display = 'none';
+  document.getElementById('final-screen').style.display = 'block';
+  document.getElementById('step-indicator').textContent = 'Gata!';
+}
+
+// ==================== INIT ====================
+checkMobile();
+initForm();
+renderPreview();
+</script>
+</body>
+</html>
