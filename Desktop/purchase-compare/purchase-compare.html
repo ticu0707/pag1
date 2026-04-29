@@ -1,0 +1,1224 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PurchaseCompare — Compară oferte furnizori</title>
+<style>
+/* ── M0: CSS FOUNDATION ─────────────────────────────────────────────── */
+:root {
+  --primary:       #2563EB;
+  --primary-hover: #1D4ED8;
+  --primary-light: #EFF6FF;
+  --text:          #1A1A2E;
+  --surface:       #FFFFFF;
+  --bg:            #F8FAFC;
+  --border:        #E5E7EB;
+  --muted:         #6B7280;
+  --danger:        #EF4444;
+  --danger-bg:     #FEF2F2;
+  --warning:       #F59E0B;
+  --warning-bg:    #FFFBEB;
+  --warning-light: #FEF3C7;
+  --success:       #10B981;
+  --success-bg:    #ECFDF5;
+  --radius:        12px;
+  --radius-sm:     8px;
+  --shadow:        0 1px 4px rgba(0,0,0,0.08);
+  --shadow-md:     0 4px 12px rgba(0,0,0,0.10);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--bg);
+  min-height: 100vh;
+}
+
+/* ── LAYOUT ── */
+#app { max-width: 900px; margin: 0 auto; padding: 24px 16px 64px; }
+
+/* ── STEP INDICATOR ── */
+#step-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-bottom: 32px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 24px;
+  box-shadow: var(--shadow);
+}
+.step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  font-size: 14px;
+  color: var(--muted);
+}
+.step.active { color: var(--primary); font-weight: 600; }
+.step.done { color: var(--success); }
+.step-num {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: var(--border);
+  color: var(--muted);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700;
+  flex-shrink: 0;
+}
+.step.active .step-num { background: var(--primary); color: #fff; }
+.step.done .step-num { background: var(--success); color: #fff; }
+.step-divider { width: 32px; height: 1px; background: var(--border); flex-shrink: 0; }
+
+/* ── CARD ── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px;
+  box-shadow: var(--shadow);
+  margin-bottom: 20px;
+}
+.card-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.card-title .badge-step {
+  background: var(--primary-light);
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+
+/* ── FORMS ── */
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+.form-row.three { grid-template-columns: 1fr 1fr 1fr; }
+.form-row.single { grid-template-columns: 1fr; }
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field label { font-size: 13px; font-weight: 600; color: var(--text); }
+.field input, .field select, .field textarea {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 9px 12px;
+  font-size: 14px;
+  color: var(--text);
+  background: var(--surface);
+  transition: border-color 0.15s;
+  width: 100%;
+}
+.field input:focus, .field select:focus, .field textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+}
+.field input.error, .field select.error { border-color: var(--danger); }
+.field-error { font-size: 12px; color: var(--danger); margin-top: 2px; }
+.field-hint { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.field textarea { resize: vertical; min-height: 64px; }
+.date-wrap { position: relative; display: flex; align-items: center; }
+.date-wrap input[type="text"] { flex: 1; padding-right: 36px; }
+.date-wrap::after { content: '📅'; position: absolute; right: 10px; font-size: 15px; pointer-events: none; }
+.date-cal-input { position: absolute; right: 0; top: 0; width: 36px; height: 100%; opacity: 0; cursor: pointer; border: none; padding: 0; }
+
+/* ── SLIDERS ── */
+.slider-group { display: flex; flex-direction: column; gap: 14px; }
+.slider-item { display: flex; flex-direction: column; gap: 4px; }
+.slider-header { display: flex; justify-content: space-between; align-items: center; }
+.slider-label { font-size: 13px; font-weight: 600; }
+.slider-value {
+  font-size: 13px; font-weight: 700;
+  color: var(--primary);
+  min-width: 36px; text-align: right;
+}
+input[type="range"] {
+  -webkit-appearance: none; appearance: none;
+  width: 100%; height: 6px;
+  background: var(--border); border-radius: 3px; cursor: pointer;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--primary);
+  border: 2px solid #fff;
+  box-shadow: 0 1px 4px rgba(37,99,235,0.4);
+  cursor: pointer;
+}
+.slider-total {
+  text-align: right; font-size: 12px;
+  color: var(--muted); margin-top: 4px;
+}
+.slider-total.error { color: var(--danger); font-weight: 600; }
+
+/* ── BUTTONS ── */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 18px;
+  font-size: 14px; font-weight: 600;
+  border-radius: var(--radius-sm);
+  border: none; cursor: pointer;
+  transition: all 0.15s;
+  text-decoration: none;
+}
+.btn-primary { background: var(--primary); color: #fff; }
+.btn-primary:hover { background: var(--primary-hover); }
+.btn-outline {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+.btn-outline:hover { background: var(--bg); border-color: var(--muted); }
+.btn-danger-outline {
+  background: transparent;
+  border: 1px solid var(--danger);
+  color: var(--danger);
+}
+.btn-danger-outline:hover { background: var(--danger-bg); }
+.btn-sm { padding: 6px 12px; font-size: 13px; }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-row { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+
+/* ── SUPPLIER CARD ── */
+.supplier-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.supplier-card.expired { opacity: 0.55; border-style: dashed; }
+.supplier-card-name { font-weight: 600; font-size: 14px; flex: 1; }
+.supplier-card-meta { font-size: 12px; color: var(--muted); }
+.badge {
+  display: inline-flex; align-items: center;
+  padding: 2px 8px; border-radius: 20px;
+  font-size: 12px; font-weight: 600;
+}
+.badge-expired { background: var(--danger-bg); color: var(--danger); }
+.badge-winner { background: var(--primary-light); color: var(--primary); }
+.badge-warning { background: var(--warning-bg); color: var(--warning); }
+
+/* ── ALERTS ── */
+.alert {
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+  margin-bottom: 12px;
+  font-size: 13px;
+  display: flex; align-items: flex-start; gap: 8px;
+}
+.alert-warning { background: var(--warning-bg); border: 1px solid #FDE68A; color: #92400E; }
+.alert-danger { background: var(--danger-bg); border: 1px solid #FECACA; color: #991B1B; }
+.alert-info { background: var(--primary-light); border: 1px solid #BFDBFE; color: #1E40AF; }
+.alert-success { background: var(--success-bg); border: 1px solid #A7F3D0; color: #065F46; }
+.disclaimer {
+  font-size: 12px; color: var(--muted);
+  border-top: 1px solid var(--border);
+  padding-top: 10px; margin-top: 10px;
+}
+
+/* ── RESULTS TABLE ── */
+.results-table-wrap { overflow-x: auto; margin-top: 16px; }
+.results-table {
+  width: 100%; border-collapse: collapse;
+  font-size: 13px; min-width: 680px;
+}
+.results-table th {
+  background: var(--bg);
+  border-bottom: 2px solid var(--border);
+  padding: 10px 12px;
+  text-align: left; font-size: 12px;
+  font-weight: 700; color: var(--muted);
+  white-space: nowrap;
+}
+.results-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+.results-table tr.winner td { background: var(--primary-light); }
+.results-table tr.expired-row td { opacity: 0.5; }
+.results-table td.surplus-warn { background: var(--warning-light); }
+.score-bar-wrap { display: flex; align-items: center; gap: 6px; min-width: 90px; }
+.score-bar {
+  height: 6px; border-radius: 3px;
+  background: var(--primary);
+  transition: width 0.3s;
+}
+.score-bar-bg {
+  flex: 1; height: 6px; border-radius: 3px;
+  background: var(--border); position: relative; overflow: hidden;
+}
+.score-num { font-size: 12px; font-weight: 700; color: var(--primary); min-width: 28px; }
+.score-criteria { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+.score-chip {
+  font-size: 11px; padding: 1px 6px;
+  border-radius: 4px; background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+
+/* ── WINNER CARD ── */
+.winner-card {
+  background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%);
+  border: 2px solid var(--primary);
+  border-radius: var(--radius);
+  padding: 20px 24px;
+  margin-bottom: 20px;
+}
+.winner-card-header {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 12px;
+}
+.winner-name { font-size: 20px; font-weight: 800; color: var(--text); }
+.winner-meta { font-size: 14px; color: var(--muted); }
+.winner-savings {
+  font-size: 24px; font-weight: 800; color: var(--success);
+}
+.winner-savings-label { font-size: 13px; color: var(--muted); }
+.winner-stats { display: flex; gap: 24px; flex-wrap: wrap; margin-top: 12px; }
+.winner-stat { display: flex; flex-direction: column; }
+.winner-stat-val { font-size: 17px; font-weight: 700; }
+.winner-stat-lbl { font-size: 12px; color: var(--muted); }
+
+/* ── PRINT CSS ── */
+@media print {
+  body { background: #fff; }
+  #step-indicator, #section-suppliers, .btn, .btn-row,
+  #app > .card:first-of-type,
+  .no-print { display: none !important; }
+  #section-results { box-shadow: none; border: none; }
+  .card { box-shadow: none; border: 1px solid #ddd; }
+  #print-header, #print-footer { display: block !important; }
+  .results-table { font-size: 11px; }
+  .results-table th, .results-table td { padding: 6px 8px; }
+  tr.winner td { background: #EFF6FF !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .page-break { page-break-before: always; }
+  #section-settings .card { display: none; }
+  #print-params { display: block !important; }
+}
+
+/* ── PRINT-ONLY ELEMENTS ── */
+#print-header, #print-footer, #print-params { display: none; }
+#print-header {
+  border-bottom: 2px solid var(--text);
+  padding-bottom: 12px; margin-bottom: 16px;
+}
+#print-header h1 { font-size: 18px; }
+#print-header .ph-meta { font-size: 12px; color: var(--muted); margin-top: 4px; }
+#print-footer {
+  border-top: 1px solid var(--border);
+  padding-top: 10px; margin-top: 20px;
+  font-size: 11px; color: var(--muted); text-align: center;
+}
+#print-params {
+  font-size: 12px; background: var(--bg);
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 10px 14px; margin-bottom: 14px;
+}
+.sign-line {
+  display: flex; gap: 32px; margin-top: 20px; flex-wrap: wrap;
+}
+.sign-box { border-top: 1px solid var(--text); padding-top: 4px; min-width: 160px; font-size: 11px; color: var(--muted); }
+
+/* ── MISC ── */
+hr.section-sep { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+.empty-state { text-align: center; color: var(--muted); padding: 32px 16px; font-size: 14px; }
+.uom-warning { font-size: 12px; color: var(--warning); margin-top: 4px; display: flex; align-items: center; gap: 4px; }
+#section-results { display: none; }
+#section-results.visible { display: block; }
+.top-bar {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 24px;
+}
+.app-logo { font-size: 18px; font-weight: 800; color: var(--primary); }
+.app-logo span { color: var(--text); }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- TOP BAR -->
+  <div class="top-bar no-print">
+    <div class="app-logo">Purchase<span>Compare</span></div>
+    <div style="display:flex;gap:10px;">
+      <button class="btn btn-outline btn-sm" id="btn-reset">↺ Resetează</button>
+      <button class="btn btn-primary btn-sm" id="btn-export" disabled>⬇ Exportă PDF</button>
+    </div>
+  </div>
+
+  <!-- STEP INDICATOR -->
+  <div id="step-indicator" class="no-print">
+    <div class="step active" id="step1-indicator">
+      <div class="step-num">1</div>
+      <span>Setări comandă</span>
+    </div>
+    <div class="step-divider"></div>
+    <div class="step" id="step2-indicator">
+      <div class="step-num">2</div>
+      <span>Furnizori</span>
+    </div>
+    <div class="step-divider"></div>
+    <div class="step" id="step3-indicator">
+      <div class="step-num">3</div>
+      <span>Rezultate</span>
+    </div>
+  </div>
+
+  <!-- PRINT HEADER -->
+  <div id="print-header">
+    <h1>PurchaseCompare — Analiză furnizori</h1>
+    <div class="ph-meta" id="ph-meta"></div>
+  </div>
+  <div id="print-params"></div>
+
+  <!-- STEP 1: SETTINGS -->
+  <div id="section-settings"></div>
+
+  <!-- STEP 2: SUPPLIERS -->
+  <div id="section-suppliers"></div>
+
+  <!-- STEP 3: RESULTS -->
+  <div id="section-results"></div>
+
+  <!-- PRINT FOOTER -->
+  <div id="print-footer">
+    Generat cu <strong>PurchaseCompare</strong> · Tool gratuit de comparare furnizori · purchasecompare.ro
+  </div>
+
+</div>
+<script>
+'use strict';
+/* ═══════════════════════════════════════════════════════════════
+   NAMESPACE
+═══════════════════════════════════════════════════════════════ */
+const PC = {};
+
+/* ═══════════════════════════════════════════════════════════════
+   M3 — PC.calc: PURE CALCULATION FUNCTIONS
+   Testare: console.assert(PC.calc.effectiveQty(80,100) === 100)
+═══════════════════════════════════════════════════════════════ */
+PC.calc = (function() {
+
+  function effectiveQty(desired, moq) {
+    return Math.max(desired, moq);
+  }
+
+  function surplus(effective, desired) {
+    return effective - desired;
+  }
+
+  function totalCost(effQty, price, transport) {
+    return (effQty * price) + transport;
+  }
+
+  function realCostPerUnit(total, desiredQty) {
+    if (desiredQty <= 0) return 0;
+    return total / desiredQty;
+  }
+
+  function cashflowDays(terms) {
+    return { 'cash': 0, '15d': 15, '30d': 30, '60d': 60 }[terms] ?? 0;
+  }
+
+  function cashflowSavings(total, paymentDays, annualRate) {
+    if (!paymentDays || !annualRate) return 0;
+    return total * (annualRate / 100) * (paymentDays / 365);
+  }
+
+  function adjustedCostPerUnit(realCost, savings, desiredQty) {
+    if (desiredQty <= 0) return realCost;
+    return realCost - (savings / desiredQty);
+  }
+
+  function processSupplier(s, settings) {
+    const desired = settings.qty;
+    const effQty = effectiveQty(desired, s.moq);
+    const surplusUnits = surplus(effQty, desired);
+    const surplusPct = desired > 0 ? (surplusUnits / desired) * 100 : 0;
+    const total = totalCost(effQty, s.price, s.transport);
+    const realCost = realCostPerUnit(total, desired);
+    const pDays = cashflowDays(s.paymentTerms);
+    const cfSavings = cashflowSavings(total, pDays, settings.capitalRate);
+    const adjCost = adjustedCostPerUnit(realCost, cfSavings, desired);
+
+    return {
+      ...s,
+      effQty,
+      surplusUnits,
+      surplusPct,
+      total,
+      realCost,
+      cfSavings,
+      adjCost,
+      comparisonCost: pDays > 0 ? adjCost : realCost
+    };
+  }
+
+  return { effectiveQty, surplus, totalCost, realCostPerUnit,
+           cashflowDays, cashflowSavings, adjustedCostPerUnit, processSupplier };
+})();
+
+/* ═══════════════════════════════════════════════════════════════
+   M4 — PC.score: NORMALIZATION + SCORING
+   Testare: console.assert(PC.score.normalize(10,10,10) === 50)
+═══════════════════════════════════════════════════════════════ */
+PC.score = (function() {
+
+  function normalize(value, min, max) {
+    if (max === min) return 50;
+    return Math.round((max - value) / (max - min) * 100);
+  }
+
+  function scoreSuppliers(computed, settings) {
+    const valid = computed.filter(s => !s._excluded);
+    if (valid.length < 2) {
+      return computed.map(s => ({ ...s, scorePrice: null, scoreLead: null, scoreMoq: null, scoreFinal: null }));
+    }
+
+    const costs = valid.map(s => s.comparisonCost);
+    const leads = valid.map(s => s.leadtime);
+    const surpluses = valid.map(s => s.surplusUnits);
+
+    const minCost = Math.min(...costs), maxCost = Math.max(...costs);
+    const minLead = Math.min(...leads), maxLead = Math.max(...leads);
+    const minSurplus = Math.min(...surpluses), maxSurplus = Math.max(...surpluses);
+
+    const w = { price: settings.wPrice / 100, lead: settings.wLead / 100, moq: settings.wMoq / 100 };
+
+    return computed.map(s => {
+      if (s._excluded) return { ...s, scorePrice: null, scoreLead: null, scoreMoq: null, scoreFinal: null };
+      const sp = normalize(s.comparisonCost, minCost, maxCost);
+      const sl = normalize(s.leadtime, minLead, maxLead);
+      const sm = normalize(s.surplusUnits, minSurplus, maxSurplus);
+      const sf = Math.round(sp * w.price + sl * w.lead + sm * w.moq);
+      return { ...s, scorePrice: sp, scoreLead: sl, scoreMoq: sm, scoreFinal: sf };
+    });
+  }
+
+  function isScoringEnabled(validSuppliers) {
+    return validSuppliers.length >= 2;
+  }
+
+  function findWinner(scored) {
+    const valid = scored.filter(s => !s._excluded && s.scoreFinal !== null);
+    if (!valid.length) return null;
+    return valid.reduce((best, s) => s.scoreFinal > best.scoreFinal ? s : best, valid[0]);
+  }
+
+  return { normalize, scoreSuppliers, isScoringEnabled, findWinner };
+})();
+
+/* ═══════════════════════════════════════════════════════════════
+   M8 — PC.validate: INPUT VALIDATION
+═══════════════════════════════════════════════════════════════ */
+PC.validate = (function() {
+
+  function settings(s) {
+    const errors = [];
+    if (!s.sku || !s.sku.trim()) errors.push({ field: 'sku', msg: 'Denumirea produsului este obligatorie.' });
+    if (!s.qty || s.qty <= 0) errors.push({ field: 'qty', msg: 'Cantitatea trebuie să fie mai mare decât 0.' });
+    const sum = (s.wPrice || 0) + (s.wLead || 0) + (s.wMoq || 0);
+    if (Math.abs(sum - 100) > 1) errors.push({ field: 'sliders', msg: 'Suma ponderilor trebuie să fie 100%.' });
+    return errors;
+  }
+
+  function supplier(s) {
+    const errors = [];
+    if (!s.name || !s.name.trim()) errors.push({ field: 'name', msg: 'Numele furnizorului este obligatoriu.' });
+    if (!s.price || s.price <= 0) errors.push({ field: 'price', msg: 'Prețul trebuie să fie mai mare decât 0.' });
+    if (!s.moq || s.moq <= 0) errors.push({ field: 'moq', msg: 'MOQ trebuie să fie mai mare decât 0.' });
+    if (s.leadtime === '' || s.leadtime === undefined || s.leadtime < 0) errors.push({ field: 'leadtime', msg: 'Lead time-ul nu poate fi negativ.' });
+    if (s.transport === '' || s.transport === undefined || s.transport < 0) errors.push({ field: 'transport', msg: 'Costul de transport nu poate fi negativ.' });
+    return errors;
+  }
+
+  function showError(fieldId, msg) {
+    const el = document.getElementById(fieldId);
+    if (!el) return;
+    el.classList.add('error');
+    let errEl = el.parentNode.querySelector('.field-error');
+    if (!errEl) { errEl = document.createElement('span'); errEl.className = 'field-error'; el.parentNode.appendChild(errEl); }
+    errEl.textContent = msg;
+  }
+
+  function clearErrors(formId) {
+    const form = document.getElementById(formId);
+    if (!form) return;
+    form.querySelectorAll('.error').forEach(el => el.classList.remove('error'));
+    form.querySelectorAll('.field-error').forEach(el => el.remove());
+  }
+
+  return { settings, supplier, showError, clearErrors };
+})();
+
+/* ═══════════════════════════════════════════════════════════════
+   M1 — PC.settings: STEP 1 UI
+═══════════════════════════════════════════════════════════════ */
+PC.settings = (function() {
+
+  function getDefaults() {
+    return { sku: '', uom: 'buc', qty: 1, wPrice: 60, wLead: 25, wMoq: 15, capitalRate: 8 };
+  }
+
+  function render(s) {
+    document.getElementById('section-settings').innerHTML = `
+      <div class="card">
+        <div class="card-title">
+          <span class="badge-step">Pasul 1</span>
+          Parametrii comenzii
+        </div>
+        <form id="form-settings" autocomplete="off">
+          <div class="form-row">
+            <div class="field">
+              <label for="sku">Denumire produs / SKU *</label>
+              <input type="text" id="sku" value="${esc(s.sku)}" placeholder="ex: Făină tip 550">
+            </div>
+            <div class="field">
+              <label for="uom">Unitate de măsură *</label>
+              <select id="uom">
+                ${['kg','buc','cutie','litru','alt'].map(u => `<option value="${u}"${s.uom===u?' selected':''}>${u}</option>`).join('')}
+              </select>
+              <span class="uom-warning">⚠ Asigură-te că toți furnizorii cotează în aceeași unitate.</span>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label for="qty">Cantitate dorită *</label>
+              <input type="number" id="qty" value="${s.qty}" min="1" step="1">
+            </div>
+            <div class="field">
+              <label for="capitalRate">Rată cost capital (% anual)</label>
+              <input type="number" id="capitalRate" value="${s.capitalRate}" min="0" max="100" step="0.5">
+              <span class="field-hint">Folosit doar dacă furnizorii au termeni de plată diferiți.</span>
+            </div>
+          </div>
+          <hr class="section-sep">
+          <div class="card-title" style="font-size:14px;margin-bottom:14px;">Priorități scoring</div>
+          <div class="slider-group">
+            <div class="slider-item">
+              <div class="slider-header">
+                <span class="slider-label">💰 Preț</span>
+                <span class="slider-value" id="val-wPrice">${s.wPrice}%</span>
+              </div>
+              <input type="range" id="wPrice" min="0" max="100" value="${s.wPrice}" data-slider="wPrice">
+            </div>
+            <div class="slider-item">
+              <div class="slider-header">
+                <span class="slider-label">⚡ Lead Time</span>
+                <span class="slider-value" id="val-wLead">${s.wLead}%</span>
+              </div>
+              <input type="range" id="wLead" min="0" max="100" value="${s.wLead}" data-slider="wLead">
+            </div>
+            <div class="slider-item">
+              <div class="slider-header">
+                <span class="slider-label">📦 MOQ / Flexibilitate</span>
+                <span class="slider-value" id="val-wMoq">${s.wMoq}%</span>
+              </div>
+              <input type="range" id="wMoq" min="0" max="100" value="${s.wMoq}" data-slider="wMoq">
+            </div>
+          </div>
+          <div class="slider-total" id="slider-total">Total: ${s.wPrice+s.wLead+s.wMoq}%</div>
+        </form>
+      </div>`;
+  }
+
+  function read() {
+    return {
+      sku:         (document.getElementById('sku')?.value || '').trim(),
+      uom:         document.getElementById('uom')?.value || 'buc',
+      qty:         parseFloat(document.getElementById('qty')?.value) || 0,
+      wPrice:      parseInt(document.getElementById('wPrice')?.value) || 0,
+      wLead:       parseInt(document.getElementById('wLead')?.value) || 0,
+      wMoq:        parseInt(document.getElementById('wMoq')?.value) || 0,
+      capitalRate: parseFloat(document.getElementById('capitalRate')?.value) || 0,
+    };
+  }
+
+  function validate(s) {
+    return PC.validate.settings(s);
+  }
+
+  return { getDefaults, render, read, validate };
+})();
+
+/* ═══════════════════════════════════════════════════════════════
+   M2 — PC.suppliers: STEP 2 UI + SUPPLIER MANAGEMENT
+═══════════════════════════════════════════════════════════════ */
+PC.suppliers = (function() {
+
+  function uid() {
+    return Math.random().toString(36).slice(2, 9);
+  }
+
+  function isExpired(s) {
+    if (!s.validity) return false;
+    let d;
+    if (/^\d{2}\/\d{2}\/\d{4}$/.test(s.validity)) {
+      const [dd, mm, yyyy] = s.validity.split('/');
+      d = new Date(parseInt(yyyy), parseInt(mm) - 1, parseInt(dd));
+    } else {
+      d = new Date(s.validity);
+    }
+    if (isNaN(d.getTime())) return false;
+    return d < new Date(new Date().toDateString());
+  }
+
+  function add(data, state) {
+    state.suppliers.push({ ...data, id: uid() });
+  }
+
+  function remove(id, state) {
+    state.suppliers = state.suppliers.filter(s => s.id !== id);
+  }
+
+  function toggleExpired(id, state) {
+    const s = state.suppliers.find(s => s.id === id);
+    if (s) s.forceInclude = !s.forceInclude;
+  }
+
+  function render(state) {
+    const list = state.suppliers;
+    let html = `
+      <div class="card">
+        <div class="card-title">
+          <span class="badge-step">Pasul 2</span>
+          Oferte furnizori
+          <span style="margin-left:auto;font-size:13px;color:var(--muted);font-weight:400;">${list.length} furnizor${list.length !== 1 ? 'i' : ''} adăugat${list.length !== 1 ? 'i' : ''}</span>
+        </div>`;
+
+    if (list.length === 0) {
+      html += `<div class="empty-state">Niciun furnizor adăugat încă.<br>Completează formularul de mai jos pentru a începe.</div>`;
+    } else {
+      list.forEach(s => {
+        const expired = isExpired(s);
+        const excluded = expired && !s.forceInclude;
+        html += `
+          <div class="supplier-card${expired ? ' expired' : ''}">
+            <div style="flex:1;">
+              <div class="supplier-card-name">${esc(s.name)}${expired ? ' <span class="badge badge-expired">Expirat</span>' : ''}</div>
+              <div class="supplier-card-meta">${s.price} lei/${state.settings.uom} · MOQ: ${s.moq} ${state.settings.uom} · ${s.leadtime}z · transport: ${s.transport} lei${s.paymentTerms ? ' · ' + s.paymentTerms : ''}</div>
+              ${s.notes ? `<div class="supplier-card-meta" style="margin-top:2px;">📝 ${esc(s.notes)}</div>` : ''}
+            </div>
+            <div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap;">
+              ${expired ? `<button class="btn btn-outline btn-sm" data-toggle-expired="${s.id}">${excluded ? '+ Include' : '− Exclude'}</button>` : ''}
+              <button class="btn btn-danger-outline btn-sm" data-remove="${s.id}">✕</button>
+            </div>
+          </div>`;
+      });
+    }
+
+    html += `
+        <hr class="section-sep">
+        <div style="font-size:14px;font-weight:600;margin-bottom:14px;">+ Adaugă furnizor</div>
+        <form id="form-add-supplier" autocomplete="off">
+          <div class="form-row">
+            <div class="field">
+              <label for="s-name">Nume furnizor *</label>
+              <input type="text" id="s-name" placeholder="ex: Distributor ABC">
+            </div>
+            <div class="field">
+              <label for="s-price">Preț / unitate (lei) *</label>
+              <input type="number" id="s-price" min="0.01" step="0.01" placeholder="0.00">
+            </div>
+          </div>
+          <div class="form-row three">
+            <div class="field">
+              <label for="s-moq">MOQ (cantitate minimă) *</label>
+              <input type="number" id="s-moq" min="1" step="1" placeholder="1">
+            </div>
+            <div class="field">
+              <label for="s-leadtime">Lead time (zile) *</label>
+              <input type="number" id="s-leadtime" min="0" step="1" placeholder="0">
+            </div>
+            <div class="field">
+              <label for="s-transport">Cost transport (lei) *</label>
+              <input type="number" id="s-transport" min="0" step="0.01" placeholder="0.00">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="field">
+              <label for="s-validity">Valabilitate ofertă</label>
+              <div class="date-wrap">
+                <input type="text" id="s-validity" placeholder="zz/ll/aaaa" maxlength="10" inputmode="numeric" autocomplete="off">
+                <input type="date" id="s-validity-cal" class="date-cal-input" tabindex="-1" title="Alege din calendar">
+              </div>
+            </div>
+            <div class="field">
+              <label for="s-terms">Termeni de plată</label>
+              <select id="s-terms">
+                <option value="">— selectează —</option>
+                <option value="cash">Cash / anticipat</option>
+                <option value="15d">15 zile</option>
+                <option value="30d">30 zile</option>
+                <option value="60d">60 zile</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-row single">
+            <div class="field">
+              <label for="s-notes">Notițe interne</label>
+              <textarea id="s-notes" placeholder="ex: livrează întârziat frecvent, ambalaj fragil..."></textarea>
+            </div>
+          </div>
+          <div class="btn-row">
+            <button type="submit" class="btn btn-primary">+ Adaugă furnizor</button>
+          </div>
+        </form>
+      </div>`;
+
+    document.getElementById('section-suppliers').innerHTML = html;
+  }
+
+  function readForm() {
+    return {
+      name:         (document.getElementById('s-name')?.value || '').trim(),
+      price:        parseFloat(document.getElementById('s-price')?.value) || 0,
+      moq:          parseFloat(document.getElementById('s-moq')?.value) || 0,
+      leadtime:     parseFloat(document.getElementById('s-leadtime')?.value || '0'),
+      transport:    parseFloat(document.getElementById('s-transport')?.value || '0'),
+      validity:     document.getElementById('s-validity')?.value || '',
+      paymentTerms: document.getElementById('s-terms')?.value || '',
+      notes:        (document.getElementById('s-notes')?.value || '').trim(),
+      forceInclude: false,
+    };
+  }
+
+  return { uid, isExpired, add, remove, toggleExpired, render, readForm };
+})();
+
+/* ═══════════════════════════════════════════════════════════════
+   M6 — PC.storage: SESSION STORAGE
+═══════════════════════════════════════════════════════════════ */
+PC.storage = (function() {
+  const KEY = 'pc_session';
+
+  function save(state) {
+    try { sessionStorage.setItem(KEY, JSON.stringify(state)); } catch(e) {}
+  }
+
+  function load() {
+    try {
+      const raw = sessionStorage.getItem(KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch(e) { return null; }
+  }
+
+  function clear() {
+    sessionStorage.removeItem(KEY);
+  }
+
+  return { save, load, clear };
+})();
+
+/* ═══════════════════════════════════════════════════════════════
+   M5 — PC.results: RESULTS TABLE + RECOMMENDATION
+═══════════════════════════════════════════════════════════════ */
+PC.results = (function() {
+
+  function fmt(n, dec=2) {
+    return n.toLocaleString('ro-RO', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+  }
+
+  function renderAlerts(state, computed) {
+    let html = '';
+    const valid = computed.filter(s => !s._excluded);
+    const all = computed;
+
+    if (all.length > 0 && valid.length === 0) {
+      html += `<div class="alert alert-danger">⛔ Toate ofertele sunt expirate și excluse. Activează manual cel puțin una pentru a vedea rezultatele.</div>`;
+    }
+    if (valid.length === 1) {
+      html += `<div class="alert alert-info">ℹ Scoring dezactivat — ai un singur furnizor valid. Adaugă cel puțin 2 pentru comparație.</div>`;
+    }
+    const allMoqExceed = valid.length > 0 && valid.every(s => s.moq > state.settings.qty);
+    if (allMoqExceed) {
+      html += `<div class="alert alert-warning">⚠ Toți furnizorii au MOQ mai mare decât cantitatea dorită (${state.settings.qty} ${state.settings.uom}). Verifică cantitatea sau negociază MOQ-ul.</div>`;
+    }
+    const withSurplus = valid.filter(s => s.surplusPct > 20);
+    if (withSurplus.length > 0) {
+      html += `<div class="alert alert-warning">⚠ <strong>${withSurplus.map(s=>esc(s.name)).join(', ')}</strong> — surplus forțat &gt;20% față de cantitatea dorită.</div>`;
+    }
+
+    html += `<div class="disclaimer">⚡ Scorul este relativ la ofertele introduse, nu absolut. Adăugarea sau eliminarea unui furnizor poate modifica scorurile celorlalți.</div>`;
+    return html;
+  }
+
+  function renderWinner(winner, scored, settings) {
+    if (!winner) return '';
+    const validScored = scored.filter(s => !s._excluded && s.scoreFinal !== null);
+    const worst = validScored.reduce((w, s) => s.comparisonCost > w.comparisonCost ? s : w, validScored[0]);
+    const savings = (worst.comparisonCost - winner.comparisonCost) * settings.qty;
+    const hasSaving = savings > 0.005;
+
+    return `
+      <div class="winner-card">
+        <div class="winner-card-header">
+          <span class="badge badge-winner" style="font-size:13px;padding:4px 12px;">✓ Recomandat</span>
+          <div class="winner-name">${esc(winner.name)}</div>
+        </div>
+        <div class="winner-stats">
+          <div class="winner-stat">
+            <div class="winner-stat-val">${fmt(winner.comparisonCost)} lei/${settings.uom}</div>
+            <div class="winner-stat-lbl">Cost real / unitate${winner.cfSavings > 0 ? ' (ajustat cashflow)' : ''}</div>
+          </div>
+          <div class="winner-stat">
+            <div class="winner-stat-val">${fmt(winner.total)} lei</div>
+            <div class="winner-stat-lbl">Cost total comandă</div>
+          </div>
+          <div class="winner-stat">
+            <div class="winner-stat-val">${winner.leadtime}z</div>
+            <div class="winner-stat-lbl">Lead time</div>
+          </div>
+          ${winner.surplusUnits > 0 ? `
+          <div class="winner-stat">
+            <div class="winner-stat-val" style="color:var(--warning)">+${winner.surplusUnits} ${settings.uom}</div>
+            <div class="winner-stat-lbl">Surplus forțat de MOQ</div>
+          </div>` : ''}
+          ${hasSaving ? `
+          <div class="winner-stat">
+            <div class="winner-stat-val winner-savings">~${fmt(savings)} lei</div>
+            <div class="winner-stat-lbl">Economie față de ${esc(worst.name)}</div>
+          </div>` : ''}
+        </div>
+        <div class="winner-score-detail" style="margin-top:14px;font-size:12px;color:var(--muted);">
+          Scor: <strong>${winner.scoreFinal}/100</strong> ·
+          Preț: ${winner.scorePrice} · Lead: ${winner.scoreLead} · MOQ: ${winner.scoreMoq}
+        </div>
+      </div>`;
+  }
+
+  function renderTable(scored, settings) {
+    if (!scored.length) return '';
+    const showScore = PC.score.isScoringEnabled(scored.filter(s => !s._excluded));
+
+    let html = `<div class="results-table-wrap"><table class="results-table">
+      <thead><tr>
+        <th>Furnizor</th>
+        <th>Preț/${settings.uom}</th>
+        <th>MOQ</th>
+        <th>Surplus</th>
+        <th>Transport</th>
+        <th>Cost total</th>
+        <th>Cost real/${settings.uom}</th>
+        <th>Lead (z)</th>
+        <th>Plată</th>
+        ${showScore ? '<th>Scor preț</th><th>Scor lead</th><th>Scor MOQ</th><th>Scor final</th>' : ''}
+      </tr></thead><tbody>`;
+
+    const winner = showScore ? PC.score.findWinner(scored) : null;
+
+    scored.forEach(s => {
+      const isWinner = winner && s.id === winner.id;
+      const isExcluded = s._excluded;
+      const surplusWarn = s.surplusPct > 20;
+      html += `<tr class="${isWinner ? 'winner' : ''}${isExcluded ? ' expired-row' : ''}">
+        <td><strong>${esc(s.name)}</strong>${isWinner ? ' <span class="badge badge-winner">✓</span>' : ''}${isExcluded ? ' <span class="badge badge-expired">Expirat</span>' : ''}</td>
+        <td>${fmt(s.price)}</td>
+        <td>${s.moq} ${settings.uom}</td>
+        <td class="${surplusWarn ? 'surplus-warn' : ''}">${s.surplusUnits > 0 ? '+'+s.surplusUnits : '—'}</td>
+        <td>${s.transport > 0 ? fmt(s.transport)+' lei' : 'Gratuit'}</td>
+        <td><strong>${fmt(s.total)} lei</strong></td>
+        <td>${fmt(s.comparisonCost)}${s.cfSavings > 0 ? ' <span title="Ajustat cashflow" style="color:var(--success)">*</span>' : ''}</td>
+        <td>${s.leadtime}z</td>
+        <td>${s.paymentTerms || '—'}</td>
+        ${showScore && !isExcluded ? `
+          <td><div class="score-bar-wrap"><div class="score-bar-bg"><div class="score-bar" style="width:${s.scorePrice}%"></div></div><span class="score-num">${s.scorePrice}</span></div></td>
+          <td><div class="score-bar-wrap"><div class="score-bar-bg"><div class="score-bar" style="width:${s.scoreLead}%"></div></div><span class="score-num">${s.scoreLead}</span></div></td>
+          <td><div class="score-bar-wrap"><div class="score-bar-bg"><div class="score-bar" style="width:${s.scoreMoq}%"></div></div><span class="score-num">${s.scoreMoq}</span></div></td>
+          <td><div class="score-bar-wrap"><div class="score-bar-bg"><div class="score-bar" style="width:${s.scoreFinal}%"></div></div><span class="score-num score-num" style="font-size:14px">${s.scoreFinal}</span></div></td>` : (showScore ? '<td colspan="4" style="color:var(--muted);font-size:12px;">Exclus</td>' : '')}
+      </tr>`;
+    });
+
+    html += `</tbody></table></div>`;
+
+    const hasCfAdjusted = scored.some(s => s.cfSavings > 0);
+    if (hasCfAdjusted) {
+      html += `<div class="disclaimer">* Cost ajustat pentru costul capitalului blocat la plata anticipată vs. plată amânată (rată ${settings.capitalRate}% anual).</div>`;
+    }
+    return html;
+  }
+
+  function render(state) {
+    const section = document.getElementById('section-results');
+    const suppliers = state.suppliers;
+    const settings = state.settings;
+
+    const computed = suppliers.map(s => {
+      const expired = PC.suppliers.isExpired(s);
+      const excluded = expired && !s.forceInclude;
+      const proc = PC.calc.processSupplier(s, settings);
+      return { ...proc, _expired: expired, _excluded: excluded };
+    });
+
+    const valid = computed.filter(s => !s._excluded);
+
+    if (suppliers.length === 0) {
+      section.classList.remove('visible');
+      updateStepIndicator(1);
+      document.getElementById('btn-export').disabled = true;
+      return;
+    }
+
+    const scored = PC.score.scoreSuppliers(computed, settings);
+    const winner = PC.score.findWinner(scored);
+
+    updateStepIndicator(valid.length >= 2 ? 3 : 2);
+
+    section.innerHTML = `
+      <div class="card">
+        <div class="card-title">
+          <span class="badge-step">Pasul 3</span>
+          Rezultate
+        </div>
+        ${renderAlerts(state, computed)}
+        ${winner ? renderWinner(winner, scored, settings) : ''}
+        ${renderTable(scored, settings)}
+        <div class="sign-line no-print" style="display:none"></div>
+      </div>`;
+
+    section.classList.add('visible');
+    document.getElementById('btn-export').disabled = false;
+    PC.app._lastScored = scored;
+    PC.app._lastComputed = computed;
+  }
+
+  return { render, renderAlerts, renderWinner, renderTable };
+})();
+
+/* ═══════════════════════════════════════════════════════════════
+   M7 — PC.export: PDF PRINT
+═══════════════════════════════════════════════════════════════ */
+PC.export = (function() {
+
+  function buildPrintHeader(state) {
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('ro-RO', { day:'2-digit', month:'long', year:'numeric' });
+    const timeStr = now.toLocaleTimeString('ro-RO', { hour:'2-digit', minute:'2-digit' });
+    const s = state.settings;
+
+    document.getElementById('ph-meta').innerHTML =
+      `Data: ${dateStr} ${timeStr} · SKU: ${esc(s.sku)} · Cantitate: ${s.qty} ${s.uom} · Ponderi: Preț ${s.wPrice}% / Lead ${s.wLead}% / MOQ ${s.wMoq}%`;
+
+    document.getElementById('print-params').innerHTML = `
+      <strong>Parametrii analizei:</strong> ${esc(s.sku)} · ${s.qty} ${s.uom} ·
+      Ponderi scoring: Preț ${s.wPrice}% / Lead time ${s.wLead}% / MOQ ${s.wMoq}%
+      ${s.capitalRate ? ` · Rată capital: ${s.capitalRate}%` : ''}
+      <div class="sign-line" style="margin-top:16px;">
+        <div class="sign-box">Analizat de: ________________________</div>
+        <div class="sign-box">Aprobat de: ________________________</div>
+        <div class="sign-box">Data: ____________________________</div>
+      </div>`;
+  }
+
+  function trigger() {
+    buildPrintHeader(PC.app.getState());
+    setTimeout(() => window.print(), 100);
+  }
+
+  return { trigger };
+})();
+
+/* ═══════════════════════════════════════════════════════════════
+   HELPER: escape HTML
+═══════════════════════════════════════════════════════════════ */
+function esc(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   M9 — PC.app: ORCHESTRATION + EVENT BINDING
+═══════════════════════════════════════════════════════════════ */
+PC.app = (function() {
+
+  let state = {
+    settings: PC.settings.getDefaults(),
+    suppliers: [],
+    ui: {}
+  };
+
+  let _lastScored = [];
+  let _lastComputed = [];
+
+  function getState() { return state; }
+
+  function saveAndRender() {
+    PC.storage.save(state);
+    PC.results.render(state);
+  }
+
+  function updateStepIndicator(activeStep) {
+    [1,2,3].forEach(n => {
+      const el = document.getElementById(`step${n}-indicator`);
+      if (!el) return;
+      el.classList.remove('active','done');
+      if (n < activeStep) el.classList.add('done');
+      else if (n === activeStep) el.classList.add('active');
+    });
+  }
+
+  function balanceSliders(changedId, newVal) {
+    const keys = ['wPrice','wLead','wMoq'];
+    const others = keys.filter(k => k !== changedId);
+    const prev = state.settings[changedId];
+    const available = 100 - newVal;
+    const prevSum = others.reduce((s, k) => s + state.settings[k], 0);
+
+    if (prevSum === 0) {
+      others.forEach(k => state.settings[k] = Math.round(available / 2));
+    } else {
+      others.forEach(k => {
+        state.settings[k] = Math.round(state.settings[k] / prevSum * available);
+      });
+    }
+    const actualSum = others.reduce((s, k) => s + state.settings[k], 0);
+    const diff = available - actualSum;
+    if (diff !== 0) state.settings[others[1]] += diff;
+
+    others.forEach(k => {
+      const el = document.getElementById(k);
+      if (el) el.value = state.settings[k];
+      const valEl = document.getElementById('val-' + k);
+      if (valEl) valEl.textContent = state.settings[k] + '%';
+    });
+    const total = state.settings.wPrice + state.settings.wLead + state.settings.wMoq;
+    const totalEl = document.getElementById('slider-total');
+    if (totalEl) { totalEl.textContent = `Total: ${total}%`; totalEl.className = 'slider-total' + (total !== 100 ? ' error' : ''); }
+  }
+
+  function bindEvents() {
+    document.addEventListener('input', function(e) {
+      if (e.target.id === 's-validity') {
+        let v = e.target.value.replace(/\D/g, '');
+        if (v.length > 2) v = v.slice(0, 2) + '/' + v.slice(2);
+        if (v.length > 5) v = v.slice(0, 5) + '/' + v.slice(5, 9);
+        e.target.value = v;
+      }
+    });
+
+    document.addEventListener('change', function(e) {
+      const t = e.target;
+
+      if (t.id === 's-validity-cal' && t.value) {
+        const [y, m, d] = t.value.split('-');
+        const textInput = document.getElementById('s-validity');
+        if (textInput) textInput.value = `${d}/${m}/${y}`;
+        return;
+      }
+
+      if (t.dataset.slider) {
+        const key = t.dataset.slider;
+        const val = parseInt(t.value);
+        state.settings[key] = val;
+        const valEl = document.getElementById('val-' + key);
+        if (valEl) valEl.textContent = val + '%';
+        balanceSliders(key, val);
+        saveAndRender();
+        return;
+      }
+
+      if (['sku','uom','qty','capitalRate'].includes(t.id)) {
+        state.settings = PC.settings.read();
+        PC.validate.clearErrors('form-settings');
+        saveAndRender();
+      }
+    });
+
+    document.addEventListener('submit', function(e) {
+      if (e.target.id === 'form-add-supplier') {
+        e.preventDefault();
+        PC.validate.clearErrors('form-add-supplier');
+        const data = PC.suppliers.readForm();
+        const errors = PC.validate.supplier(data);
+        if (errors.length) {
+          errors.forEach(err => PC.validate.showError('s-' + err.field, err.msg));
+          return;
+        }
+        PC.suppliers.add(data, state);
+        PC.suppliers.render(state);
+        saveAndRender();
+      }
+    });
+
+    document.addEventListener('click', function(e) {
+      const removeId = e.target.dataset.remove;
+      if (removeId) {
+        PC.suppliers.remove(removeId, state);
+        PC.suppliers.render(state);
+        saveAndRender();
+        return;
+      }
+      const toggleId = e.target.dataset.toggleExpired;
+      if (toggleId) {
+        PC.suppliers.toggleExpired(toggleId, state);
+        PC.suppliers.render(state);
+        saveAndRender();
+        return;
+      }
+      if (e.target.id === 'btn-export') {
+        PC.export.trigger();
+        return;
+      }
+      if (e.target.id === 'btn-reset') {
+        if (confirm('Ești sigur că vrei să resetezi toată analiza? Datele nu pot fi recuperate.')) {
+          PC.storage.clear();
+          state = { settings: PC.settings.getDefaults(), suppliers: [], ui: {} };
+          PC.settings.render(state.settings);
+          PC.suppliers.render(state);
+          PC.results.render(state);
+        }
+      }
+    });
+  }
+
+  function init() {
+    const saved = PC.storage.load();
+    if (saved && saved.settings && Array.isArray(saved.suppliers)) {
+      state = saved;
+    }
+    PC.settings.render(state.settings);
+    PC.suppliers.render(state);
+    PC.results.render(state);
+    bindEvents();
+  }
+
+  return { init, getState, saveAndRender,
+    get _lastScored() { return _lastScored; },
+    set _lastScored(v) { _lastScored = v; },
+    get _lastComputed() { return _lastComputed; },
+    set _lastComputed(v) { _lastComputed = v; }
+  };
+})();
+
+/* ── GLOBAL: updateStepIndicator (accesibil din PC.results) ── */
+function updateStepIndicator(activeStep) {
+  [1,2,3].forEach(n => {
+    const el = document.getElementById(`step${n}-indicator`);
+    if (!el) return;
+    el.classList.remove('active','done');
+    if (n < activeStep) el.classList.add('done');
+    else if (n === activeStep) el.classList.add('active');
+  });
+}
+
+/* ── START ── */
+document.addEventListener('DOMContentLoaded', () => PC.app.init());
+</script>
+</body>
+</html>

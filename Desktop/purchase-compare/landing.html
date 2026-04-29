@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PurchaseCompare — Găsește furnizorul optim în 5 minute</title>
+<meta name="description" content="Compară oferte furnizori instant. Calcul automat de cost real, scoring transparent și export PDF. Gratuit, offline, fără cont.">
+<style>
+:root {
+  --primary:       #2563EB;
+  --primary-hover: #1D4ED8;
+  --primary-light: #EFF6FF;
+  --text:          #1A1A2E;
+  --text-light:    #374151;
+  --surface:       #FFFFFF;
+  --bg:            #F8FAFC;
+  --bg-dark:       #0F172A;
+  --border:        #E5E7EB;
+  --muted:         #6B7280;
+  --success:       #10B981;
+  --warning:       #F59E0B;
+  --radius:        14px;
+  --radius-sm:     8px;
+  --shadow:        0 1px 4px rgba(0,0,0,0.08);
+  --shadow-lg:     0 8px 32px rgba(0,0,0,0.12);
+}
+*,*::before,*::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  font-size: 16px; line-height: 1.6;
+  color: var(--text); background: var(--surface);
+}
+a { color: inherit; text-decoration: none; }
+img { max-width: 100%; }
+
+/* ── UTILS ── */
+.container { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+.text-center { text-align: center; }
+.text-muted { color: var(--muted); }
+
+/* ── BUTTON ── */
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 14px 28px; font-size: 16px; font-weight: 700;
+  border-radius: var(--radius-sm); border: none; cursor: pointer;
+  transition: all 0.15s; text-decoration: none;
+}
+.btn-primary { background: var(--primary); color: #fff; box-shadow: 0 4px 14px rgba(37,99,235,0.35); }
+.btn-primary:hover { background: var(--primary-hover); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(37,99,235,0.45); }
+.btn-outline { background: transparent; border: 2px solid var(--primary); color: var(--primary); }
+.btn-outline:hover { background: var(--primary-light); }
+.btn-lg { padding: 16px 36px; font-size: 17px; }
+
+/* ── NAV ── */
+nav {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(255,255,255,0.95);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--border);
+}
+.nav-inner {
+  display: flex; align-items: center; justify-content: space-between;
+  height: 64px;
+}
+.logo { font-size: 20px; font-weight: 800; color: var(--primary); }
+.logo span { color: var(--text); }
+
+/* ── HERO ── */
+.hero {
+  background: linear-gradient(160deg, #F0F7FF 0%, #EEF2FF 50%, #F8FAFC 100%);
+  padding: 80px 0 72px;
+  border-bottom: 1px solid var(--border);
+}
+.hero-label {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--primary-light); color: var(--primary);
+  border: 1px solid #BFDBFE; border-radius: 20px;
+  padding: 4px 14px; font-size: 13px; font-weight: 600;
+  margin-bottom: 20px;
+}
+.hero h1 {
+  font-size: clamp(28px, 5vw, 52px);
+  font-weight: 900; line-height: 1.15;
+  color: var(--text); margin-bottom: 20px;
+  max-width: 820px;
+}
+.hero h1 em { font-style: normal; color: var(--primary); }
+.hero-sub {
+  font-size: clamp(16px, 2vw, 19px);
+  color: var(--text-light); max-width: 620px;
+  margin-bottom: 36px; line-height: 1.6;
+}
+.hero-cta { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.hero-trust {
+  display: flex; align-items: center; gap: 20px;
+  margin-top: 40px; flex-wrap: wrap;
+}
+.trust-item {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 13px; color: var(--muted); font-weight: 500;
+}
+.trust-icon { font-size: 16px; }
+
+/* ── PROBLEM SECTION ── */
+.section { padding: 72px 0; }
+.section-label {
+  font-size: 13px; font-weight: 700; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--primary);
+  margin-bottom: 12px;
+}
+.section-title {
+  font-size: clamp(22px, 3.5vw, 36px);
+  font-weight: 800; line-height: 1.2;
+  margin-bottom: 14px;
+}
+.section-sub {
+  font-size: 17px; color: var(--muted);
+  max-width: 540px; margin-bottom: 48px;
+}
+.problems-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+.problem-card {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 28px 24px;
+}
+.problem-icon {
+  width: 48px; height: 48px; border-radius: 12px;
+  background: var(--primary-light); display: flex; align-items: center; justify-content: center;
+  font-size: 22px; margin-bottom: 16px;
+}
+.problem-card h3 { font-size: 17px; font-weight: 700; margin-bottom: 8px; }
+.problem-card p { font-size: 14px; color: var(--muted); line-height: 1.6; }
+
+/* ── HOW IT WORKS ── */
+.how-section { background: var(--bg); padding: 72px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.steps-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 32px; margin-top: 48px;
+}
+.step-card { text-align: center; padding: 32px 20px; }
+.step-num-big {
+  width: 56px; height: 56px; border-radius: 50%;
+  background: var(--primary); color: #fff;
+  font-size: 22px; font-weight: 900;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 20px;
+  box-shadow: 0 4px 14px rgba(37,99,235,0.3);
+}
+.step-card h3 { font-size: 18px; font-weight: 700; margin-bottom: 10px; }
+.step-card p { font-size: 14px; color: var(--muted); line-height: 1.6; }
+.steps-connector {
+  display: flex; align-items: center; justify-content: center;
+  gap: 32px; margin-top: 32px;
+}
+
+/* ── AUTHORITY SECTION ── */
+.authority-section {
+  padding: 72px 0;
+  border-bottom: 1px solid var(--border);
+}
+.authority-inner {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 64px; align-items: start;
+}
+.authority-quote {
+  font-size: 18px; line-height: 1.7;
+  color: var(--text-light);
+  border-left: 4px solid var(--primary);
+  padding-left: 24px;
+  margin-bottom: 28px;
+}
+.authority-quote strong { color: var(--text); }
+.author-card {
+  display: flex; align-items: center; gap: 16px;
+  padding: 20px; background: var(--bg);
+  border: 1px solid var(--border); border-radius: var(--radius);
+}
+.author-avatar {
+  width: 52px; height: 52px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary) 0%, #7C3AED 100%);
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 20px; font-weight: 800; flex-shrink: 0;
+}
+.author-name { font-size: 15px; font-weight: 700; }
+.author-title { font-size: 13px; color: var(--muted); margin-top: 2px; }
+
+/* ── INSIGHT CARDS ── */
+.insights-grid {
+  display: flex; flex-direction: column; gap: 16px;
+}
+.insight-card {
+  background: var(--surface);
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 18px 20px;
+  display: flex; gap: 14px; align-items: flex-start;
+}
+.insight-icon { font-size: 22px; flex-shrink: 0; margin-top: 2px; }
+.insight-card h4 { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+.insight-card p { font-size: 13px; color: var(--muted); line-height: 1.5; }
+
+/* ── CTA FINAL ── */
+.cta-section {
+  background: linear-gradient(135deg, var(--bg-dark) 0%, #1E293B 100%);
+  padding: 80px 0; text-align: center;
+}
+.cta-section h2 {
+  font-size: clamp(24px, 4vw, 42px);
+  font-weight: 900; color: #fff; margin-bottom: 16px;
+}
+.cta-section p { font-size: 18px; color: #94A3B8; margin-bottom: 40px; }
+.cta-microcopy {
+  margin-top: 16px; font-size: 13px; color: #64748B;
+  display: flex; justify-content: center; gap: 20px; flex-wrap: wrap;
+}
+.cta-microcopy span { display: flex; align-items: center; gap: 4px; }
+
+/* ── FOOTER ── */
+footer {
+  background: var(--bg-dark); border-top: 1px solid #1E293B;
+  padding: 24px 0; text-align: center;
+  font-size: 13px; color: #475569;
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 768px) {
+  .nav-inner .btn { display: none; }
+  .hero { padding: 52px 0 48px; }
+  .problems-grid { grid-template-columns: 1fr; gap: 16px; }
+  .steps-grid { grid-template-columns: 1fr; gap: 20px; }
+  .authority-inner { grid-template-columns: 1fr; gap: 36px; }
+  .section { padding: 52px 0; }
+  .how-section { padding: 52px 0; }
+  .authority-section { padding: 52px 0; }
+  .cta-section { padding: 56px 0; }
+  .hero-cta { flex-direction: column; align-items: flex-start; }
+  .cta-microcopy { flex-direction: column; align-items: center; gap: 8px; }
+}
+@media (max-width: 480px) {
+  .container { padding: 0 16px; }
+  .btn-lg { padding: 14px 24px; font-size: 15px; }
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="container nav-inner">
+    <div class="logo">Purchase<span>Compare</span></div>
+    <a href="purchase-compare.html" download class="btn btn-primary" style="padding:10px 20px;font-size:14px;">⬇ Descarcă gratuit</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-label">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+      Tool gratuit pentru achiziții
+    </div>
+    <h1>Costul real al unei comenzi nu e pe oferta furnizorului.<br><em>E în calculele pe care nu ai timp să le faci.</em></h1>
+    <p class="hero-sub">PurchaseCompare îți arată în 5 minute care furnizor e cu adevărat mai ieftin — după MOQ forțat, transport și termeni de plată.</p>
+    <div class="hero-cta">
+      <a href="purchase-compare.html" download class="btn btn-primary btn-lg">
+        ⬇ Descarcă PurchaseCompare — gratuit
+      </a>
+      <a href="#cum-functioneaza" class="btn btn-outline">Cum funcționează →</a>
+    </div>
+    <div class="hero-trust">
+      <div class="trust-item"><span class="trust-icon">🔒</span> Funcționează offline</div>
+      <div class="trust-item"><span class="trust-icon">⚡</span> Fără instalare</div>
+      <div class="trust-item"><span class="trust-icon">🚫</span> Fără cont sau date personale</div>
+      <div class="trust-item"><span class="trust-icon">📄</span> Export PDF inclus</div>
+    </div>
+  </div>
+</section>
+
+<!-- PROBLEMA -->
+<section class="section">
+  <div class="container">
+    <div class="section-label">Problema</div>
+    <h2 class="section-title">Cum alegi acum furnizorul?<br>Probabil greșit.</h2>
+    <p class="section-sub">73% din managerii de achiziții din firmele mici compară ofertele în Excel sau pe hârtie. Rezultat: erori, timp pierdut, marjă erodată.</p>
+    <div class="problems-grid">
+      <div class="problem-card">
+        <div class="problem-icon">⏱</div>
+        <h3>Compari manual, sub presiune</h3>
+        <p>Ai 3–5 oferte în inbox, cu formate diferite, și un termen de răspuns. Calculele manuale durează și greșelile costă.</p>
+      </div>
+      <div class="problem-card">
+        <div class="problem-icon">🔄</div>
+        <h3>Comanzi din obișnuință</h3>
+        <p>Mergi la același furnizor fără să verifici dacă altcineva oferă mai bine. Realizezi diferența abia pe factură — când e prea târziu.</p>
+      </div>
+      <div class="problem-card">
+        <div class="problem-icon">❌</div>
+        <h3>Calculezi greșit costul real</h3>
+        <p>Prețul per unitate nu include MOQ-ul forțat, transportul fix și costul banilor blocați la plată anticipată. Puțini calculează toate astea corect.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CUM FUNCTIONEAZA -->
+<section class="how-section" id="cum-functioneaza">
+  <div class="container text-center">
+    <div class="section-label">Soluția</div>
+    <h2 class="section-title">Trei pași. Cinci minute. O decizie clară.</h2>
+    <div class="steps-grid">
+      <div class="step-card">
+        <div class="step-num-big">1</div>
+        <h3>Introduci ofertele primite</h3>
+        <p>Adaugi 2–5 furnizori cu prețul, MOQ-ul, lead time-ul și costul de transport. Durează 2 minute.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num-big">2</div>
+        <h3>Setezi ce contează mai mult</h3>
+        <p>Prețul, viteza de livrare sau flexibilitatea cantității? Ajustezi 3 glisoare după prioritățile tale reale.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num-big">3</div>
+        <h3>Primești recomandarea + exportul</h3>
+        <p>Furnizorul optim evidențiat, economia estimată față de cea mai scumpă opțiune, și un PDF gata de trimis sau aprobat intern.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- AUTORITATE -->
+<section class="authority-section">
+  <div class="container">
+    <div class="authority-inner">
+      <div>
+        <div class="section-label">De ce funcționează</div>
+        <h2 class="section-title" style="margin-bottom:24px;">Prețul afișat nu e costul real al comenzii tale.</h2>
+        <blockquote class="authority-quote">
+          Am văzut sute de firme mici care comandau de la cel mai „ieftin" furnizor și pierdeau bani fără să știe de ce.
+          Problema nu era prețul per unitate — era <strong>MOQ-ul care forța supracomandă</strong>, transportul plătit indiferent de cantitate,
+          și banii blocați la plată anticipată. <strong>PurchaseCompare calculează automat costul real</strong> — cel pe care îl plătești efectiv, nu cel din ofertă.
+        </blockquote>
+        <div class="author-card">
+          <div class="author-avatar">P</div>
+          <div>
+            <div class="author-name">Echipa PurchaseCompare</div>
+            <div class="author-title">Specialiști în optimizarea achizițiilor pentru IMM-uri</div>
+          </div>
+        </div>
+      </div>
+      <div class="insights-grid">
+        <div class="insight-card">
+          <div class="insight-icon">💡</div>
+          <div>
+            <h4>MOQ-ul forțat e un cost ascuns</h4>
+            <p>Dacă vrei 100 buc și MOQ-ul e 150, plătești 50 de unități în plus. PurchaseCompare le calculează automat ca „surplus forțat" și le include în costul real.</p>
+          </div>
+        </div>
+        <div class="insight-card">
+          <div class="insight-icon">💡</div>
+          <div>
+            <h4>Transportul fix inversează ierarhia</h4>
+            <p>Un furnizor cu preț mai mare dar transport zero poate fi mai ieftin decât unul cu preț mic și 80 lei transport, la cantități mici. Calculul e contraintuitiv fără un tool.</p>
+          </div>
+        </div>
+        <div class="insight-card">
+          <div class="insight-icon">💡</div>
+          <div>
+            <h4>Plata la 60 zile are valoare reală</h4>
+            <p>Banii care stau la tine 60 de zile în loc să plece la furnizor imediat au un cost de oportunitate. PurchaseCompare ajustează costul efectiv în funcție de termenii de plată.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA FINAL -->
+<section class="cta-section">
+  <div class="container">
+    <h2>Descarcă și folosește acum.<br>Gratuit, offline, în 5 minute.</h2>
+    <p>Un singur fișier HTML. Se deschide în orice browser. Funcționează fără internet.</p>
+    <a href="purchase-compare.html" download class="btn btn-primary btn-lg">
+      ⬇ Descarcă PurchaseCompare — gratuit
+    </a>
+    <div class="cta-microcopy">
+      <span>✓ Fișier HTML · deschide în browser</span>
+      <span>✓ Funcționează offline</span>
+      <span>✓ Fără cont sau date personale</span>
+      <span>✓ Export PDF inclus</span>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="container">
+    <strong style="color:#94A3B8;">PurchaseCompare</strong> · Tool gratuit de comparare furnizori pentru IMM-uri · © 2026
+  </div>
+</footer>
+
+</body>
+</html>
