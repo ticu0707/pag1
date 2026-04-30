@@ -315,6 +315,7 @@
           <a id="cta-follow-link" href="#" target="_blank" class="btn-primary">Urmărește pe <span id="cta-label"></span></a>
         </div>
         <button class="btn-redownload" onclick="generatePDF()">↻ Descarcă din nou</button>
+        <button class="btn-back" style="margin-top:0.75rem;" onclick="goToStep1()">← Editează profilul</button>
       </div>
     </div>
 
@@ -612,11 +613,21 @@ function handleLogo(event) {
   if (file.size > 2 * 1024 * 1024) { alert('Fișierul depășește 2MB.'); return; }
   const reader = new FileReader();
   reader.onload = (e) => {
-    state.logoDataURL = e.target.result;
-    document.getElementById('logo-upload-label').style.display = 'none';
-    document.getElementById('logo-preview-thumb').style.display = 'block';
-    document.getElementById('logo-thumb').src = e.target.result;
-    renderPreview();
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 300;
+      const scale = Math.min(1, MAX / Math.max(img.width, img.height));
+      const cvs = document.createElement('canvas');
+      cvs.width = Math.round(img.width * scale);
+      cvs.height = Math.round(img.height * scale);
+      cvs.getContext('2d').drawImage(img, 0, 0, cvs.width, cvs.height);
+      state.logoDataURL = cvs.toDataURL('image/jpeg', 0.85);
+      document.getElementById('logo-upload-label').style.display = 'none';
+      document.getElementById('logo-preview-thumb').style.display = 'block';
+      document.getElementById('logo-thumb').src = state.logoDataURL;
+      renderPreview();
+    };
+    img.src = e.target.result;
   };
   reader.readAsDataURL(file);
 }
@@ -764,16 +775,26 @@ async function generatePDF() {
   const origText = btn ? btn.textContent : '';
   if (btn) { btn.textContent = 'Se generează... (5-15 sec)'; btn.disabled = true; }
 
+  const resetBtn = () => { if (btn) { btn.textContent = origText; btn.disabled = false; } };
+
+  // Timeout de siguranță — resetează butonul dacă html2canvas blochează > 30s
+  const timeoutId = setTimeout(() => {
+    resetBtn();
+    alert('Generarea a durat prea mult. Încearcă din nou.');
+  }, 30000);
+
   try {
     const posterEl = document.getElementById('poster-preview');
 
     const canvas = await html2canvas(posterEl, {
-      scale: 4,
+      scale: 3,
       useCORS: false,
       allowTaint: true,
       logging: false,
       backgroundColor: '#FFFFFF'
     });
+
+    clearTimeout(timeoutId);
 
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ unit: 'mm', format: 'a5', orientation: 'portrait' });
@@ -815,9 +836,10 @@ async function generatePDF() {
 
     showFinalScreen();
   } catch (err) {
+    clearTimeout(timeoutId);
     console.error('PDF generation error:', err);
-    alert('Eroare la generarea PDF. Verificați consola (F12) pentru detalii.');
-    if (btn) { btn.textContent = origText; btn.disabled = false; }
+    alert('Eroare la generarea PDF: ' + err.message);
+    resetBtn();
   }
 }
 
