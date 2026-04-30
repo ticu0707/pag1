@@ -1,0 +1,22 @@
+# Memory Index
+
+## Utilizator
+- [user_vibe_course.md](user_vibe_course.md) — Profil: urmează curs vibe-coding, beginner-intermediate, Windows 10, română, nivel tehnic per tehnologie
+- [feedback_colaborare.md](feedback_colaborare.md) — Stil colaborare: opțiuni înainte de implementare, confirmări pas-cu-pas, ton prietenos, română în conv / engleză în cod
+
+## Comenzi & Workflow
+- [reference_comenzi_workflow.md](reference_comenzi_workflow.md) — 4 comenzi slash custom: /start /end /commit /push — workflow complet de sesiune
+
+## Proiecte
+- [project_vibe_website.md](project_vibe_website.md) — Vibe Caffè (Next.js, branch starter): Hero + Features + Menu + Footer gata; urmează Navigation, About, ChatWidget (Barista Bot)
+- [project_clinica_medicala.md](project_clinica_medicala.md) — Clinică medicală: IVR bot vocal (Twilio + Claude API) + admin panel Next.js + Supabase; planificare completă, urmează Modulul 1 (Supabase)
+- [project_erp_financiar.md](project_erp_financiar.md) — ERP financiar intern (Next.js + Supabase): 6 module, plan aprobat, rafinări DB critice neaplicate, implementare neîncepută
+- [project_vibe_budget.md](project_vibe_budget.md) — Vibe Budget (Next.js + Supabase + Claude AI): setup complet, server la localhost:3000; urmeaza Auth + Dashboard + CRUD
+- [project_descriere_produse_app.md](project_descriere_produse_app.md) — App generare descrieri produse eCommerce (Next.js + Claude API + Supabase): PRD v1.0 complet, implementare neîncepută
+- [project_cashpulse.md](project_cashpulse.md) — CashPulse (single HTML, Chart.js, LocalStorage): implementare completă toate 10 module, commit local, nepushed
+- [project_reorder_radar.md](project_reorder_radar.md) — Reorder Radar (2 HTML files, offline, LocalStorage): implementare completă + 3 bug fixes, commit local, nepushed
+- [project_followup_board.md](project_followup_board.md) — FollowUp Board (single HTML + landing, offline, LocalStorage v4): implementare completă 18 module, commit local, nepushed; urmează testare F1-F20 + deploy Netlify
+- [project_purchase_compare.md](project_purchase_compare.md) — PurchaseCompare (2 HTML files, offline, sessionStorage): implementare completă + 2 bug fixes, funcțional testat; urmează commit + deploy
+- [project_invoicechaser.md](project_invoicechaser.md) — InvoiceChaser (2 HTML files, offline): tracker facturi restante + generator mesaje reamintire pentru IMM; implementare completă, commit local
+- [project_daily_sales_flash.md](project_daily_sales_flash.md) — Daily Sales Flash (2 HTML files, offline, Chart.js bundled): raport zilnic vânzări cu comparație față/față; implementare completă 17 module, commit local
+- [project_team_time_tracker.md](project_team_time_tracker.md) — Team Time Tracker: pontaj echipă pentru manageri — rămas la nivel de PRD, implementare neîncepută
