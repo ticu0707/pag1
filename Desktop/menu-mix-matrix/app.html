@@ -1,0 +1,1433 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MenuMix Matrix — Analiză meniu</title>
+  <style>
+    /* ══════════════════════════════════════════
+       A1 · Design Tokens + Reset (offline complet)
+       Zero CDN, zero import extern
+    ══════════════════════════════════════════ */
+    :root {
+      --primary:    #C8371A;
+      --primary-dk: #a02c14;
+      --secondary:  #1A1A2E;
+      --accent:     #F5A623;
+      --bg:         #FAFAF8;
+      --white:      #FFFFFF;
+      --gray-100:   #F3F3F0;
+      --gray-300:   #D1D1C8;
+      --gray-500:   #8A8A80;
+      --gray-700:   #4A4A42;
+      --text:       #1A1A2E;
+      --success:    #22C55E;
+      --error:      #EF4444;
+      --warning:    #F59E0B;
+      --c-vedeta:   #22C55E;
+      --c-potential:#3B82F6;
+      --c-muncitor: #F97316;
+      --c-candidat: #EF4444;
+      --font: system-ui, -apple-system, 'Segoe UI', sans-serif;
+      --radius: 12px;
+      --shadow: 0 4px 24px rgba(26,26,46,0.10);
+      --shadow-lg: 0 8px 40px rgba(26,26,46,0.16);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+    }
+    button { font-family: var(--font); cursor: pointer; border: none; }
+    input, select { font-family: var(--font); }
+
+    /* ══════════════════════════════════════════
+       A2 · Header — Nume locație + Dată
+    ══════════════════════════════════════════ */
+    .app-header {
+      background: linear-gradient(135deg, var(--secondary) 0%, #2d1f3d 100%);
+      color: white;
+      padding: 20px 0;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.20);
+    }
+    .header-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .header-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .header-brand .logo { font-size: 22px; }
+    .header-brand h1 {
+      font-size: 18px;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+    }
+    .header-brand span {
+      font-size: 12px;
+      color: rgba(255,255,255,0.55);
+      font-weight: 400;
+      display: block;
+      margin-top: -2px;
+    }
+    .header-meta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .header-field {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .header-field label {
+      font-size: 10px;
+      font-weight: 600;
+      color: rgba(255,255,255,0.50);
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+    }
+    .header-input {
+      background: rgba(255,255,255,0.10);
+      border: 1px solid rgba(255,255,255,0.20);
+      border-radius: 6px;
+      color: white;
+      font-size: 13px;
+      padding: 5px 10px;
+      outline: none;
+      transition: border-color 0.2s, background 0.2s;
+      min-width: 140px;
+    }
+    .header-input::placeholder { color: rgba(255,255,255,0.35); }
+    .header-input:focus {
+      border-color: var(--accent);
+      background: rgba(255,255,255,0.15);
+    }
+    .header-input.date-input { min-width: 110px; }
+
+    /* ══════════════════════════════════════════
+       Layout principal
+    ══════════════════════════════════════════ */
+    .main-wrap {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 32px 24px 80px;
+    }
+
+    /* ══════════════════════════════════════════
+       A8 · Banner restore sessionStorage
+    ══════════════════════════════════════════ */
+    .restore-banner {
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      background: rgba(59,130,246,0.10);
+      border: 1px solid rgba(59,130,246,0.30);
+      border-radius: 10px;
+      padding: 12px 16px;
+      margin-bottom: 24px;
+      font-size: 14px;
+      color: #1d4ed8;
+    }
+    .restore-banner.visible { display: flex; }
+    .restore-banner .rb-close {
+      background: none;
+      border: none;
+      color: #1d4ed8;
+      font-size: 18px;
+      cursor: pointer;
+      padding: 0 4px;
+      opacity: 0.7;
+    }
+    .restore-banner .rb-close:hover { opacity: 1; }
+
+    /* ══════════════════════════════════════════
+       A3 · Secțiune input preparate
+    ══════════════════════════════════════════ */
+    .section-card {
+      background: var(--white);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      margin-bottom: 24px;
+      overflow: hidden;
+    }
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 24px 16px;
+      border-bottom: 1px solid var(--gray-100);
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .section-head-left { display: flex; align-items: center; gap: 10px; }
+    .section-icon {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dk));
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 17px;
+      box-shadow: 0 2px 8px rgba(200,55,26,0.25);
+    }
+    .section-head h2 { font-size: 16px; font-weight: 700; color: var(--secondary); }
+    .section-head p  { font-size: 12px; color: var(--gray-500); margin-top: 1px; }
+    .counter-badge {
+      background: var(--gray-100);
+      border: 1px solid var(--gray-300);
+      border-radius: 100px;
+      padding: 4px 12px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--gray-700);
+      white-space: nowrap;
+    }
+    .counter-badge.warn { border-color: var(--warning); color: #92400e; background: #fef3c7; }
+
+    /* Table header */
+    .items-table-wrap { overflow-x: auto; }
+    .items-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .items-table thead th {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--gray-500);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      padding: 10px 12px 8px;
+      text-align: left;
+      border-bottom: 1px solid var(--gray-100);
+      background: var(--gray-100);
+      white-space: nowrap;
+    }
+    .items-table thead th:last-child { text-align: center; }
+
+    /* Item rows */
+    .item-row td {
+      padding: 8px 8px;
+      vertical-align: top;
+      border-bottom: 1px solid var(--gray-100);
+    }
+    .item-row:last-child td { border-bottom: none; }
+    .item-row:hover { background: rgba(250,250,248,0.6); }
+
+    .cell-input {
+      width: 100%;
+      padding: 9px 11px;
+      border: 1.5px solid var(--gray-300);
+      border-radius: 8px;
+      font-size: 14px;
+      color: var(--text);
+      background: var(--bg);
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .cell-input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(200,55,26,0.10);
+      background: white;
+    }
+    .cell-input.error {
+      border-color: var(--error);
+      box-shadow: 0 0 0 3px rgba(239,68,68,0.08);
+    }
+    .cell-input.warning {
+      border-color: var(--warning);
+      box-shadow: 0 0 0 3px rgba(245,158,11,0.10);
+    }
+    .cell-input.valid { border-color: var(--success); }
+    .cell-error {
+      font-size: 11px;
+      color: var(--error);
+      margin-top: 3px;
+      display: none;
+      font-weight: 500;
+    }
+    .cell-error.visible { display: block; }
+    .cell-warning {
+      font-size: 11px;
+      color: #92400e;
+      margin-top: 3px;
+      display: none;
+      font-weight: 500;
+    }
+    .cell-warning.visible { display: block; }
+
+    .col-name  { min-width: 160px; }
+    .col-num   { min-width: 100px; }
+    .col-del   { width: 44px; text-align: center; }
+
+    .btn-del-row {
+      width: 32px; height: 32px;
+      background: none;
+      border: 1.5px solid var(--gray-300);
+      border-radius: 8px;
+      color: var(--gray-500);
+      font-size: 16px;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s;
+    }
+    .btn-del-row:hover {
+      border-color: var(--error);
+      color: var(--error);
+      background: rgba(239,68,68,0.06);
+    }
+    .btn-del-row:disabled {
+      opacity: 0.25;
+      cursor: not-allowed;
+    }
+
+    /* Add row + Analyze */
+    .table-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 24px;
+      border-top: 1px solid var(--gray-100);
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .btn-add-row {
+      display: flex; align-items: center; gap: 6px;
+      background: none;
+      border: 1.5px dashed var(--gray-300);
+      border-radius: 8px;
+      color: var(--gray-700);
+      font-size: 14px;
+      font-weight: 500;
+      padding: 8px 16px;
+      transition: all 0.15s;
+    }
+    .btn-add-row:hover:not(:disabled) {
+      border-color: var(--primary);
+      color: var(--primary);
+      background: rgba(200,55,26,0.04);
+    }
+    .btn-add-row:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .min-warning {
+      font-size: 12px;
+      color: var(--gray-500);
+      font-style: italic;
+    }
+    .min-warning.hidden { display: none; }
+
+    .btn-analyze {
+      display: flex; align-items: center; gap: 8px;
+      background: var(--primary);
+      color: white;
+      font-size: 15px;
+      font-weight: 700;
+      padding: 11px 24px;
+      border-radius: var(--radius);
+      transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+      box-shadow: 0 4px 14px rgba(200,55,26,0.28);
+    }
+    .btn-analyze:hover:not(:disabled) {
+      background: var(--primary-dk);
+      transform: translateY(-1px);
+      box-shadow: 0 6px 18px rgba(200,55,26,0.36);
+    }
+    .btn-analyze:disabled {
+      background: var(--gray-300);
+      color: var(--gray-500);
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+    }
+
+    /* ══════════════════════════════════════════
+       A6 · Matrice SVG
+    ══════════════════════════════════════════ */
+    .results-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+    .matrix-card {
+      background: var(--white);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 24px;
+    }
+    .matrix-card h3 {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--secondary);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .matrix-wrap {
+      position: relative;
+      width: 100%;
+    }
+    .matrix-svg {
+      width: 100%;
+      max-width: 560px;
+      height: auto;
+      display: block;
+      margin: 0 auto;
+    }
+
+    /* SVG tooltip */
+    .svg-tooltip {
+      position: absolute;
+      background: var(--secondary);
+      color: white;
+      font-size: 12px;
+      padding: 6px 10px;
+      border-radius: 6px;
+      pointer-events: none;
+      z-index: 50;
+      display: none;
+      max-width: 200px;
+      line-height: 1.5;
+      white-space: pre-wrap;
+    }
+
+    /* Legend */
+    .matrix-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 14px;
+      justify-content: center;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12px;
+      color: var(--gray-700);
+    }
+    .legend-dot {
+      width: 12px; height: 12px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* ══════════════════════════════════════════
+       A7 · Acțiuni + Bannere
+    ══════════════════════════════════════════ */
+    .actions-card {
+      background: var(--white);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 24px;
+    }
+    .actions-card h3 {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--secondary);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .banner-emotional {
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-bottom: 16px;
+      font-size: 14px;
+      display: none;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .banner-emotional.visible { display: flex; }
+    .banner-emotional.green {
+      background: rgba(34,197,94,0.10);
+      border: 1px solid rgba(34,197,94,0.30);
+      color: #166534;
+    }
+    .banner-emotional.blue {
+      background: rgba(59,130,246,0.10);
+      border: 1px solid rgba(59,130,246,0.30);
+      color: #1e40af;
+    }
+    .banner-emotional .be-icon { font-size: 20px; flex-shrink: 0; }
+    .banner-emotional strong { display: block; font-size: 14px; font-weight: 700; margin-bottom: 2px; }
+
+    .action-group { margin-bottom: 20px; }
+    .action-group:last-child { margin-bottom: 0; }
+    .action-group-title {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--gray-500);
+      margin-bottom: 8px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid var(--gray-100);
+    }
+
+    .action-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      margin-bottom: 8px;
+      border: 1px solid transparent;
+      transition: background 0.15s;
+    }
+    .action-item:last-child { margin-bottom: 0; }
+    .action-item.vedeta   { background: rgba(34,197,94,0.07);  border-color: rgba(34,197,94,0.20);  }
+    .action-item.potential{ background: rgba(59,130,246,0.07); border-color: rgba(59,130,246,0.20); }
+    .action-item.muncitor { background: rgba(249,115,22,0.07); border-color: rgba(249,115,22,0.20); }
+    .action-item.candidat { background: rgba(239,68,68,0.07);  border-color: rgba(239,68,68,0.20);  }
+
+    .action-emoji { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
+    .action-name  { font-size: 14px; font-weight: 700; color: var(--secondary); margin-bottom: 2px; }
+    .action-text  { font-size: 13px; color: var(--gray-700); line-height: 1.5; }
+    .action-tag {
+      display: inline-block;
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 100px;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .tag-vedeta    { background: rgba(34,197,94,0.15);  color: #166534; }
+    .tag-potential { background: rgba(59,130,246,0.15); color: #1e40af; }
+    .tag-muncitor  { background: rgba(249,115,22,0.15); color: #9a3412; }
+    .tag-candidat  { background: rgba(239,68,68,0.15);  color: #991b1b; }
+
+    /* ══════════════════════════════════════════
+       Butoane acțiuni de jos
+    ══════════════════════════════════════════ */
+    .results-actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 24px;
+      padding-top: 24px;
+      border-top: 1px solid var(--gray-100);
+    }
+    .btn-print {
+      display: flex; align-items: center; gap: 7px;
+      background: var(--secondary);
+      color: white;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 10px 20px;
+      border-radius: var(--radius);
+      transition: background 0.2s;
+    }
+    .btn-print:hover { background: #2d2d4a; }
+    .btn-reset {
+      display: flex; align-items: center; gap: 7px;
+      background: none;
+      border: 1.5px solid var(--gray-300);
+      color: var(--gray-700);
+      font-size: 14px;
+      font-weight: 600;
+      padding: 10px 20px;
+      border-radius: var(--radius);
+      transition: all 0.2s;
+    }
+    .btn-reset:hover {
+      border-color: var(--error);
+      color: var(--error);
+      background: rgba(239,68,68,0.05);
+    }
+
+    /* ══════════════════════════════════════════
+       Secțiunea rezultate (ascunsă inițial)
+    ══════════════════════════════════════════ */
+    #resultsSection { display: none; }
+    #resultsSection.visible { display: block; }
+
+    /* ══════════════════════════════════════════
+       A9 · Modal reset
+    ══════════════════════════════════════════ */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(26,26,46,0.60);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .modal-overlay.visible { display: flex; }
+    .modal-box {
+      background: white;
+      border-radius: 16px;
+      padding: 32px;
+      max-width: 400px;
+      width: 100%;
+      box-shadow: var(--shadow-lg);
+      text-align: center;
+    }
+    .modal-icon { font-size: 40px; margin-bottom: 12px; }
+    .modal-box h3 { font-size: 20px; font-weight: 800; color: var(--secondary); margin-bottom: 8px; }
+    .modal-box p  { font-size: 14px; color: var(--gray-700); margin-bottom: 24px; line-height: 1.6; }
+    .modal-btns { display: flex; flex-direction: column; gap: 10px; }
+    .btn-confirm-reset {
+      background: var(--error);
+      color: white;
+      font-size: 15px;
+      font-weight: 700;
+      padding: 12px;
+      border-radius: var(--radius);
+      transition: background 0.2s;
+    }
+    .btn-confirm-reset:hover { background: #c81e1e; }
+    .btn-cancel-reset {
+      background: var(--gray-100);
+      color: var(--gray-700);
+      font-size: 15px;
+      font-weight: 600;
+      padding: 12px;
+      border-radius: var(--radius);
+      transition: background 0.2s;
+    }
+    .btn-cancel-reset:hover { background: var(--gray-300); }
+
+    /* ══════════════════════════════════════════
+       A9 · Mobile warning
+    ══════════════════════════════════════════ */
+    .mobile-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: var(--secondary);
+      z-index: 9999;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 40px 32px;
+      color: white;
+    }
+    .mobile-overlay.visible { display: flex; }
+    .mobile-overlay .mo-icon { font-size: 56px; margin-bottom: 20px; }
+    .mobile-overlay h2 { font-size: 22px; font-weight: 800; margin-bottom: 12px; }
+    .mobile-overlay p {
+      font-size: 15px;
+      color: rgba(255,255,255,0.75);
+      max-width: 320px;
+      margin-bottom: 28px;
+      line-height: 1.6;
+    }
+    .mobile-overlay button {
+      background: var(--accent);
+      color: var(--secondary);
+      font-size: 15px;
+      font-weight: 700;
+      padding: 12px 28px;
+      border-radius: var(--radius);
+    }
+
+    /* ══════════════════════════════════════════
+       A9 · Print styles
+    ══════════════════════════════════════════ */
+    @media print {
+      .app-header, .section-card, .restore-banner,
+      .results-actions, .modal-overlay, .mobile-overlay,
+      #resultsSection .results-actions { display: none !important; }
+
+      body { background: white; }
+      #resultsSection { display: block !important; }
+
+      .print-header {
+        display: block !important;
+        margin-bottom: 20px;
+        padding-bottom: 16px;
+        border-bottom: 2px solid var(--gray-300);
+      }
+      .print-header h1 { font-size: 20px; font-weight: 800; color: var(--secondary); }
+      .print-header p  { font-size: 13px; color: var(--gray-700); margin-top: 4px; }
+
+      .results-grid { grid-template-columns: 1fr 1fr; gap: 16px; }
+      .matrix-svg { max-width: 148mm; }
+
+      .section-card, .matrix-card, .actions-card {
+        box-shadow: none !important;
+        border: 1px solid var(--gray-300);
+      }
+
+      .print-footer {
+        display: block !important;
+        text-align: center;
+        margin-top: 24px;
+        font-size: 11px;
+        color: var(--gray-500);
+        border-top: 1px solid var(--gray-300);
+        padding-top: 12px;
+      }
+    }
+    .print-header, .print-footer { display: none; }
+
+    /* ── Responsive ── */
+    @media (max-width: 700px) {
+      .results-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── A2: Header ── -->
+  <header class="app-header">
+    <div class="header-inner">
+      <div class="header-brand">
+        <span class="logo">🍽️</span>
+        <div>
+          <h1>MenuMix Matrix</h1>
+          <span>Analiză menu engineering</span>
+        </div>
+      </div>
+      <div class="header-meta">
+        <div class="header-field">
+          <label for="locatieNume">Nume locație</label>
+          <input type="text" id="locatieNume" class="header-input"
+            placeholder="ex: Restaurantul Bunicii" />
+        </div>
+        <div class="header-field">
+          <label for="dataSesiune">Data analizei</label>
+          <input type="text" id="dataSesiune" class="header-input date-input"
+            placeholder="zz/ll/aaaa" />
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="main-wrap">
+
+    <!-- A8: Banner restore -->
+    <div class="restore-banner" id="restoreBanner">
+      <span>🔄 <strong>Am restaurat analiza ta anterioară.</strong> Datele introduse înainte de reîncărcare au fost salvate automat.</span>
+      <button class="rb-close" onclick="document.getElementById('restoreBanner').classList.remove('visible')" title="Închide">✕</button>
+    </div>
+
+    <!-- Print header (vizibil doar la print) -->
+    <div class="print-header" id="printHeader">
+      <h1 id="printTitle">Analiză meniu — MenuMix Matrix</h1>
+      <p id="printSubtitle"></p>
+    </div>
+
+    <!-- ── A3: Secțiune input preparate ── -->
+    <div class="section-card">
+      <div class="section-head">
+        <div class="section-head-left">
+          <div class="section-icon">📋</div>
+          <div>
+            <h2>Preparatele tale</h2>
+            <p>Completează vânzările și costurile pentru fiecare preparat</p>
+          </div>
+        </div>
+        <span class="counter-badge" id="counterBadge">1 / 25 preparate</span>
+      </div>
+
+      <div class="items-table-wrap">
+        <table class="items-table">
+          <thead>
+            <tr>
+              <th class="col-name">Preparat</th>
+              <th class="col-num">Vânzări lunare (buc.)</th>
+              <th class="col-num">Preț vânzare (RON)</th>
+              <th class="col-num">Cost unitar (RON)</th>
+              <th class="col-del">✕</th>
+            </tr>
+          </thead>
+          <tbody id="itemsBody">
+            <!-- rândurile se generează dinamic -->
+          </tbody>
+        </table>
+      </div>
+
+      <div class="table-footer">
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <button class="btn-add-row" id="btnAddRow">
+            + Adaugă preparat
+          </button>
+          <span class="min-warning" id="minWarning">Adaugă cel puțin 4 preparate pentru analiză</span>
+        </div>
+        <button class="btn-analyze" id="btnAnalyze" disabled>
+          📊 Analizează meniul
+        </button>
+      </div>
+    </div>
+
+    <!-- ── Rezultate (A6 + A7) ── -->
+    <div id="resultsSection">
+      <div class="results-grid">
+        <!-- Matricea SVG -->
+        <div class="matrix-card">
+          <h3>📊 Matricea meniului tău</h3>
+          <div class="matrix-wrap">
+            <svg class="matrix-svg" id="matrixSvg" viewBox="0 0 600 600" xmlns="http://www.w3.org/2000/svg">
+              <!-- se generează dinamic -->
+            </svg>
+            <div class="svg-tooltip" id="svgTooltip"></div>
+          </div>
+          <div class="matrix-legend">
+            <div class="legend-item"><div class="legend-dot" style="background:#22C55E"></div>⭐ Vedetă</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#3B82F6"></div>💎 Potențial</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#F97316"></div>🐄 Muncitor</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#EF4444"></div>❌ Candidat la eliminare</div>
+          </div>
+        </div>
+
+        <!-- Lista acțiuni -->
+        <div class="actions-card">
+          <h3>🎯 Acțiuni recomandate</h3>
+
+          <div class="banner-emotional green" id="bannerVedeta">
+            <span class="be-icon">⭐</span>
+            <div>
+              <strong id="bannerVedetaText"></strong>
+              Construiește pe ele — sunt motoarele meniului tău.
+            </div>
+          </div>
+          <div class="banner-emotional blue" id="bannerEchilibrat">
+            <span class="be-icon">✅</span>
+            <div>
+              <strong>Meniu echilibrat</strong>
+              Meniul tău are o structură bună în acest moment. Revino după modificări de prețuri sau preparate noi.
+            </div>
+          </div>
+
+          <div id="actionsList">
+            <!-- se generează dinamic -->
+          </div>
+
+          <div class="results-actions">
+            <button class="btn-print" onclick="doPrint()">🖨️ Printează / Salvează</button>
+            <button class="btn-reset" onclick="openResetModal()">🔄 Analiză nouă</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Print footer -->
+    <div class="print-footer">Generat cu MenuMix Matrix · menumixmatrix.ro</div>
+  </div>
+
+  <!-- ── A9: Modal reset ── -->
+  <div class="modal-overlay" id="resetModal">
+    <div class="modal-box">
+      <div class="modal-icon">⚠️</div>
+      <h3>Ești sigur?</h3>
+      <p>Datele introduse se vor șterge permanent și vei începe o analiză nouă.</p>
+      <div class="modal-btns">
+        <button class="btn-confirm-reset" onclick="confirmReset()">Șterge și începe din nou</button>
+        <button class="btn-cancel-reset" onclick="closeResetModal()">Păstrează datele</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── A9: Mobile warning ── -->
+  <div class="mobile-overlay" id="mobileOverlay">
+    <div class="mo-icon">🖥️</div>
+    <h2>Optimizat pentru desktop</h2>
+    <p>MenuMix Matrix este conceput pentru laptop sau calculator. Te rugăm să îl accesezi de pe un ecran mai mare.</p>
+    <button onclick="document.getElementById('mobileOverlay').classList.remove('visible')">Am înțeles</button>
+  </div>
+
+  <script>
+  /* ══════════════════════════════════════════════════════════════
+     A5 · Motor calcul + clasificare (funcții pure)
+  ══════════════════════════════════════════════════════════════ */
+  function calcMargin(price, cost) {
+    return price - cost;
+  }
+  function calcPopularity(sales, totalSales) {
+    if (totalSales === 0) return 0;
+    return (sales / totalSales) * 100;
+  }
+  function calcThresholds(items) {
+    const margins      = items.map(i => i.margin);
+    const popularities = items.map(i => i.popularity);
+    const avgMargin      = margins.reduce((a, b) => a + b, 0) / margins.length;
+    const avgPopularity  = popularities.reduce((a, b) => a + b, 0) / popularities.length;
+    return { avgMargin, avgPopularity };
+  }
+  function classify(item, thresholds) {
+    const highMargin = item.margin     >= thresholds.avgMargin;
+    const highPop    = item.popularity >= thresholds.avgPopularity;
+    if (highMargin && highPop)  return 'vedeta';
+    if (highMargin && !highPop) return 'potential';
+    if (!highMargin && highPop) return 'muncitor';
+    return 'candidat';
+  }
+  function enrichItems(rawItems) {
+    const totalSales = rawItems.reduce((sum, i) => sum + i.sales, 0);
+    return rawItems.map(i => ({
+      ...i,
+      margin:     calcMargin(i.price, i.cost),
+      popularity: calcPopularity(i.sales, totalSales),
+    }));
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     A3 · State & Row Management
+  ══════════════════════════════════════════════════════════════ */
+  const MAX_ITEMS = 25;
+  const MIN_ITEMS = 4;
+  let rowId = 0;
+
+  function getRows() {
+    return Array.from(document.querySelectorAll('.item-row'));
+  }
+  function getRowCount() { return getRows().length; }
+
+  function createRow(data) {
+    rowId++;
+    const id = rowId;
+    const tr = document.createElement('tr');
+    tr.className = 'item-row';
+    tr.dataset.id = id;
+    tr.innerHTML = `
+      <td class="col-name">
+        <input type="text" class="cell-input cell-name" placeholder="ex: Șnițel vienez"
+          data-field="name" value="${esc(data?.name||'')}" />
+      </td>
+      <td class="col-num">
+        <input type="number" class="cell-input cell-num" placeholder="ex: 120"
+          data-field="sales" min="0.01" step="any" value="${data?.sales||''}" />
+        <div class="cell-error"></div>
+      </td>
+      <td class="col-num">
+        <input type="number" class="cell-input cell-num" placeholder="ex: 35"
+          data-field="price" min="0.01" step="any" value="${data?.price||''}" />
+        <div class="cell-error"></div>
+      </td>
+      <td class="col-num">
+        <input type="number" class="cell-input cell-num" placeholder="ex: 14"
+          data-field="cost" min="0.01" step="any" value="${data?.cost||''}" />
+        <div class="cell-error"></div>
+        <div class="cell-warning"></div>
+      </td>
+      <td class="col-del">
+        <button class="btn-del-row" title="Șterge rândul" onclick="deleteRow(${id})">✕</button>
+      </td>
+    `;
+    // Attach validation listeners
+    tr.querySelectorAll('input').forEach(inp => {
+      inp.addEventListener('blur',   () => { validateRow(tr); saveState(); });
+      inp.addEventListener('input',  () => { saveState(); updateUIState(); });
+    });
+    return tr;
+  }
+
+  function addRow(data) {
+    const tbody = document.getElementById('itemsBody');
+    if (getRowCount() >= MAX_ITEMS) return;
+    tbody.appendChild(createRow(data));
+    updateUIState();
+    saveState();
+  }
+
+  function deleteRow(id) {
+    if (getRowCount() <= 1) return;
+    const tr = document.querySelector(`.item-row[data-id="${id}"]`);
+    if (tr) tr.remove();
+    updateUIState();
+    saveState();
+  }
+
+  function esc(str) {
+    return String(str).replace(/"/g, '&quot;').replace(/</g, '&lt;');
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     A4 · Motor validare inline
+  ══════════════════════════════════════════════════════════════ */
+  function validateRow(tr) {
+    const salesInp = tr.querySelector('[data-field="sales"]');
+    const priceInp = tr.querySelector('[data-field="price"]');
+    const costInp  = tr.querySelector('[data-field="cost"]');
+
+    let ok = true;
+
+    // Vânzări
+    const salesErr = salesInp.nextElementSibling;
+    const sales = parseFloat(salesInp.value);
+    if (salesInp.value && (isNaN(sales) || sales <= 0)) {
+      setError(salesInp, salesErr, 'Valoare > 0 obligatorie.'); ok = false;
+    } else if (salesInp.value) {
+      clearFieldState(salesInp, salesErr);
+    }
+
+    // Preț
+    const priceErr = priceInp.nextElementSibling;
+    const price = parseFloat(priceInp.value);
+    if (priceInp.value && (isNaN(price) || price <= 0)) {
+      setError(priceInp, priceErr, 'Valoare > 0 obligatorie.'); ok = false;
+    } else if (priceInp.value) {
+      clearFieldState(priceInp, priceErr);
+    }
+
+    // Cost
+    const costErrEl  = costInp.nextElementSibling;
+    const costWarnEl = costErrEl.nextElementSibling;
+    const cost = parseFloat(costInp.value);
+    if (costInp.value) {
+      if (isNaN(cost) || cost <= 0) {
+        setError(costInp, costErrEl, 'Valoare > 0 obligatorie.');
+        costWarnEl.classList.remove('visible');
+        ok = false;
+      } else if (priceInp.value && !isNaN(price) && cost > price) {
+        setError(costInp, costErrEl, 'Costul depășește prețul de vânzare.');
+        costWarnEl.classList.remove('visible');
+        ok = false;
+      } else if (priceInp.value && !isNaN(price) && cost === price) {
+        clearFieldState(costInp, costErrEl);
+        costInp.classList.add('warning');
+        costWarnEl.textContent = 'Marja zero — preparatul nu aduce profit.';
+        costWarnEl.classList.add('visible');
+      } else {
+        clearFieldState(costInp, costErrEl);
+        costWarnEl.classList.remove('visible');
+      }
+    }
+    return ok;
+  }
+
+  function setError(inp, errEl, msg) {
+    inp.classList.add('error');
+    inp.classList.remove('valid', 'warning');
+    errEl.textContent = msg;
+    errEl.classList.add('visible');
+  }
+  function clearFieldState(inp, errEl) {
+    inp.classList.remove('error', 'warning');
+    inp.classList.add('valid');
+    if (errEl) errEl.classList.remove('visible');
+  }
+
+  function hasErrors() {
+    return document.querySelectorAll('.cell-input.error').length > 0;
+  }
+
+  function getValidItems() {
+    const items = [];
+    getRows().forEach(tr => {
+      const name  = tr.querySelector('[data-field="name"]').value.trim();
+      const sales = parseFloat(tr.querySelector('[data-field="sales"]').value);
+      const price = parseFloat(tr.querySelector('[data-field="price"]').value);
+      const cost  = parseFloat(tr.querySelector('[data-field="cost"]').value);
+      if (name && !isNaN(sales) && sales > 0 && !isNaN(price) && price > 0 && !isNaN(cost) && cost > 0 && cost <= price) {
+        items.push({ name, sales, price, cost });
+      }
+    });
+    return items;
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     UI State update (counters, buttons)
+  ══════════════════════════════════════════════════════════════ */
+  function updateUIState() {
+    const count = getRowCount();
+    const valid = getValidItems();
+
+    // Counter badge
+    const badge = document.getElementById('counterBadge');
+    badge.textContent = `${count} / ${MAX_ITEMS} preparate`;
+    badge.classList.toggle('warn', count >= MAX_ITEMS - 3);
+
+    // Add button
+    const btnAdd = document.getElementById('btnAddRow');
+    btnAdd.disabled = count >= MAX_ITEMS;
+    btnAdd.title    = count >= MAX_ITEMS ? 'Limita de 25 preparate asigură o analiză completă în sub 5 minute.' : '';
+
+    // Delete buttons
+    getRows().forEach(tr => {
+      const btn = tr.querySelector('.btn-del-row');
+      btn.disabled = count <= 1;
+    });
+
+    // Min warning
+    const minWarn = document.getElementById('minWarning');
+    minWarn.classList.toggle('hidden', valid.length >= MIN_ITEMS);
+
+    // Analyze button
+    const btnAna = document.getElementById('btnAnalyze');
+    btnAna.disabled = valid.length < MIN_ITEMS || hasErrors();
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     A6 · Matrice SVG — normalizare min-max
+  ══════════════════════════════════════════════════════════════ */
+  const CAT_COLORS = {
+    vedeta:   '#22C55E',
+    potential:'#3B82F6',
+    muncitor: '#F97316',
+    candidat: '#EF4444',
+  };
+  const CAT_LABELS = {
+    vedeta:   '⭐ Vedetă',
+    potential:'💎 Potențial',
+    muncitor: '🐄 Muncitor',
+    candidat: '❌ Candidat la eliminare',
+  };
+
+  function normalize(val, min, max) {
+    if (max === min) return 0.5;
+    return (val - min) / (max - min);
+  }
+
+  function buildMatrix(classifiedItems) {
+    const svg    = document.getElementById('matrixSvg');
+    const pad    = 60;
+    const size   = 600;
+    const inner  = size - pad * 2;
+    const mid    = pad + inner / 2;
+
+    const margins      = classifiedItems.map(i => i.margin);
+    const popularities = classifiedItems.map(i => i.popularity);
+    const minM = Math.min(...margins),      maxM = Math.max(...margins);
+    const minP = Math.min(...popularities), maxP = Math.max(...popularities);
+
+    // Position each item: X = popularity (right), Y = margin (up)
+    const positioned = classifiedItems.map(item => {
+      const nx = normalize(item.popularity, minP, maxP);
+      const ny = normalize(item.margin,     minM, maxM);
+      return {
+        ...item,
+        svgX: pad + nx * inner,
+        svgY: pad + (1 - ny) * inner,
+      };
+    });
+
+    svg.innerHTML = '';
+
+    const ns = 'http://www.w3.org/2000/svg';
+    function el(tag, attrs) {
+      const e = document.createElementNS(ns, tag);
+      Object.entries(attrs).forEach(([k,v]) => e.setAttribute(k, v));
+      return e;
+    }
+
+    // Background cadrane
+    const quadrants = [
+      { x: mid,  y: pad,  w: inner/2, h: inner/2, color: CAT_COLORS.vedeta,   label: '⭐ Vedetă',    lx: mid + inner*0.25, ly: pad + 18 },
+      { x: pad,  y: pad,  w: inner/2, h: inner/2, color: CAT_COLORS.potential,label: '💎 Potențial', lx: pad + inner*0.25, ly: pad + 18 },
+      { x: mid,  y: mid,  w: inner/2, h: inner/2, color: CAT_COLORS.muncitor, label: '🐄 Muncitor',  lx: mid + inner*0.25, ly: mid + 18 },
+      { x: pad,  y: mid,  w: inner/2, h: inner/2, color: CAT_COLORS.candidat, label: '❌ Candidat',  lx: pad + inner*0.25, ly: mid + 18 },
+    ];
+    quadrants.forEach(q => {
+      const rect = el('rect', { x:q.x, y:q.y, width:q.w, height:q.h, fill:q.color, 'fill-opacity':'0.08' });
+      svg.appendChild(rect);
+      const txt = el('text', { x:q.lx, y:q.ly, 'text-anchor':'middle', 'font-size':'11', fill:q.color, 'font-weight':'600', 'font-family':'system-ui,sans-serif', opacity:'0.7' });
+      txt.textContent = q.label;
+      svg.appendChild(txt);
+    });
+
+    // Border
+    svg.appendChild(el('rect', { x:pad, y:pad, width:inner, height:inner, fill:'none', stroke:'#D1D1C8', 'stroke-width':'1' }));
+
+    // Threshold lines (mid)
+    const lineH = el('line', { x1:pad, y1:mid, x2:pad+inner, y2:mid, stroke:'#8A8A80', 'stroke-width':'1', 'stroke-dasharray':'6,4' });
+    const lineV = el('line', { x1:mid, y1:pad, x2:mid, y2:pad+inner, stroke:'#8A8A80', 'stroke-width':'1', 'stroke-dasharray':'6,4' });
+    svg.appendChild(lineH);
+    svg.appendChild(lineV);
+
+    // Axis labels
+    const axX = el('text', { x: pad + inner/2, y: size - 8, 'text-anchor':'middle', 'font-size':'12', fill:'#8A8A80', 'font-family':'system-ui,sans-serif' });
+    axX.textContent = 'Popularitate →';
+    svg.appendChild(axX);
+
+    const axY = el('text', { x: 14, y: pad + inner/2, 'text-anchor':'middle', 'font-size':'12', fill:'#8A8A80', 'font-family':'system-ui,sans-serif', transform:`rotate(-90, 14, ${pad + inner/2})` });
+    axY.textContent = '↑ Marjă';
+    svg.appendChild(axY);
+
+    // Threshold labels
+    const tlM = el('text', { x: pad - 4, y: mid - 4, 'text-anchor':'end', 'font-size':'10', fill:'#8A8A80', 'font-family':'system-ui,sans-serif' });
+    tlM.textContent = 'Marjă medie';
+    svg.appendChild(tlM);
+    const tlP = el('text', { x: mid + 4, y: pad - 4, 'text-anchor':'start', 'font-size':'10', fill:'#8A8A80', 'font-family':'system-ui,sans-serif' });
+    tlP.textContent = 'Popularitate medie';
+    svg.appendChild(tlP);
+
+    // Group overlapping items (distance < 28px)
+    const placed = [];
+    positioned.forEach(item => {
+      const group = placed.find(g => Math.hypot(g.svgX - item.svgX, g.svgY - item.svgY) < 28);
+      if (group) { group.items.push(item); }
+      else       { placed.push({ svgX: item.svgX, svgY: item.svgY, items: [item] }); }
+    });
+
+    const tooltip = document.getElementById('svgTooltip');
+
+    placed.forEach(group => {
+      const first    = group.items[0];
+      const color    = CAT_COLORS[first.category];
+      const isGroup  = group.items.length > 1;
+      const cx       = group.svgX;
+      const cy       = group.svgY;
+      const r        = isGroup ? 16 : 13;
+
+      const circle = el('circle', { cx, cy, r, fill: color, 'fill-opacity':'0.85', stroke:'white', 'stroke-width':'2', cursor:'pointer' });
+      svg.appendChild(circle);
+
+      if (isGroup) {
+        const cnt = el('text', { x:cx, y:cy+4, 'text-anchor':'middle', 'font-size':'12', fill:'white', 'font-weight':'700', 'font-family':'system-ui,sans-serif', 'pointer-events':'none' });
+        cnt.textContent = group.items.length;
+        svg.appendChild(cnt);
+      } else {
+        const label = first.name.length > 14 ? first.name.slice(0, 13) + '…' : first.name;
+        const txt = el('text', { x:cx, y:cy + r + 12, 'text-anchor':'middle', 'font-size':'10', fill: color, 'font-weight':'600', 'font-family':'system-ui,sans-serif', 'pointer-events':'none' });
+        txt.textContent = label;
+        svg.appendChild(txt);
+      }
+
+      // Tooltip on hover
+      const svgRect = svg.getBoundingClientRect.bind(svg);
+      circle.addEventListener('mousemove', (e) => {
+        const svgEl = document.getElementById('matrixSvg');
+        const rect  = svgEl.getBoundingClientRect();
+        tooltip.style.display = 'block';
+        tooltip.style.left = (e.clientX - rect.left + 12) + 'px';
+        tooltip.style.top  = (e.clientY - rect.top  - 10) + 'px';
+        tooltip.textContent = group.items.map(i =>
+          `${CAT_LABELS[i.category]} — ${i.name}\nMarjă: ${i.margin.toFixed(2)} RON | Pop: ${i.popularity.toFixed(1)}%`
+        ).join('\n─────────\n');
+      });
+      circle.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
+    });
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     A7 · Lista acțiuni + bannere emoționale
+  ══════════════════════════════════════════════════════════════ */
+  const ACTION_COPY = {
+    muncitor:  (i) => `Se vinde bine, dar marja e sub medie. O creștere de 5% ar aduce +${(i.margin * i.sales * 0.05).toFixed(0)} RON/lună la volumul actual. Analizează ajustarea prețului.`,
+    potential: (i) => `Marjă bună, dar vizibilitate scăzută. Testează poziționarea în meniu sau recomandarea activă de către personal.`,
+    candidat:  (i) => `Vânzări și marjă sub media meniului. Analizează înlocuirea sau eliminarea la următoarea revizuire.`,
+    vedeta:    (i) => `Performează excelent pe ambele axe. Păstrează și promovează activ.`,
+  };
+  const ACTION_EMOJI = { vedeta:'⭐', potential:'💎', muncitor:'🐄', candidat:'❌' };
+  const ACTION_TAG   = { vedeta:'Vedetă', potential:'Potențial', muncitor:'Muncitor', candidat:'Candidat la eliminare' };
+  const ACTION_ORDER = ['muncitor', 'potential', 'candidat', 'vedeta'];
+
+  function buildActionsList(classifiedItems) {
+    const list = document.getElementById('actionsList');
+    list.innerHTML = '';
+
+    // Bannere
+    const vedete = classifiedItems.filter(i => i.category === 'vedeta');
+    const needAction = classifiedItems.filter(i => i.category === 'muncitor' || i.category === 'candidat');
+
+    const bannerV = document.getElementById('bannerVedeta');
+    const bannerE = document.getElementById('bannerEchilibrat');
+
+    if (vedete.length > 0) {
+      document.getElementById('bannerVedetaText').textContent =
+        `Ai ${vedete.length} preparat${vedete.length > 1 ? 'e' : ''} ${vedete.length > 1 ? 'care aduc' : 'care aduce'} atât volum cât și marjă.`;
+      bannerV.classList.add('visible');
+      bannerE.classList.remove('visible');
+    } else if (needAction.length === 0) {
+      bannerE.classList.add('visible');
+      bannerV.classList.remove('visible');
+    } else {
+      bannerV.classList.remove('visible');
+      bannerE.classList.remove('visible');
+    }
+
+    // Grupuri acțiuni în ordinea impactului
+    ACTION_ORDER.forEach(cat => {
+      const group = classifiedItems.filter(i => i.category === cat);
+      if (group.length === 0) return;
+
+      const groupDiv = document.createElement('div');
+      groupDiv.className = 'action-group';
+
+      const titles = { muncitor:'Ajustează prețul — impact imediat', potential:'Crește vizibilitatea', candidat:'Analizează eliminarea', vedeta:'Continuă strategia' };
+      const titleDiv = document.createElement('div');
+      titleDiv.className = 'action-group-title';
+      titleDiv.textContent = titles[cat];
+      groupDiv.appendChild(titleDiv);
+
+      group.forEach(item => {
+        const div = document.createElement('div');
+        div.className = `action-item ${cat}`;
+        div.innerHTML = `
+          <span class="action-emoji">${ACTION_EMOJI[cat]}</span>
+          <div>
+            <div class="action-tag tag-${cat}">${ACTION_TAG[cat]}</div>
+            <div class="action-name">${esc(item.name)}</div>
+            <div class="action-text">${ACTION_COPY[cat](item)}</div>
+          </div>
+        `;
+        groupDiv.appendChild(div);
+      });
+
+      list.appendChild(groupDiv);
+    });
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     Analyze — main trigger
+  ══════════════════════════════════════════════════════════════ */
+  document.getElementById('btnAnalyze').addEventListener('click', function() {
+    // Validate all rows first
+    let allOk = true;
+    getRows().forEach(tr => { if (!validateRow(tr)) allOk = false; });
+    if (hasErrors()) return;
+
+    const raw       = getValidItems();
+    if (raw.length < MIN_ITEMS) return;
+
+    const enriched  = enrichItems(raw);
+    const thresholds = calcThresholds(enriched);
+    const classified = enriched.map(i => ({ ...i, category: classify(i, thresholds) }));
+
+    buildMatrix(classified);
+    buildActionsList(classified);
+
+    // Update print header
+    const loc  = document.getElementById('locatieNume').value.trim();
+    const data = document.getElementById('dataSesiune').value.trim();
+    document.getElementById('printTitle').textContent =
+      'Analiză meniu — ' + (loc || 'MenuMix Matrix');
+    document.getElementById('printSubtitle').textContent =
+      data ? `Data analizei: ${data}` : '';
+
+    // Show results
+    const sec = document.getElementById('resultsSection');
+    sec.classList.add('visible');
+    sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  /* ══════════════════════════════════════════════════════════════
+     A9 · Print
+  ══════════════════════════════════════════════════════════════ */
+  function doPrint() { window.print(); }
+
+  /* ══════════════════════════════════════════════════════════════
+     A9 · Modal reset
+  ══════════════════════════════════════════════════════════════ */
+  function openResetModal()  { document.getElementById('resetModal').classList.add('visible'); }
+  function closeResetModal() { document.getElementById('resetModal').classList.remove('visible'); }
+  function confirmReset() {
+    sessionStorage.removeItem('mmm_data');
+    closeResetModal();
+    document.getElementById('itemsBody').innerHTML = '';
+    rowId = 0;
+    addRow();
+    document.getElementById('resultsSection').classList.remove('visible');
+    document.getElementById('restoreBanner').classList.remove('visible');
+    document.getElementById('locatieNume').value = '';
+    document.getElementById('dataSesiune').value = getTodayFormatted();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     A8 · sessionStorage autosave + restore
+  ══════════════════════════════════════════════════════════════ */
+  function getState() {
+    const rows = getRows().map(tr => ({
+      name:  tr.querySelector('[data-field="name"]').value,
+      sales: tr.querySelector('[data-field="sales"]').value,
+      price: tr.querySelector('[data-field="price"]').value,
+      cost:  tr.querySelector('[data-field="cost"]').value,
+    }));
+    return {
+      rows,
+      locatie: document.getElementById('locatieNume').value,
+      data:    document.getElementById('dataSesiune').value,
+    };
+  }
+
+  function saveState() {
+    try { sessionStorage.setItem('mmm_data', JSON.stringify(getState())); } catch(e) {}
+  }
+
+  function restoreState() {
+    try {
+      const raw = sessionStorage.getItem('mmm_data');
+      if (!raw) return false;
+      const state = JSON.parse(raw);
+      if (!state.rows || state.rows.length === 0) return false;
+
+      document.getElementById('itemsBody').innerHTML = '';
+      rowId = 0;
+      state.rows.forEach(r => addRow(r));
+      if (state.locatie) document.getElementById('locatieNume').value = state.locatie;
+      if (state.data)    document.getElementById('dataSesiune').value  = state.data;
+      updateUIState();
+      return true;
+    } catch(e) { return false; }
+  }
+
+  // Autosave on header input changes
+  document.getElementById('locatieNume').addEventListener('input', saveState);
+  document.getElementById('dataSesiune').addEventListener('input', saveState);
+
+  /* ══════════════════════════════════════════════════════════════
+     A2 · Date auto-fill
+  ══════════════════════════════════════════════════════════════ */
+  function getTodayFormatted() {
+    const d = new Date();
+    const dd = String(d.getDate()).padStart(2,'0');
+    const mm = String(d.getMonth()+1).padStart(2,'0');
+    const yy = d.getFullYear();
+    return `${dd}/${mm}/${yy}`;
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     A9 · Mobile warning
+  ══════════════════════════════════════════════════════════════ */
+  function checkMobile() {
+    document.getElementById('mobileOverlay').classList.toggle('visible', window.innerWidth < 768);
+  }
+
+  /* ══════════════════════════════════════════════════════════════
+     Init
+  ══════════════════════════════════════════════════════════════ */
+  document.addEventListener('DOMContentLoaded', function() {
+    // Set today's date
+    document.getElementById('dataSesiune').value = getTodayFormatted();
+
+    // Restore or init
+    const restored = restoreState();
+    if (restored) {
+      document.getElementById('restoreBanner').classList.add('visible');
+    } else {
+      addRow(); // first empty row
+    }
+
+    updateUIState();
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+
+    // Add row button
+    document.getElementById('btnAddRow').addEventListener('click', () => {
+      addRow();
+      // Focus the name input of the new row
+      const rows = getRows();
+      const last = rows[rows.length - 1];
+      if (last) last.querySelector('[data-field="name"]').focus();
+    });
+  });
+  </script>
+</body>
+</html>
