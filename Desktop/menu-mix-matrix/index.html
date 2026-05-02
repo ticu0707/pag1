@@ -224,114 +224,34 @@
     }
     .social-proof strong { color: var(--secondary); }
 
-    /* ── FORM SECTION ── */
-    .form-section {
+    /* ── DOWNLOAD SECTION ── */
+    .download-section {
       padding: 80px 0;
       background: linear-gradient(180deg, var(--bg) 0%, #f0ede8 100%);
     }
-    .form-card {
-      max-width: 520px;
+    .download-card {
+      max-width: 480px;
       margin: 0 auto;
       background: var(--white);
       border-radius: 20px;
       padding: 48px 40px;
       box-shadow: var(--shadow-lg);
-    }
-    .form-card-header {
       text-align: center;
-      margin-bottom: 32px;
     }
-    .form-card-header .emoji { font-size: 40px; margin-bottom: 12px; }
-    .form-card-header h2 {
+    .dl-emoji { font-size: 48px; margin-bottom: 16px; }
+    .download-card h2 {
       font-size: 22px;
       font-weight: 800;
       color: var(--secondary);
-      margin-bottom: 8px;
+      margin-bottom: 10px;
     }
-    .form-card-header p {
-      font-size: 14px;
-      color: var(--gray-500);
-    }
-    .form-group {
-      margin-bottom: 18px;
-    }
-    .form-group label {
-      display: block;
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--gray-700);
-      margin-bottom: 6px;
-    }
-    .form-group .required-star { color: var(--primary); }
-    .form-control {
-      width: 100%;
-      padding: 12px 14px;
-      border: 1.5px solid var(--gray-300);
-      border-radius: 8px;
+    .download-card > p {
       font-size: 15px;
-      color: var(--text);
-      background: var(--bg);
-      outline: none;
-      transition: border-color 0.2s, box-shadow 0.2s;
-    }
-    .form-control:focus {
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(200,55,26,0.12);
-      background: var(--white);
-    }
-    .form-control.error {
-      border-color: var(--error);
-      box-shadow: 0 0 0 3px rgba(239,68,68,0.10);
-    }
-    .form-control.valid {
-      border-color: var(--success);
-    }
-    .field-error {
-      display: none;
-      font-size: 12px;
-      color: var(--error);
-      margin-top: 5px;
-      font-weight: 500;
-    }
-    .field-error.visible { display: block; }
-
-    .gdpr-row {
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-      margin-bottom: 24px;
-      padding: 14px;
-      background: var(--gray-100);
-      border-radius: 8px;
-      border: 1.5px solid var(--gray-300);
-      cursor: pointer;
-      transition: border-color 0.2s;
-    }
-    .gdpr-row:has(input:checked) { border-color: var(--success); background: rgba(34,197,94,0.06); }
-    .gdpr-row input[type="checkbox"] {
-      width: 18px;
-      height: 18px;
-      flex-shrink: 0;
-      margin-top: 1px;
-      accent-color: var(--primary);
-      cursor: pointer;
-    }
-    .gdpr-row span {
-      font-size: 13px;
       color: var(--gray-700);
-      line-height: 1.5;
+      margin-bottom: 28px;
+      line-height: 1.6;
     }
-    .gdpr-error {
-      display: none;
-      font-size: 12px;
-      color: var(--error);
-      margin-top: -18px;
-      margin-bottom: 18px;
-      font-weight: 500;
-    }
-    .gdpr-error.visible { display: block; }
-
-    .btn-submit {
+    .btn-download {
       width: 100%;
       padding: 15px;
       background: var(--primary);
@@ -343,55 +263,16 @@
       cursor: pointer;
       transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
       box-shadow: 0 4px 16px rgba(200,55,26,0.30);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
+      margin-bottom: 14px;
     }
-    .btn-submit:hover:not(:disabled) {
+    .btn-download:hover {
       background: var(--primary-dk);
       transform: translateY(-1px);
       box-shadow: 0 6px 20px rgba(200,55,26,0.38);
     }
-    .btn-submit:disabled {
-      background: var(--gray-300);
+    .download-note {
+      font-size: 13px;
       color: var(--gray-500);
-      cursor: not-allowed;
-      box-shadow: none;
-      transform: none;
-    }
-    .btn-submit .spinner {
-      display: none;
-      width: 18px; height: 18px;
-      border: 2px solid rgba(255,255,255,0.4);
-      border-top-color: white;
-      border-radius: 50%;
-      animation: spin 0.7s linear infinite;
-    }
-    .btn-submit.loading .spinner { display: block; }
-    .btn-submit.loading .btn-text { display: none; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-
-    .form-success {
-      display: none;
-      text-align: center;
-      padding: 24px 0 8px;
-    }
-    .form-success.visible { display: block; }
-    .form-success .success-icon {
-      font-size: 48px;
-      margin-bottom: 12px;
-    }
-    .form-success h3 {
-      font-size: 18px;
-      font-weight: 700;
-      color: var(--success);
-      margin-bottom: 8px;
-    }
-    .form-success p {
-      font-size: 14px;
-      color: var(--gray-700);
-      line-height: 1.6;
     }
 
     /* ── FOOTER ── */
@@ -514,59 +395,17 @@
     </div>
   </section>
 
-  <!-- ── FORMULAR ── -->
-  <section class="form-section" id="descarca">
+  <!-- ── DESCĂRCARE ── -->
+  <section class="download-section" id="descarca">
     <div class="container">
-      <div class="form-card">
-        <div class="form-card-header">
-          <div class="emoji">🎯</div>
-          <h2>Primește aplicația gratuit</h2>
-          <p>Completează mai jos și descarcă imediat. Funcționează offline, fără instalare.</p>
-        </div>
-
-        <form id="leadForm" novalidate>
-          <div class="form-group">
-            <label for="email">Adresă de email <span class="required-star">*</span></label>
-            <input type="email" id="email" name="email" class="form-control"
-              placeholder="adresa@ta@email.ro" autocomplete="email" />
-            <div class="field-error" id="email-error">Introdu o adresă de email validă.</div>
-          </div>
-
-          <div class="form-group">
-            <label for="tip_locatie">Tipul locației <span class="required-star">*</span></label>
-            <select id="tip_locatie" name="tip_locatie" class="form-control">
-              <option value="">— Selectează tipul locației —</option>
-              <option value="Restaurant">Restaurant</option>
-              <option value="Bar">Bar</option>
-              <option value="Cafenea">Cafenea</option>
-              <option value="Altul">Altul</option>
-            </select>
-            <div class="field-error" id="locatie-error">Selectează tipul locației tale.</div>
-          </div>
-
-          <div class="form-group">
-            <label for="nume">Numele tău <span style="color:var(--gray-500);font-weight:400;">(opțional)</span></label>
-            <input type="text" id="nume" name="nume" class="form-control"
-              placeholder="ex: Ion Popescu" autocomplete="name" />
-          </div>
-
-          <div class="gdpr-row" id="gdprRow" onclick="document.getElementById('gdpr').click()">
-            <input type="checkbox" id="gdpr" name="gdpr" onclick="event.stopPropagation()" />
-            <span>Sunt de acord să primesc ocazional resurse utile despre optimizarea meniului și a profitabilității în HoReCa.</span>
-          </div>
-          <div class="gdpr-error" id="gdpr-error">Bifează acordul pentru a continua.</div>
-
-          <button type="submit" class="btn-submit" id="submitBtn">
-            <span class="spinner"></span>
-            <span class="btn-text">📥 Primește aplicația gratuit</span>
-          </button>
-        </form>
-
-        <div class="form-success" id="formSuccess">
-          <div class="success-icon">✅</div>
-          <h3>Aplicația se descarcă acum!</h3>
-          <p>Verifică folderul <strong>Downloads</strong>. Deschide fișierul <strong>app.html</strong> în browser — funcționează complet offline, fără instalare.</p>
-        </div>
+      <div class="download-card">
+        <div class="dl-emoji">📥</div>
+        <h2>Descarcă aplicația gratuit</h2>
+        <p>Un singur fișier HTML. Funcționează offline, fără instalare, direct în browser.</p>
+        <button class="btn-download" onclick="triggerDownload()">
+          Descarcă MenuMix Matrix
+        </button>
+        <p class="download-note">Fișier HTML · ~55KB · Fără cont, fără date personale</p>
       </div>
     </div>
   </section>
@@ -584,65 +423,8 @@
     <button onclick="document.getElementById('mobileOverlay').classList.remove('visible')">Am înțeles</button>
   </div>
 
-  <!-- ── EmailJS SDK ── -->
-  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
   <script>
-    // ── EmailJS Config — înlocuiește cu valorile din contul tău EmailJS ──
-    const EMAILJS_SERVICE_ID  = 'YOUR_SERVICE_ID';
-    const EMAILJS_TEMPLATE_ID = 'YOUR_TEMPLATE_ID';
-    const EMAILJS_PUBLIC_KEY  = 'YOUR_PUBLIC_KEY';
-
-    emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY });
-
-    // ── Validare ──
-    function isValidEmail(val) {
-      return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val.trim());
-    }
-
-    function showError(inputEl, errorEl, msg) {
-      inputEl.classList.add('error');
-      inputEl.classList.remove('valid');
-      errorEl.textContent = msg;
-      errorEl.classList.add('visible');
-    }
-
-    function clearError(inputEl, errorEl) {
-      inputEl.classList.remove('error');
-      errorEl.classList.remove('visible');
-    }
-
-    function markValid(inputEl) {
-      inputEl.classList.remove('error');
-      inputEl.classList.add('valid');
-    }
-
-    // Validare blur pe email
-    document.getElementById('email').addEventListener('blur', function() {
-      const err = document.getElementById('email-error');
-      if (!this.value.trim()) {
-        showError(this, err, 'Câmpul email este obligatoriu.');
-      } else if (!isValidEmail(this.value)) {
-        showError(this, err, 'Introdu o adresă de email validă (ex: nume@domeniu.ro).');
-      } else {
-        clearError(this, err);
-        markValid(this);
-      }
-    });
-
-    // Validare blur pe select
-    document.getElementById('tip_locatie').addEventListener('change', function() {
-      const err = document.getElementById('locatie-error');
-      if (!this.value) {
-        showError(this, err, 'Selectează tipul locației tale.');
-      } else {
-        clearError(this, err);
-        markValid(this);
-      }
-    });
-
-    // ── Download helper ──
     function triggerDownload() {
-      // Folosim un link spre fișierul app.html din același folder
       const a = document.createElement('a');
       a.href = 'app.html';
       a.download = 'MenuMix-Matrix-App.html';
@@ -651,63 +433,6 @@
       document.body.removeChild(a);
     }
 
-    // ── Submit ──
-    document.getElementById('leadForm').addEventListener('submit', async function(e) {
-      e.preventDefault();
-      let valid = true;
-
-      const emailEl   = document.getElementById('email');
-      const locatieEl = document.getElementById('tip_locatie');
-      const gdprEl    = document.getElementById('gdpr');
-      const emailErr  = document.getElementById('email-error');
-      const locErr    = document.getElementById('locatie-error');
-      const gdprErr   = document.getElementById('gdpr-error');
-
-      // Validare email
-      if (!emailEl.value.trim()) {
-        showError(emailEl, emailErr, 'Câmpul email este obligatoriu.'); valid = false;
-      } else if (!isValidEmail(emailEl.value)) {
-        showError(emailEl, emailErr, 'Introdu o adresă de email validă.'); valid = false;
-      } else { clearError(emailEl, emailErr); markValid(emailEl); }
-
-      // Validare locatie
-      if (!locatieEl.value) {
-        showError(locatieEl, locErr, 'Selectează tipul locației tale.'); valid = false;
-      } else { clearError(locatieEl, locErr); markValid(locatieEl); }
-
-      // Validare GDPR
-      if (!gdprEl.checked) {
-        gdprErr.classList.add('visible'); valid = false;
-      } else { gdprErr.classList.remove('visible'); }
-
-      if (!valid) return;
-
-      // UI loading
-      const btn = document.getElementById('submitBtn');
-      btn.classList.add('loading');
-      btn.disabled = true;
-
-      const params = {
-        email:        emailEl.value.trim(),
-        tip_locatie:  locatieEl.value,
-        nume:         document.getElementById('nume').value.trim() || 'Necunoscut',
-        timestamp:    new Date().toLocaleString('ro-RO'),
-      };
-
-      // Trimite email (dacă eșuează, descărcarea tot pornește)
-      try {
-        await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, params);
-      } catch (err) {
-        console.warn('EmailJS error (non-blocking):', err);
-      }
-
-      // Descărcare + success UI
-      triggerDownload();
-      document.getElementById('leadForm').style.display = 'none';
-      document.getElementById('formSuccess').classList.add('visible');
-    });
-
-    // ── Mobile warning ──
     function checkMobile() {
       const overlay = document.getElementById('mobileOverlay');
       if (window.innerWidth < 768) {

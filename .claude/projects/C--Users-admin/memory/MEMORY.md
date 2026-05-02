@@ -20,3 +20,4 @@
 - [project_invoicechaser.md](project_invoicechaser.md) — InvoiceChaser (2 HTML files, offline): tracker facturi restante + generator mesaje reamintire pentru IMM; implementare completă, commit local
 - [project_daily_sales_flash.md](project_daily_sales_flash.md) — Daily Sales Flash (2 HTML files, offline, Chart.js bundled): raport zilnic vânzări cu comparație față/față; implementare completă 17 module, commit local
 - [project_team_time_tracker.md](project_team_time_tracker.md) — Team Time Tracker: pontaj echipă pentru manageri — rămas la nivel de PRD, implementare neîncepută
+- [project_menu_mix_matrix.md](project_menu_mix_matrix.md) — MenuMix Matrix (2 HTML files, offline, SessionStorage): menu engineering HoReCa cu matrice SVG; implementare completă, commit local, nepushed; urmează config EmailJS + testare + deploy
