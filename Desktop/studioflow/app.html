@@ -4268,7 +4268,307 @@
       _f7Csv('scoring.csv',[['Categorie','Won','Total','Win rate %'],...[['HOT ≥105',c.filter(x=>(x.scoreTotal||0)>=105)],['WARM 70-104',c.filter(x=>(x.scoreTotal||0)>=70&&(x.scoreTotal||0)<105)],['COLD <70',c.filter(x=>(x.scoreTotal||0)<70)]].map(([cat,arr])=>[cat,arr.filter(x=>x.status==='won').length,arr.length,arr.length?Math.round(arr.filter(x=>x.status==='won').length/arr.length*100):0])]);
     }
   </script>
-  <script id="sf-f10">      /* M15 — Settings */  </script>
+  <script id="sf-f10">
+    // ── sf-f10: Settings ──────────────────────────────────────
+    function _esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+    function _s10InjectCss(){
+      if(document.getElementById('sf-f10-css'))return;
+      const s=document.createElement('style');s.id='sf-f10-css';
+      s.textContent=`.s10-sec{margin-bottom:16px;padding:18px 20px}.s10-sh{font-size:14px;font-weight:700;color:var(--sf-primary);border-left:3px solid var(--sf-accent);padding-left:8px;margin-bottom:14px}.s10-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.s10-grid label{font-size:12px;font-weight:600;display:flex;flex-direction:column;gap:3px}.s10-sbtn{margin-top:14px}.s10-sm-btn{font-size:12px;padding:4px 10px;background:none;border:1px solid var(--sf-border);border-radius:4px;cursor:pointer;color:var(--sf-text-2)}.s10-sm-btn:hover{background:var(--sf-bg-2)}.s10-rc-row{border:1px solid var(--sf-border);border-radius:6px;padding:10px;margin-bottom:8px}`;
+      document.head.appendChild(s);
+    }
+
+    async function renderSettings(){
+      const el=document.getElementById('page-settings');if(!el)return;
+      _s10InjectCss();
+      const[studio,settings,rateCards,leads]=await Promise.all([AppState.db.get('studio',1),AppState.db.get('settings','settings'),AppState.db.getAll('rateCards'),AppState.db.getAll('leads')]);
+      const st=settings||{};
+      const thr=st.scoreThresholds||{hot:105,warm:70};
+      const gng=st.goNoGoRules||{minScore:70,maxActiveProjects:8};
+      const w=st.winProbWeights||{scoreWeight:.4,sourceWeight:.2,typologyWeight:.15,pricePositionWeight:.25};
+      const cdays=(st.cadenceDays||[0,3,7,14,30]).join(', ');
+      const closedN=leads.filter(l=>['won','lost'].includes(l.status)).length;
+      const piMin=st.priceIntelMinSamples||30;
+      const lastBk=st.lastBackupAt?new Date(st.lastBackupAt).toLocaleDateString('ro-RO'):'—';
+      const logoH=studio?.logoBlob?`<img src="${URL.createObjectURL(studio.logoBlob)}" style="height:40px;margin-bottom:6px;display:block" onload="URL.revokeObjectURL(this.src)"><button class="sf-btn s10-sm-btn" onclick="_s10RemoveLogo()">Șterge logo</button><br>`:'';
+      const wpRows=[['s10-ws','Scor',Math.round(w.scoreWeight*100)],['s10-wsrc','Sursă',Math.round(w.sourceWeight*100)],['s10-wt','Tipologie',Math.round(w.typologyWeight*100)],['s10-wp','Preț',Math.round(w.pricePositionWeight*100)]];
+      const wpSum=wpRows.reduce((s,r)=>s+r[2],0);
+      el.innerHTML=`<div style="padding:20px 24px;max-width:720px">
+  <h1 style="font-size:20px;font-weight:700;color:var(--sf-primary);margin-bottom:20px">Setări</h1>
+
+  <div class="sf-card s10-sec">
+    <div class="s10-sh">10.1 Studio</div>
+    <div class="s10-grid">
+      <label>Nume studio<input id="s10-sname" class="sf-input" value="${_esc(studio?.name||'')}"></label>
+      <label>CUI / CIF<input id="s10-cui" class="sf-input" value="${_esc(studio?.vatId||'')}"></label>
+      <label>Adresă<input id="s10-addr" class="sf-input" value="${_esc(studio?.address||'')}"></label>
+      <label>Telefon<input id="s10-phone" class="sf-input" value="${_esc(studio?.phone||'')}"></label>
+      <label>Email<input id="s10-email" class="sf-input" value="${_esc(studio?.email||'')}"></label>
+      <label>Website<input id="s10-web" class="sf-input" value="${_esc(studio?.website||'')}"></label>
+      <label>Tarif orar EUR<input id="s10-rate" class="sf-input" type="number" min="1" value="${studio?.hourlyRateEUR||65}"></label>
+      <label>Ore/săpt.<input id="s10-cap" class="sf-input" type="number" min="1" value="${studio?.weeklyCapacityHours||40}"></label>
+      <label>Max proiecte active<input id="s10-mxp" class="sf-input" type="number" min="1" value="${studio?.activeProjectsLimit||8}"></label>
+    </div>
+    <div style="margin-top:10px"><label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Logo</label>
+      ${logoH}<input type="file" id="s10-logo" accept="image/*" style="font-size:12px"></div>
+    <button class="sf-btn sf-btn--primary s10-sbtn" onclick="_s10SaveStudio()">Salvează studio</button>
+  </div>
+
+  <div class="sf-card s10-sec">
+    <div class="s10-sh">10.2 Scoring & Go/No-Go</div>
+    <div class="s10-grid">
+      <label>Prag HOT ≥<input id="s10-hot" class="sf-input" type="number" min="1" max="140" value="${thr.hot}" oninput="_s10ScorePreview()"></label>
+      <label>Prag WARM ≥<input id="s10-warm" class="sf-input" type="number" min="1" max="140" value="${thr.warm}" oninput="_s10ScorePreview()"></label>
+      <label>Minim GO ≥<input id="s10-ming" class="sf-input" type="number" min="1" max="140" value="${gng.minScore}"></label>
+      <label>Max proiecte active<input id="s10-mxpa" class="sf-input" type="number" min="1" value="${gng.maxActiveProjects||8}"></label>
+    </div>
+    <div id="s10-score-prev" style="font-size:12px;color:var(--sf-text-3);margin:8px 0"></div>
+    <div style="margin-top:12px">
+      <div style="font-size:13px;font-weight:600;color:var(--sf-primary);margin-bottom:8px">Ponderi Win Probability <span id="s10-wsum" style="font-size:11px;color:${wpSum===100?'var(--sf-text-3)':'#C0392B'}">(sumă: ${wpSum}%)</span></div>
+      ${wpRows.map(([id,lbl,val])=>`<div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><span style="width:72px;font-size:12px">${lbl}</span><input type="range" id="${id}" min="0" max="100" value="${val}" style="flex:1" oninput="_s10WpSync()"><span id="${id}-v" style="width:34px;font-size:12px;text-align:right">${val}%</span></div>`).join('')}
+    </div>
+    <button class="sf-btn sf-btn--primary s10-sbtn" onclick="_s10SaveScoring()">Salvează scoring</button>
+  </div>
+
+  <div class="sf-card s10-sec">
+    <div class="s10-sh">10.3 Cadence</div>
+    <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Zile cadență (separate prin virgulă)</label>
+    <input id="s10-cdays" class="sf-input" value="${cdays}" style="width:280px">
+    <div style="font-size:11px;color:var(--sf-text-3);margin-top:4px">Ex: 0, 3, 7, 14, 30</div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="sf-btn sf-btn--primary" onclick="_s10SaveCadence()">Salvează</button>
+      <button class="sf-btn s10-sm-btn" onclick="_s10ResetCadence()">Restaurează default</button>
+    </div>
+  </div>
+
+  <div class="sf-card s10-sec">
+    <div class="s10-sh">10.4 Backup & Date</div>
+    <div style="font-size:12px;color:var(--sf-text-3);margin-bottom:12px">Ultima backup: <strong>${lastBk}</strong></div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">
+      <button class="sf-btn sf-btn--primary" onclick="selectBackupFolder()">Folder backup (sesiune)</button>
+      <button class="sf-btn" onclick="manualExportBackup()">Exportă JSON</button>
+      <button class="sf-btn" onclick="_s10ImportBackup()">Importă din JSON</button>
+      <button class="sf-btn" onclick="_s10ExportLeadsCSV()">Exportă leads CSV</button>
+    </div>
+    <div id="s10-storage" style="font-size:12px;color:var(--sf-text-3);margin-bottom:12px">
+      <button class="sf-btn s10-sm-btn" onclick="_s10CalcStorage()">Calculează spațiu utilizat</button>
+    </div>
+    <hr style="border:none;border-top:1px solid var(--sf-border);margin:14px 0">
+    <div style="font-size:13px;font-weight:600;color:#C0392B;margin-bottom:8px">Zona periculoasă</div>
+    <button class="sf-btn" style="border-color:#C0392B;color:#C0392B" onclick="_s10DeleteAll()">Ștergere completă date</button>
+  </div>
+
+  <div class="sf-card s10-sec">
+    <div class="s10-sh">10.5 Rate Card</div>
+    ${rateCards.map(rc=>`<div class="s10-rc-row"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><strong style="font-size:13px">${_esc(rc.name)}</strong>${rc.isDefault?`<span style="font-size:10px;background:var(--sf-primary);color:#fff;padding:2px 8px;border-radius:10px">Default</span>`:`<button class="sf-btn s10-sm-btn" onclick="_s10SetDefaultRC('${rc.id}')">Default</button><button class="sf-btn s10-sm-btn" style="color:#C0392B" onclick="_s10DeleteRC('${rc.id}')">Șterge</button>`}</div><label style="font-size:12px;font-weight:600;display:flex;align-items:center;gap:8px">EUR/h<input class="sf-input" style="width:80px" type="number" min="1" value="${rc.hourlyRateEUR}" onchange="_s10SaveRC('${rc.id}',this.value)"></label></div>`).join('')}
+    ${rateCards.length<3?`<button class="sf-btn s10-sm-btn" onclick="_s10AddRC()" style="margin-top:8px">+ Adaugă rate card</button>`:''}
+  </div>
+
+  <div class="sf-card s10-sec">
+    <div class="s10-sh">10.6 Price Intelligence</div>
+    <div style="font-size:13px;margin-bottom:12px"><strong>${closedN}</strong> deal-uri completate. Price Intelligence: <strong style="color:${closedN>=piMin?'#27ae60':'var(--sf-text-3)'}">${closedN>=piMin?'ACTIV':'INSUFICIENT'}</strong> (prag: ${piMin})</div>
+    <label style="font-size:12px;font-weight:600;display:block;margin-bottom:4px">Minimum samples pentru activare</label>
+    <input id="s10-pimin" class="sf-input" type="number" min="5" max="200" value="${piMin}" style="width:100px">
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button class="sf-btn sf-btn--primary" onclick="_s10SavePI()">Salvează</button>
+      <button class="sf-btn s10-sm-btn" onclick="_s10ResetWP()">Reset ponderi Win Probability</button>
+    </div>
+  </div>
+
+  <div class="sf-card s10-sec" style="margin-bottom:40px">
+    <div class="s10-sh">10.7 Sistem</div>
+    <div style="font-size:12px;color:var(--sf-text-3);line-height:2"><div>Versiune app: <strong>${APP_VERSION}</strong></div><div>Schema IndexedDB: <strong>v${st.schemaVersion||1}</strong></div></div>
+    <button class="sf-btn s10-sm-btn" style="margin-top:10px" onclick="_s10ForceSwUpdate()">Forțează update Service Worker</button>
+  </div>
+  </div>`;
+      _s10ScorePreview();
+    }
+
+    function _s10ScorePreview(){
+      const hot=parseInt(document.getElementById('s10-hot')?.value)||105;
+      const warm=parseInt(document.getElementById('s10-warm')?.value)||70;
+      const prev=document.getElementById('s10-score-prev');if(!prev)return;
+      const cat=v=>v>=hot?'<strong style="color:var(--sf-hot)">HOT</strong>':v>=warm?'<strong style="color:var(--sf-accent)">WARM</strong>':'<strong style="color:var(--sf-cold)">COLD</strong>';
+      prev.innerHTML=`Preview: 120 → ${cat(120)} · 80 → ${cat(80)} · 50 → ${cat(50)}`;
+    }
+
+    function _s10WpSync(){
+      const ids=['s10-ws','s10-wsrc','s10-wt','s10-wp'];
+      let total=0;
+      ids.forEach(id=>{const v=parseInt(document.getElementById(id)?.value||0);total+=v;const vEl=document.getElementById(id+'-v');if(vEl)vEl.textContent=v+'%';});
+      const el=document.getElementById('s10-wsum');if(el){el.textContent=`(sumă: ${total}%)`;el.style.color=total===100?'var(--sf-text-3)':'#C0392B';}
+    }
+
+    async function _s10SaveStudio(){
+      const studio=await AppState.db.get('studio',1)||{id:1};
+      let logoBlob=studio.logoBlob||null;
+      const file=document.getElementById('s10-logo')?.files[0];
+      if(file)try{logoBlob=await compressImage(file,200,800);}catch{}
+      const updated={...studio,
+        name:document.getElementById('s10-sname')?.value?.trim()||studio.name,
+        vatId:document.getElementById('s10-cui')?.value?.trim()||studio.vatId,
+        address:document.getElementById('s10-addr')?.value?.trim()||studio.address,
+        phone:document.getElementById('s10-phone')?.value?.trim()||studio.phone,
+        email:document.getElementById('s10-email')?.value?.trim()||studio.email,
+        website:document.getElementById('s10-web')?.value?.trim()||studio.website,
+        hourlyRateEUR:parseFloat(document.getElementById('s10-rate')?.value)||studio.hourlyRateEUR,
+        weeklyCapacityHours:parseInt(document.getElementById('s10-cap')?.value)||studio.weeklyCapacityHours,
+        activeProjectsLimit:parseInt(document.getElementById('s10-mxp')?.value)||studio.activeProjectsLimit,
+        logoBlob, updatedAt:new Date().toISOString()
+      };
+      await AppState.db.put('studio',updated);
+      renderSidebarLogo(updated.logoBlob);renderSidebarStudioName(updated.name);
+      showToast('success','Studio salvat.');renderSettings();
+    }
+
+    async function _s10RemoveLogo(){
+      const studio=await AppState.db.get('studio',1);if(!studio)return;
+      await AppState.db.put('studio',{...studio,logoBlob:null,updatedAt:new Date().toISOString()});
+      renderSidebarLogo(null);showToast('success','Logo șters.');renderSettings();
+    }
+
+    async function _s10SaveScoring(){
+      const ids=['s10-ws','s10-wsrc','s10-wt','s10-wp'];
+      const vals=ids.map(id=>parseInt(document.getElementById(id)?.value)||0);
+      if(vals.reduce((s,v)=>s+v,0)!==100){showToast('warning','Ponderile trebuie să sumeze 100%. Ajustează înainte de salvare.');return;}
+      const st=await AppState.db.get('settings','settings')||{id:'settings'};
+      await AppState.db.put('settings',{...st,
+        scoreThresholds:{hot:parseInt(document.getElementById('s10-hot')?.value)||105,warm:parseInt(document.getElementById('s10-warm')?.value)||70},
+        goNoGoRules:{...st.goNoGoRules,minScore:parseInt(document.getElementById('s10-ming')?.value)||70,maxActiveProjects:parseInt(document.getElementById('s10-mxpa')?.value)||8},
+        winProbWeights:{scoreWeight:vals[0]/100,sourceWeight:vals[1]/100,typologyWeight:vals[2]/100,pricePositionWeight:vals[3]/100},
+        updatedAt:new Date().toISOString()
+      });
+      showToast('success','Scoring & ponderi salvate.');
+    }
+
+    async function _s10SaveCadence(){
+      const raw=document.getElementById('s10-cdays')?.value||'';
+      const days=raw.split(',').map(s=>parseInt(s.trim())).filter(n=>!isNaN(n)&&n>=0).sort((a,b)=>a-b);
+      if(!days.length){showToast('warning','Introdu cel puțin o zi de cadență.');return;}
+      const st=await AppState.db.get('settings','settings')||{id:'settings'};
+      await AppState.db.put('settings',{...st,cadenceDays:days,updatedAt:new Date().toISOString()});
+      showToast('success',`Cadence: ${days.join(', ')} zile.`);
+    }
+
+    async function _s10ResetCadence(){document.getElementById('s10-cdays').value='0, 3, 7, 14, 30';await _s10SaveCadence();}
+
+    function base64ToBlob(dataUrl,mime='image/jpeg'){
+      if(!dataUrl)return null;
+      try{const[,b64]=dataUrl.split(',');const raw=atob(b64);const u8=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)u8[i]=raw.charCodeAt(i);return new Blob([u8],{type:mime});}catch{return null;}
+    }
+
+    async function clearAllData(db){
+      await Promise.all([
+        db.delete('studio',1),
+        db.delete('settings','settings'),
+        ...['clients','leads','offers','activities','portfolio','rateCards'].map(s=>
+          db.getAll(s).then(all=>Promise.all(all.map(r=>db.delete(s,r.id))))
+        )
+      ]);
+    }
+
+    function _s10ImportBackup(){
+      const inp=document.createElement('input');inp.type='file';inp.accept='.json,application/json';
+      inp.onchange=async()=>{
+        const file=inp.files[0];if(!file)return;
+        let backup;
+        try{backup=JSON.parse(await file.text());}catch{showToast('error','Fișier invalid — nu este JSON valid.');return;}
+        if(!backup._meta?.version){showToast('error','Fișier incompatibil.');return;}
+        const ok=await showConfirmDialog({title:'Restaurare date',message:`Toate datele curente vor fi înlocuite cu backup-ul din ${backup._meta.exportedAt||'?'}. Continui?`,confirmText:'RESTAUREAZĂ',dangerKeyword:'RESTAUREAZĂ'});
+        if(!ok)return;
+        try{
+          await clearAllData(AppState.db);
+          if(backup.studio)await AppState.db.put('studio',backup.studio);
+          await Promise.all([
+            backup.clients?.length&&AppState.db.putBulk('clients',backup.clients),
+            backup.leads?.length&&AppState.db.putBulk('leads',backup.leads),
+            backup.offers?.length&&AppState.db.putBulk('offers',backup.offers),
+            backup.activities?.length&&AppState.db.putBulk('activities',backup.activities),
+            backup.rateCards?.length&&AppState.db.putBulk('rateCards',backup.rateCards),
+            backup.portfolio?.length&&AppState.db.putBulk('portfolio',backup.portfolio.map(p=>({...p,imageBlob:base64ToBlob(p.imageBlob),thumbnailBlob:base64ToBlob(p.thumbnailBlob)}))),
+            backup.settings&&AppState.db.put('settings',backup.settings)
+          ].filter(Boolean));
+          showToast('success','Restaurare completă. Se reîncarcă...');setTimeout(()=>location.reload(),1500);
+        }catch(err){showToast('error','Eroare restaurare: '+err.message);}
+      };
+      inp.click();
+    }
+
+    async function _s10ExportLeadsCSV(){
+      const[leads,clients,offers]=await Promise.all([AppState.db.getAll('leads'),AppState.db.getAll('clients'),AppState.db.getAll('offers')]);
+      const cMap=Object.fromEntries(clients.map(c=>[c.id,c]));
+      const rows=leads.map(l=>{
+        const cl=cMap[l.clientId]||{};
+        const lo=offers.filter(o=>o.leadId===l.id).sort((a,b)=>b.revision-a.revision)[0];
+        return[lo?.offerCode||'',l.createdAt?.split('T')[0]||'',cl.name||'',l.address||'',l.typology||'',l.area||'',l.funnelType==='design'?'ARH/INT':'DB',l.sourceType||'',lo?.content?.totalPriceEUR||'',l.status||'',l.wonContractValue||'',l.scoreTotal||'',l.scoreCategory||''].join(';');
+      });
+      const a=document.createElement('a');
+      a.href=URL.createObjectURL(new Blob(['﻿NR.OFERTA;DATA;CLIENT;ADRESA;TIP;MP;SPECIALITATI;SURSA;PRET;STATUS;CONTRACT;SCOR;CATEGORIE\n'+rows.join('\n')],{type:'text/csv;charset=utf-8'}));
+      a.download=`studioflow-leads-${new Date().toISOString().split('T')[0]}.csv`;a.click();
+      showToast('success','CSV exportat.');
+    }
+
+    async function _s10CalcStorage(){
+      const el=document.getElementById('s10-storage');if(!el)return;
+      try{
+        const all=await Promise.all(['studio','clients','leads','offers','activities','rateCards','settings'].map(s=>AppState.db.getAll(s)));
+        const bytes=new TextEncoder().encode(JSON.stringify(all)).length;
+        el.innerHTML=`Spațiu estimat (fără imagini): <strong>${(bytes/1024/1024).toFixed(2)} MB</strong>`;
+      }catch{el.textContent='Nu s-a putut calcula.';}
+    }
+
+    async function _s10DeleteAll(){
+      const ok=await showConfirmDialog({title:'Ștergere completă',message:'TOATE datele (leads, oferte, clienți, activități, setări) vor fi șterse definitiv.',confirmText:'STERGE',dangerKeyword:'STERGE'});
+      if(!ok)return;
+      await clearAllData(AppState.db);
+      showToast('success','Date șterse. Se reîncarcă...');setTimeout(()=>location.reload(),1000);
+    }
+
+    async function _s10SaveRC(id,rate){
+      const rc=await AppState.db.get('rateCards',id);if(!rc)return;
+      await AppState.db.put('rateCards',{...rc,hourlyRateEUR:parseFloat(rate)||rc.hourlyRateEUR,updatedAt:new Date().toISOString()});
+      showToast('success','Rate card salvat.');
+    }
+
+    async function _s10SetDefaultRC(id){
+      const all=await AppState.db.getAll('rateCards');
+      await Promise.all(all.map(rc=>AppState.db.put('rateCards',{...rc,isDefault:rc.id===id,updatedAt:new Date().toISOString()})));
+      showToast('success','Rate card default setat.');renderSettings();
+    }
+
+    async function _s10DeleteRC(id){
+      const ok=await showConfirmDialog({title:'Șterge rate card',message:'Ștergi definitiv acest rate card?',confirmText:'Șterge'});
+      if(!ok)return;
+      await AppState.db.delete('rateCards',id);showToast('success','Rate card șters.');renderSettings();
+    }
+
+    async function _s10AddRC(){
+      const name=prompt('Nume rate card nou:');if(!name?.trim())return;
+      await AppState.db.put('rateCards',{id:uuid(),name:name.trim(),currency:'EUR',hourlyRateEUR:65,isDefault:false,rates:{},createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()});
+      showToast('success','Rate card adăugat.');renderSettings();
+    }
+
+    async function _s10SavePI(){
+      const v=parseInt(document.getElementById('s10-pimin')?.value)||30;
+      const st=await AppState.db.get('settings','settings')||{id:'settings'};
+      await AppState.db.put('settings',{...st,priceIntelMinSamples:v,updatedAt:new Date().toISOString()});
+      showToast('success','Price Intelligence salvat.');renderSettings();
+    }
+
+    async function _s10ResetWP(){
+      const ok=await showConfirmDialog({title:'Reset ponderi',message:'Resetezi ponderile Win Probability la default (Scor 40%, Sursă 20%, Tipologie 15%, Preț 25%)?',confirmText:'Resetează'});
+      if(!ok)return;
+      const st=await AppState.db.get('settings','settings')||{id:'settings'};
+      await AppState.db.put('settings',{...st,winProbWeights:{scoreWeight:.4,sourceWeight:.2,typologyWeight:.15,pricePositionWeight:.25},updatedAt:new Date().toISOString()});
+      showToast('success','Ponderi resetate.');renderSettings();
+    }
+
+    function _s10ForceSwUpdate(){
+      if(!navigator.serviceWorker?.controller){showToast('info','Niciun Service Worker activ.');return;}
+      navigator.serviceWorker.controller.postMessage({type:'SKIP_WAITING'});
+      showToast('success','Update solicitat — reîncarcă pagina pentru a aplica.');
+    }
+  </script>
   <script id="sf-export">   /* M16 — Export */    </script>
   <script id="sf-shortcuts">/* M17 — Keys */      </script>
   <script id="sf-init">
