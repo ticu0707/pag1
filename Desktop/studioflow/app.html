@@ -785,6 +785,28 @@
     .f4-act-outcome{ font-size:12px; color:var(--sf-text-2); margin-top:2px; }
     .f4-act-done   { font-size:11px; color:var(--sf-hot); margin-top:2px; }
     .f4-act-actions{ display:flex; gap:4px; flex-shrink:0; }
+
+    /* ── Today View (sf-f9) ─────────────────────── */
+    .f9-section      { margin-bottom:24px; }
+    .f9-section-title { font-weight:700; font-size:12px; letter-spacing:.5px;
+                        padding:6px 10px; border-radius:var(--sf-r); margin-bottom:8px; }
+    .f9-overdue-hd   { background:#FFF0F0; color:#C0392B; border-left:4px solid #C0392B; }
+    .f9-today-hd     { background:#FFFBF0; color:#B7770D; border-left:4px solid #D4A017; }
+    .f9-inactive-hd  { background:#EEF4FF; color:#2C6FAD; border-left:4px solid #2C6FAD; }
+    .f9-won-hd       { background:#F0FFF4; color:#1E8449; border-left:4px solid #1E8449; }
+    .f9-item         { display:flex; gap:12px; align-items:center; background:var(--sf-surface);
+                       border:1px solid var(--sf-border); border-radius:var(--sf-r);
+                       padding:10px 14px; margin-bottom:6px; }
+    .f9-item-body    { flex:1; min-width:0; }
+    .f9-item-client  { font-weight:600; font-size:13px; color:var(--sf-text); }
+    .f9-item-desc    { font-size:13px; color:var(--sf-text-2); }
+    .f9-delay        { color:var(--sf-cold); font-weight:600; }
+    .f9-item-actions { display:flex; gap:6px; flex-shrink:0; }
+    .f9-empty        { font-size:13px; color:var(--sf-text-3); font-style:italic; padding:6px 0; }
+    .f9-notif-banner { display:flex; align-items:center; justify-content:space-between;
+                       background:#EEF4FF; border:1px solid #BDD4F0; border-radius:var(--sf-r);
+                       padding:10px 14px; margin-bottom:12px; font-size:13px; gap:12px; }
+    .f9-notif-note   { font-size:11px; color:var(--sf-text-3); margin-bottom:20px; }
   </style>
 </head>
 <body class="sf-body" id="sf-body">
@@ -2961,7 +2983,179 @@
       showToast('info', 'Selectează un lead din pagina Leads pentru a loga activitate.');
     }
   </script>
-  <script id="sf-f9">       /* M9 — Today */      </script>
+  <script id="sf-f9">
+    // Notified set persists per browser session (deduplicare notificări)
+    const notifiedSet = new Set(JSON.parse(sessionStorage.getItem('sf_notified') || '[]'));
+
+    async function renderToday() {
+      const el = document.getElementById('page-today');
+      if (!el) return;
+
+      const todayISO  = new Date().toISOString().slice(0, 10);
+      const monthISO  = new Date().toISOString().slice(0, 7);
+      const cutoffISO = new Date(Date.now() - 14 * 86400000).toISOString().slice(0, 10);
+
+      const [allActs, allLeads, allClients] = await Promise.all([
+        AppState.db.getAll('activities'),
+        AppState.db.getAll('leads'),
+        AppState.db.getAll('clients')
+      ]);
+
+      const clientMap = Object.fromEntries(allClients.map(c => [c.id, c]));
+      const leadMap   = Object.fromEntries(allLeads.map(l => [l.id, l]));
+
+      // Section 1: activități întârziate (scheduled < azi, necompletate)
+      const overdueActs = allActs
+        .filter(a => !a.completedAt && a.scheduledAt && a.scheduledAt.slice(0,10) < todayISO)
+        .sort((a,b) => a.scheduledAt.localeCompare(b.scheduledAt));
+
+      // Section 2: activități programate azi (necompletate)
+      const todayActs = allActs
+        .filter(a => !a.completedAt && a.scheduledAt && a.scheduledAt.slice(0,10) === todayISO);
+
+      // Section 3: leads active fără activitate 14+ zile
+      const lastActDate = {};
+      allActs.forEach(a => {
+        const d = a.createdAt;
+        if (!lastActDate[a.leadId] || d > lastActDate[a.leadId]) lastActDate[a.leadId] = d;
+      });
+      const inactiveLeads = allLeads.filter(l => {
+        if (l.status !== 'active') return false;
+        const last = lastActDate[l.id];
+        return !last || last.slice(0, 10) < cutoffISO;
+      });
+
+      // Section 4: contractate luna aceasta (stageEnteredAt sau updatedAt)
+      const wonThisMonth = allLeads.filter(l =>
+        l.status === 'won' && (l.stageEnteredAt || l.updatedAt || '').slice(0, 7) === monthISO
+      );
+
+      // PWA badge + sidebar dot
+      navigator.setAppBadge?.(overdueActs.length).catch(() => {});
+      const dot = document.getElementById('badge-today');
+      if (dot) dot.hidden = overdueActs.length === 0;
+
+      const clientName = (leadId) => {
+        const l = leadMap[leadId];
+        return l ? (clientMap[l.clientId]?.name || l.projectTitle || 'Client necunoscut') : '—';
+      };
+
+      const actItem = (a) => {
+        const d = a.scheduledAt.slice(0, 10);
+        const delayDays = Math.round((new Date(todayISO) - new Date(d)) / 86400000);
+        const delayTxt  = delayDays > 0
+          ? ` <span class="f9-delay">(${delayDays} ${delayDays === 1 ? 'zi' : 'zile'} întârziat)</span>` : '';
+        return `<div class="f9-item">
+          <div class="f9-item-body">
+            <span class="f9-item-client">${clientName(a.leadId)}</span>
+            <span class="f9-item-desc"> — ${a.description}${delayTxt}</span>
+          </div>
+          <div class="f9-item-actions">
+            <button class="sf-btn sf-btn--primary" style="font-size:11px;padding:3px 10px"
+              onclick="f4CompleteAct('${a.id}','${a.leadId}').then(renderToday)">✓ Done</button>
+            <button class="sf-btn sf-btn--secondary" style="font-size:11px;padding:3px 8px"
+              onclick="openLeadActivities('${a.leadId}')" title="Activități">⏱</button>
+          </div>
+        </div>`;
+      };
+
+      const leadItem = (l) => {
+        const last     = lastActDate[l.id];
+        const daysSince = last ? Math.round((Date.now() - new Date(last)) / 86400000) : null;
+        const sinceStr  = daysSince !== null ? `ultima act.: ${daysSince} zile` : 'nicio activitate';
+        return `<div class="f9-item">
+          <div class="f9-item-body">
+            <span class="f9-item-client">${clientName(l.id)}</span>
+            <span class="f9-item-desc"> — ${l.pipelineStage || ''} · ${sinceStr}</span>
+          </div>
+          <div class="f9-item-actions">
+            <button class="sf-btn sf-btn--primary" style="font-size:11px;padding:3px 10px"
+              onclick="openLeadActivities('${l.id}')">+ Log</button>
+          </div>
+        </div>`;
+      };
+
+      const wonItem = (l) => {
+        const val = l.wonContractValue
+          ? `${Number(l.wonContractValue).toLocaleString('ro-RO')} EUR`
+          : l.estimatedValue ? `~${Number(l.estimatedValue).toLocaleString('ro-RO')} EUR` : '';
+        return `<div class="f9-item">
+          <div class="f9-item-body">
+            <span class="f9-item-client">${clientName(l.id)}</span>
+            ${val ? `<span class="f9-item-desc"> — ${val}</span>` : ''}
+          </div>
+        </div>`;
+      };
+
+      const notifBanner = Notification.permission === 'default'
+        ? `<div class="f9-notif-banner">
+            <span>🔔 Activează notificările pentru remindere automate când ești în aplicație.</span>
+            <button class="sf-btn sf-btn--secondary" style="font-size:12px;padding:4px 10px"
+              onclick="f9RequestNotif()">Activează</button>
+           </div>` : '';
+
+      const dayStr = new Date().toLocaleDateString('ro-RO',
+        { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+
+      el.innerHTML = `
+        <div class="sf-page-header">
+          <div>
+            <h2 class="sf-page-title">Today</h2>
+            <p class="sf-page-subtitle" style="text-transform:capitalize">${dayStr}</p>
+          </div>
+        </div>
+        ${notifBanner}
+        <p class="f9-notif-note">Notificările funcționează doar cu aplicația deschisă. Pentru remindere garantate, adaugă-le în Google Calendar / Outlook.</p>
+
+        <div class="f9-section">
+          <div class="f9-section-title f9-overdue-hd">🔴 ÎNTÂRZIATE (${overdueActs.length})</div>
+          ${overdueActs.length ? overdueActs.map(actItem).join('') : '<div class="f9-empty">Nicio activitate întârziată ✓</div>'}
+        </div>
+
+        <div class="f9-section">
+          <div class="f9-section-title f9-today-hd">🟡 ASTĂZI (${todayActs.length})</div>
+          ${todayActs.length ? todayActs.map(actItem).join('') : '<div class="f9-empty">Nimic programat azi</div>'}
+        </div>
+
+        <div class="f9-section">
+          <div class="f9-section-title f9-inactive-hd">🔵 LEADS FĂRĂ ACTIVITATE 14+ ZILE (${inactiveLeads.length})</div>
+          ${inactiveLeads.length ? inactiveLeads.map(leadItem).join('') : '<div class="f9-empty">Toate leadurile au activitate recentă ✓</div>'}
+        </div>
+
+        <div class="f9-section">
+          <div class="f9-section-title f9-won-hd">🟢 CONTRACTATE LUNA ACEASTA (${wonThisMonth.length})</div>
+          ${wonThisMonth.length ? wonThisMonth.map(wonItem).join('') : '<div class="f9-empty">Nicio contractare luna aceasta</div>'}
+        </div>`;
+
+      await checkAndNotify();
+    }
+
+    async function checkAndNotify() {
+      if (Notification.permission !== 'granted') return;
+      const todayISO = new Date().toISOString().slice(0, 10);
+      const allActs  = await AppState.db.getAll('activities');
+      const overdue  = allActs.filter(a =>
+        !a.completedAt && a.scheduledAt && a.scheduledAt.slice(0, 10) <= todayISO
+      );
+      overdue.forEach(a => {
+        if (notifiedSet.has(a.id)) return;
+        new Notification('StudioFlow', { body: `Activitate: ${a.description}`, tag: a.id });
+        notifiedSet.add(a.id);
+      });
+      sessionStorage.setItem('sf_notified', JSON.stringify([...notifiedSet]));
+    }
+
+    async function f9RequestNotif() {
+      const result = await Notification.requestPermission();
+      if (result === 'granted') {
+        showToast('success', 'Notificări activate!');
+        await checkAndNotify();
+        renderToday();
+      } else {
+        showToast('warning', 'Notificări refuzate — activează-le din setările browserului.');
+      }
+    }
+  </script>
   <script id="sf-f5a">      /* M11 — Portfolio */ </script>
   <script id="sf-f5">       /* M12 — Offers */    </script>
   <script id="sf-f6">       /* M13 — Clients */   </script>
