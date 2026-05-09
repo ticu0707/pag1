@@ -1083,6 +1083,7 @@
       backupFolderHandle: null,
       currentLeadId: null,
       draggedLeadId: null,
+      draggedFromStage: null,
       searchQuery: '',
     };
 
@@ -2434,7 +2435,7 @@
       const dispVal = lead.status==='won'
         ? (lead.wonContractValue||lead.estimatedValue||0)
         : (lead.estimatedValue||0);
-      return `<div class="sf-lead-card sf-lead-card--${cat}" data-lead-id="${lead.id}"${lead.status==='active'?' draggable="true"':''}>
+      return `<div class="sf-lead-card sf-lead-card--${cat}" data-lead-id="${lead.id}" data-lead-stage="${lead.pipelineStage}"${lead.status==='active'?' draggable="true"':''}>
         <div class="sf-lead-card__title">${client?.name||'—'}</div>
         <div class="sf-lead-card__sub">${lead.projectName||'—'}</div>
         <div class="sf-lead-card__meta">
@@ -2510,7 +2511,8 @@
         pipeline.addEventListener('dragstart', e => {
           const card = e.target.closest('.sf-lead-card');
           if (!card || !card.draggable) return;
-          AppState.draggedLeadId = card.dataset.leadId;
+          AppState.draggedLeadId   = card.dataset.leadId;
+          AppState.draggedFromStage = card.dataset.leadStage;
           e.dataTransfer.effectAllowed = 'move';
           setTimeout(() => card.classList.add('sf-dragging'), 0);
         });
@@ -2520,6 +2522,8 @@
           if (card) card.classList.remove('sf-dragging');
           pipeline.querySelectorAll('.drag-over')
             .forEach(c => c.classList.remove('drag-over'));
+          AppState.draggedLeadId    = null;
+          AppState.draggedFromStage = null;
         });
 
         pipeline.addEventListener('dragover', e => {
@@ -2540,10 +2544,13 @@
           if (!col) return;
           e.preventDefault();
           col.classList.remove('drag-over');
-          const leadId  = AppState.draggedLeadId;
-          const toStage = col.dataset.stage;
-          AppState.draggedLeadId = null;
+          const leadId    = AppState.draggedLeadId;
+          const fromStage = AppState.draggedFromStage;
+          const toStage   = col.dataset.stage;
+          AppState.draggedLeadId    = null;
+          AppState.draggedFromStage = null;
           if (!leadId || !toStage) return;
+          if (!TERMINAL_STAGE_KEYS.includes(toStage) && toStage === fromStage) return;
           if (TERMINAL_STAGE_KEYS.includes(toStage)) {
             await handleTerminalStageDrop(leadId, toStage);
           } else {
