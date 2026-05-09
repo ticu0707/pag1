@@ -4637,12 +4637,13 @@
             document.activeElement?.getAttribute('contenteditable') === 'true') return;
 
         const ctrl = e.ctrlKey || e.metaKey;
-        if (ctrl && e.key === 'b') {
+        const k = e.key.toLowerCase();
+        if (ctrl && k === 'b') {
           e.preventDefault();
           if (typeof selectBackupFolder === 'function') selectBackupFolder();
           return;
         }
-        if (ctrl && e.key === 's') {
+        if (ctrl && k === 's') {
           e.preventDefault();
           showToast('info', 'StudioFlow salvează automat în IndexedDB.');
           return;
