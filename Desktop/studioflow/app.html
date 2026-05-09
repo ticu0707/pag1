@@ -3363,7 +3363,7 @@
       const scale = Math.max(THUMB_W / w, THUMB_H / h);
       const sw    = Math.round(THUMB_W / scale), sh = Math.round(THUMB_H / scale);
       const sx    = Math.round((w - sw) / 2),    sy = Math.round((h - sh) / 2);
-      tc.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, THUMB_W, THUMB_H);
+      tc.getContext('2d').drawImage(canvas, sx, sy, Math.min(sw, w), Math.min(sh, h), 0, 0, THUMB_W, THUMB_H);
       const thumb = await new Promise(res => tc.toBlob(res, 'image/jpeg', 0.80));
 
       return { imageBlob: blob, thumbnailBlob: thumb, imageWidth: w, imageHeight: h };
@@ -3454,10 +3454,9 @@
       showModal(`
         <div class="sf-modal-header">
           <h2 class="sf-modal-title">${item.title}</h2>
-          <button class="sf-btn sf-btn--secondary"
-            onclick="closeModal(); URL.revokeObjectURL('${url}')">✕</button>
+          <button class="sf-btn sf-btn--secondary" onclick="closeModal()">✕</button>
         </div>
-        <img src="${url}" alt="${item.title}"
+        <img src="${url}" alt="${item.title}" onload="URL.revokeObjectURL('${url}')"
           style="width:100%;max-height:65vh;object-fit:contain;border-radius:4px;display:block">
         <p style="margin-top:8px;font-size:12px;color:var(--sf-text-3)">
           ${item.imageWidth}×${item.imageHeight}px · ${(item.fileSize/1024).toFixed(0)} KB
