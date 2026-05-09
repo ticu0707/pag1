@@ -3974,7 +3974,300 @@
       showToast('success','Rating relație salvat.');
     }
   </script>
-  <script id="sf-f7">       /* M14 — Intel */     </script>
+  <script id="sf-f7">
+    // ── sf-f7: Intelligence Dashboard ─────────────────────────
+    async function renderIntelligence() {
+      const el = document.getElementById('page-intelligence');
+      if (!el) return;
+      if (!document.getElementById('sf-f7-css')) {
+        const s = document.createElement('style'); s.id='sf-f7-css';
+        s.textContent=`.f7-panel{padding:14px}.f7-panel-hd{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;font-size:13px;font-weight:700;color:var(--sf-primary)}.f7-csv-btn{font-size:11px;color:var(--sf-primary);background:none;border:1px solid var(--sf-border);border-radius:3px;padding:2px 8px;cursor:pointer}.f7-csv-btn:hover{background:var(--sf-primary);color:#fff}`;
+        document.head.appendChild(s);
+      }
+      const [leads, offers] = await Promise.all([AppState.db.getAll('leads'), AppState.db.getAll('offers')]);
+      const closed   = leads.filter(l=>['won','lost'].includes(l.status));
+      const pending  = leads.filter(l=>['won','lost'].includes(l.status)&&!l.debrief?.completed);
+      const debCnt   = leads.filter(l=>l.debrief?.completed).length;
+      AppState._f7data = {leads, offers, closed, pending};
+
+      el.innerHTML = `<div style="padding:20px 24px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+          <h1 style="font-size:20px;font-weight:700;color:var(--sf-primary)">Intelligence</h1>
+          ${pending.length?`<button class="sf-btn sf-btn--accent" onclick="_f7OpenDebrief()">Debrief pending (${pending.length}) →</button>`:''}
+        </div>
+        ${debCnt>=20&&debCnt<50?`<div style="background:#FFF8E1;border:1px solid #F9A825;border-radius:6px;padding:12px 16px;margin-bottom:16px;font-size:13px"><strong>💡 ${debCnt} debriefuri completate!</strong> Poți calibra ponderile Win Probability în Setări → Scoring.</div>`:''}
+        ${!closed.length?`<div class="sf-card" style="padding:40px;text-align:center;color:var(--sf-text-3)">Date insuficiente. Adaugă leads și completează debriefuri pentru a vedea statistici.</div>`:`
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div class="sf-card f7-panel">
+            <div class="f7-panel-hd"><span>Funnel leads pe stagiu</span><button onclick="_f7CsvFunnel()" class="f7-csv-btn">CSV</button></div>
+            <canvas id="c-funnel" width="420" height="180" style="max-width:100%"></canvas>
+          </div>
+          <div class="sf-card f7-panel">
+            <div class="f7-panel-hd"><span>Win rate per sursă</span><button onclick="_f7CsvSource()" class="f7-csv-btn">CSV</button></div>
+            <canvas id="c-source" width="420" height="180" style="max-width:100%"></canvas>
+          </div>
+          <div class="sf-card f7-panel">
+            <div class="f7-panel-hd"><span>Win rate per tipologie (ARH vs INT)</span><button onclick="_f7CsvTypo()" class="f7-csv-btn">CSV</button></div>
+            <div id="c-typo"></div>
+          </div>
+          <div class="sf-card f7-panel">
+            <div class="f7-panel-hd"><span>Lunar: oferte trimise vs valoare</span><button onclick="_f7CsvMonthly()" class="f7-csv-btn">CSV</button></div>
+            <canvas id="c-monthly" width="420" height="180" style="max-width:100%"></canvas>
+          </div>
+          <div class="sf-card f7-panel">
+            <div class="f7-panel-hd"><span>Ciclu mediu deal (zile)</span><button onclick="_f7CsvCycle()" class="f7-csv-btn">CSV</button></div>
+            <canvas id="c-cycle" width="420" height="180" style="max-width:100%"></canvas>
+          </div>
+          <div class="sf-card f7-panel">
+            <div class="f7-panel-hd"><span>Acuratețe scoring (% câștigat per categorie)</span><button onclick="_f7CsvScoring()" class="f7-csv-btn">CSV</button></div>
+            <canvas id="c-scoring" width="420" height="180" style="max-width:100%"></canvas>
+          </div>
+        </div>`}
+      </div>`;
+
+      if (closed.length) requestAnimationFrame(()=>{
+        _f7DrawFunnel(document.getElementById('c-funnel'), leads);
+        _f7DrawSource(document.getElementById('c-source'), closed);
+        _f7DrawTypo(document.getElementById('c-typo'), closed);
+        _f7DrawMonthly(document.getElementById('c-monthly'), leads, offers);
+        _f7DrawCycle(document.getElementById('c-cycle'), closed);
+        _f7DrawScoring(document.getElementById('c-scoring'), leads);
+      });
+    }
+
+    // ── Canvas helpers ────────────────────────────────────────
+    const _f7C={primary:'#1C3557',accent:'#C9963A',disc:'#4A90D9',design:'#E67E22',hot:'#E74C3C',cold:'#95A5A6'};
+    function _f7Rect(ctx,x,y,w,h,color){if(w<=0||h<=0)return;ctx.fillStyle=color;ctx.fillRect(x,y,w,h);}
+    function _f7Txt(ctx,text,x,y,{color='#555',size=10,align='left',bold=false}={}){
+      ctx.fillStyle=color;ctx.font=`${bold?'bold ':' '}${size}px "Segoe UI",Arial,sans-serif`;ctx.textAlign=align;ctx.fillText(String(text),x,y);
+    }
+
+    // ── Panel 1: Funnel (grouped bar) ─────────────────────────
+    function _f7DrawFunnel(canvas,leads){
+      if(!canvas)return;
+      const stages=['brief_primit','propunere_trimisa','negociere','contractat','pierdut'];
+      const labels=['Brief','Propunere','Negociere','Contractat','Pierdut'];
+      const ctx=canvas.getContext('2d'),W=canvas.width,H=canvas.height;
+      ctx.clearRect(0,0,W,H);
+      const dD=stages.map(s=>leads.filter(l=>l.funnelType==='discovery'&&l.pipelineStage===s).length);
+      const dG=stages.map(s=>leads.filter(l=>l.funnelType==='design'&&l.pipelineStage===s).length);
+      const maxV=Math.max(...dD.map((v,i)=>v+dG[i]),1);
+      const pad={t:20,r:10,b:28,l:20};
+      const cw=W-pad.l-pad.r,ch=H-pad.t-pad.b;
+      const bw=cw/stages.length,gp=4,bW=bw-gp*2;
+      stages.forEach((s,i)=>{
+        const x=pad.l+i*bw+gp;
+        const dH=(dD[i]/maxV)*ch,gH=(dG[i]/maxV)*ch;
+        _f7Rect(ctx,x,pad.t+(ch-dH),bW/2-1,dH,_f7C.disc);
+        _f7Rect(ctx,x+bW/2+1,pad.t+(ch-gH),bW/2-1,gH,_f7C.design);
+        _f7Txt(ctx,labels[i],x+bW/2,H-8,{align:'center',size:9});
+        const tot=dD[i]+dG[i];
+        if(tot>0)_f7Txt(ctx,tot,x+bW/2,pad.t+(ch-Math.max(dH,gH))-3,{align:'center',bold:true,color:'#333'});
+      });
+      ctx.fillStyle=_f7C.disc;ctx.fillRect(pad.l,6,10,8);_f7Txt(ctx,'Discovery',pad.l+14,14,{size:9,color:'#666'});
+      ctx.fillStyle=_f7C.design;ctx.fillRect(pad.l+80,6,10,8);_f7Txt(ctx,'Design',pad.l+94,14,{size:9,color:'#666'});
+    }
+
+    // ── Panel 2: Source win rate (horizontal bar) ─────────────
+    function _f7DrawSource(canvas,closed){
+      if(!canvas)return;
+      const ctx=canvas.getContext('2d'),W=canvas.width,H=canvas.height;
+      ctx.clearRect(0,0,W,H);
+      const LABELS={referral:'Referral',architect_net:'Rețea arhitecți',online_ad:'Online/Ad',walk_in:'Walk-in',other:'Alte surse'};
+      const sources={};
+      closed.forEach(l=>{const s=l.sourceType||'other';if(!sources[s])sources[s]={won:0,n:0};sources[s].n++;if(l.status==='won')sources[s].won++;});
+      const items=Object.entries(sources).map(([k,v])=>({label:LABELS[k]||k,rate:v.n?Math.round(v.won/v.n*100):0,n:v.n})).sort((a,b)=>b.rate-a.rate);
+      if(!items.length){_f7Txt(ctx,'Insuficiente date',W/2,H/2,{align:'center',color:'#aaa',size:13});return;}
+      const pad={t:8,r:70,b:8,l:120};
+      const rh=Math.min(26,(H-pad.t-pad.b)/items.length-5),bw=W-pad.l-pad.r;
+      items.forEach((it,i)=>{
+        const y=pad.t+i*(rh+6);
+        _f7Txt(ctx,it.label,pad.l-6,y+rh/2+4,{align:'right',size:10});
+        ctx.fillStyle='#eee';ctx.fillRect(pad.l,y,bw,rh);
+        _f7Rect(ctx,pad.l,y,(it.rate/100)*bw,rh,_f7C.accent);
+        _f7Txt(ctx,`${it.rate}% (n=${it.n})`,pad.l+bw+6,y+rh/2+4,{size:10});
+      });
+    }
+
+    // ── Panel 3: Typology heatmap (HTML table) ────────────────
+    function _f7DrawTypo(container,closed){
+      if(!container)return;
+      const TYPOS=['T1','T2','T3','T4','T5','T6'];
+      const cell=(t,f)=>{const r=closed.filter(l=>l.typology===t&&l.funnelType===f);const w=r.filter(l=>l.status==='won').length;return{rate:r.length?Math.round(w/r.length*100):null,n:r.length};};
+      const clr=r=>r===null?'#f5f5f3':r>=60?'#d4edda':r>=35?'#fff3cd':'#f8d7da';
+      container.innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:11px;margin-top:4px">
+        <thead><tr><th style="padding:4px;text-align:left;color:#666"></th>${TYPOS.map(t=>`<th style="padding:4px;text-align:center;color:#666;font-weight:600">${t}</th>`).join('')}</tr></thead>
+        <tbody>${['discovery','design'].map(f=>`<tr>
+          <td style="padding:4px 6px;font-weight:700;color:var(--sf-primary);font-size:11px">${f==='discovery'?'ARH':'INT'}</td>
+          ${TYPOS.map(t=>{const d=cell(t,f);return`<td style="padding:6px 2px;text-align:center;background:${clr(d.rate)};border-radius:3px;border:2px solid #fff">
+            <div style="font-weight:700;font-size:12px">${d.rate!==null?d.rate+'%':'—'}</div>
+            <div style="font-size:9px;color:#888">n=${d.n}</div></td>`;}).join('')}</tr>`).join('')}
+        </tbody></table>`;
+    }
+
+    // ── Panel 4: Monthly dual-axis line ───────────────────────
+    function _f7DrawMonthly(canvas,leads,offers){
+      if(!canvas)return;
+      const ctx=canvas.getContext('2d'),W=canvas.width,H=canvas.height;
+      ctx.clearRect(0,0,W,H);
+      const months=[];
+      for(let i=5;i>=0;i--){const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-i);months.push({key:d.toISOString().slice(0,7),label:d.toLocaleDateString('ro-RO',{month:'short'})});}
+      const spm=months.map(m=>offers.filter(o=>o.sentAt&&o.sentAt.slice(0,7)===m.key).length);
+      const vpm=months.map(m=>leads.filter(l=>l.status==='won'&&(l.stageEnteredAt||'').slice(0,7)===m.key).reduce((s,l)=>s+(l.wonContractValue||0),0));
+      const maxS=Math.max(...spm,1),maxV=Math.max(...vpm,1);
+      const pad={t:20,r:55,b:22,l:28};
+      const cw=W-pad.l-pad.r,ch=H-pad.t-pad.b;
+      const step=cw/(months.length-1||1);
+      ctx.strokeStyle='#eee';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pad.l,pad.t+ch/2);ctx.lineTo(pad.l+cw,pad.t+ch/2);ctx.stroke();
+      const drawLine=(data,maxD,color)=>{
+        ctx.beginPath();ctx.strokeStyle=color;ctx.lineWidth=2;
+        data.forEach((v,i)=>{const x=pad.l+i*step,y=pad.t+ch-(v/maxD)*ch;i===0?ctx.moveTo(x,y):ctx.lineTo(x,y);});ctx.stroke();
+        ctx.fillStyle=color;data.forEach((v,i)=>{ctx.beginPath();ctx.arc(pad.l+i*step,pad.t+ch-(v/maxD)*ch,3,0,Math.PI*2);ctx.fill();});
+      };
+      drawLine(spm,maxS,_f7C.disc);drawLine(vpm,maxV,_f7C.accent);
+      months.forEach((m,i)=>_f7Txt(ctx,m.label,pad.l+i*step,H-6,{align:'center',size:9}));
+      _f7Txt(ctx,maxS,pad.l-4,pad.t+12,{align:'right',size:9,color:_f7C.disc});
+      _f7Txt(ctx,(maxV/1000).toFixed(0)+'k€',W-2,pad.t+12,{align:'right',size:9,color:_f7C.accent});
+      ctx.fillStyle=_f7C.disc;ctx.fillRect(pad.l,6,20,3);_f7Txt(ctx,'Oferte trimise',pad.l+24,12,{size:9,color:'#666'});
+      ctx.fillStyle=_f7C.accent;ctx.fillRect(pad.l+120,6,20,3);_f7Txt(ctx,'Val. contractată',pad.l+144,12,{size:9,color:'#666'});
+    }
+
+    // ── Panel 5: Deal cycle (horizontal bar) ─────────────────
+    function _f7DrawCycle(canvas,closed){
+      if(!canvas)return;
+      const ctx=canvas.getContext('2d'),W=canvas.width,H=canvas.height;
+      ctx.clearRect(0,0,W,H);
+      const won=closed.filter(l=>l.status==='won'&&l.stageEnteredAt&&l.createdAt);
+      const avg=arr=>arr.length?Math.round(arr.reduce((s,l)=>s+Math.max(0,daysDiff(l.createdAt,l.stageEnteredAt)),0)/arr.length):null;
+      const items=[{label:'Discovery',val:avg(won.filter(l=>l.funnelType==='discovery')),n:won.filter(l=>l.funnelType==='discovery').length,color:_f7C.disc},{label:'Design',val:avg(won.filter(l=>l.funnelType==='design')),n:won.filter(l=>l.funnelType==='design').length,color:_f7C.design}].filter(it=>it.val!==null);
+      if(!items.length){_f7Txt(ctx,'Insuficiente date',W/2,H/2,{align:'center',color:'#aaa',size:13});return;}
+      const maxV=Math.max(...items.map(it=>it.val),1);
+      const pad={t:30,r:20,b:20,l:100};
+      const rh=36,gap=20,bw=W-pad.l-pad.r;
+      items.forEach((it,i)=>{
+        const y=pad.t+i*(rh+gap);
+        _f7Txt(ctx,it.label,pad.l-6,y+rh/2+5,{align:'right',size:12,color:'#444'});
+        ctx.fillStyle='#eee';ctx.fillRect(pad.l,y,bw,rh);
+        _f7Rect(ctx,pad.l,y,(it.val/maxV)*bw,rh,it.color);
+        _f7Txt(ctx,`${it.val} zile (n=${it.n})`,pad.l+(it.val/maxV)*bw+8,y+rh/2+5,{size:11,color:'#333',bold:true});
+      });
+    }
+
+    // ── Panel 6: Scoring accuracy (horizontal bars) ───────────
+    function _f7DrawScoring(canvas,leads){
+      if(!canvas)return;
+      const ctx=canvas.getContext('2d'),W=canvas.width,H=canvas.height;
+      ctx.clearRect(0,0,W,H);
+      const closed=leads.filter(l=>['won','lost'].includes(l.status));
+      const pct=arr=>arr.length?Math.round(arr.filter(l=>l.status==='won').length/arr.length*100):null;
+      const items=[
+        {label:'HOT ≥105',arr:closed.filter(l=>(l.scoreTotal||0)>=105),color:_f7C.hot},
+        {label:'WARM 70–104',arr:closed.filter(l=>(l.scoreTotal||0)>=70&&(l.scoreTotal||0)<105),color:_f7C.accent},
+        {label:'COLD <70',arr:closed.filter(l=>(l.scoreTotal||0)<70),color:_f7C.cold}
+      ];
+      const pad={t:16,r:20,b:16,l:110};
+      const rh=30,gap=12,bw=W-pad.l-pad.r-80;
+      const totalH=items.length*(rh+gap)-gap;
+      const startY=(H-totalH)/2+pad.t-16;
+      items.forEach((it,i)=>{
+        const y=startY+i*(rh+gap),rate=pct(it.arr);
+        _f7Txt(ctx,it.label,pad.l-6,y+rh/2+5,{align:'right',size:11,color:'#444'});
+        ctx.fillStyle='#eee';ctx.fillRect(pad.l,y,bw,rh);
+        if(rate!==null){_f7Rect(ctx,pad.l,y,(rate/100)*bw,rh,it.color);_f7Txt(ctx,`${rate}% (n=${it.arr.length})`,pad.l+bw+8,y+rh/2+5,{size:10});}
+        else _f7Txt(ctx,`— (n=${it.arr.length})`,pad.l+bw+8,y+rh/2+5,{size:10,color:'#aaa'});
+      });
+    }
+
+    // ── Debrief dialog ────────────────────────────────────────
+    function _f7OpenDebrief(){
+      const pending=AppState._f7data?.pending||[];
+      if(!pending.length){showToast('info','Niciun debrief pending.');return;}
+      const lead=pending[0];
+      showModal(`<div style="padding:20px;min-width:340px">
+        <h2 style="font-size:15px;font-weight:700;color:var(--sf-primary);margin-bottom:4px">Debrief: ${lead.projectName||'—'}</h2>
+        <p style="font-size:12px;color:var(--sf-text-3);margin-bottom:14px">Status: <strong>${lead.status==='won'?'Câștigat':'Pierdut'}</strong></p>
+        <label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px">Scorul a fost precis?</label>
+        <div style="display:flex;gap:12px;margin-bottom:14px">
+          <label><input type="radio" name="db-score" value="true" checked> Da</label>
+          <label><input type="radio" name="db-score" value="false"> Nu</label>
+        </div>
+        <label style="font-size:13px;font-weight:600;display:block;margin-bottom:6px">Prețul a fost precis?</label>
+        <div style="display:flex;gap:12px;margin-bottom:14px">
+          <label><input type="radio" name="db-price" value="true" checked> Da</label>
+          <label><input type="radio" name="db-price" value="false"> Nu</label>
+          <label><input type="radio" name="db-price" value="unknown"> Nu știu</label>
+        </div>
+        <div id="db-dir-wrap" style="display:none;margin-bottom:14px">
+          <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px">Direcție preț:</label>
+          <select id="db-price-dir" class="sf-input" style="width:auto">
+            <option value="too_high">Prea mare</option><option value="too_low">Prea mic</option>
+          </select>
+        </div>
+        <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px">Ce a funcționat? <em style="font-weight:400;color:#aaa">(opțional)</em></label>
+        <textarea id="db-worked" class="sf-input" rows="2" style="width:100%;margin-bottom:12px;resize:vertical"></textarea>
+        <label style="font-size:13px;font-weight:600;display:block;margin-bottom:4px">Ce a eșuat?${lead.status==='lost'?' <em style="color:var(--sf-cold)">*obligatoriu</em>':' <em style="font-weight:400;color:#aaa">(opțional)</em>'}</label>
+        <textarea id="db-failed" class="sf-input" rows="2" style="width:100%;margin-bottom:16px;resize:vertical"></textarea>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button class="sf-btn" onclick="closeModal()">Amânare</button>
+          <button class="sf-btn sf-btn--primary" onclick="_f7SaveDebrief('${lead.id}')">Salvează</button>
+        </div>
+      </div>`);
+      document.querySelectorAll('input[name="db-price"]').forEach(r=>r.addEventListener('change',()=>{
+        const v=document.querySelector('input[name="db-price"]:checked')?.value;
+        document.getElementById('db-dir-wrap').style.display=v==='false'?'block':'none';
+      }));
+    }
+
+    async function _f7SaveDebrief(leadId){
+      const scoreOk=document.querySelector('input[name="db-score"]:checked')?.value==='true';
+      const priceVal=document.querySelector('input[name="db-price"]:checked')?.value;
+      const priceDir=document.getElementById('db-price-dir')?.value||null;
+      const worked=document.getElementById('db-worked')?.value?.trim()||'';
+      const failed=document.getElementById('db-failed')?.value?.trim()||'';
+      const lead=await AppState.db.get('leads',leadId);
+      if(!lead){closeModal();return;}
+      if(lead.status==='lost'&&!failed){showToast('warning','Completează câmpul "Ce a eșuat?".');return;}
+      await AppState.db.put('leads',{...lead,debrief:{completed:true,scoringAccurate:scoreOk,priceAccurate:priceVal==='true',priceDirection:priceVal==='false'?priceDir:null,whatWorked:worked,whatFailed:failed,completedAt:new Date().toISOString()},updatedAt:new Date().toISOString()});
+      closeModal();showToast('success','Debrief salvat.');
+      const all=await AppState.db.getAll('leads'),n=all.filter(l=>l.debrief?.completed).length;
+      if(n===20)showToast('info','💡 20 debriefuri completate! Calibrează criteriile în Setări → Scoring.');
+      if(n===50)showToast('info','🎯 50 debriefuri! Price Intelligence devine mai precis automat.');
+      renderIntelligence();
+    }
+
+    // ── CSV export ────────────────────────────────────────────
+    function _f7Csv(fname,rows){
+      const csv='﻿'+rows.map(r=>r.map(c=>typeof c==='string'&&c.includes(',')? `"${c}"`:c).join(',')).join('\n');
+      const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download=fname;a.click();
+    }
+    function _f7CsvFunnel(){
+      const l=AppState._f7data?.leads||[];
+      const s=['brief_primit','propunere_trimisa','negociere','contractat','pierdut','retras'];
+      _f7Csv('funnel.csv',[['Stagiu','Discovery','Design','Total'],...s.map(st=>[st,l.filter(x=>x.funnelType==='discovery'&&x.pipelineStage===st).length,l.filter(x=>x.funnelType==='design'&&x.pipelineStage===st).length,l.filter(x=>x.pipelineStage===st).length])]);
+    }
+    function _f7CsvSource(){
+      const c=AppState._f7data?.closed||[],src={};
+      c.forEach(l=>{const s=l.sourceType||'other';if(!src[s])src[s]={won:0,n:0};src[s].n++;if(l.status==='won')src[s].won++;});
+      _f7Csv('source.csv',[['Sursa','Won','Total','Win rate %'],...Object.entries(src).map(([k,v])=>[k,v.won,v.n,v.n?Math.round(v.won/v.n*100):0])]);
+    }
+    function _f7CsvTypo(){
+      const c=AppState._f7data?.closed||[],TYPOS=['T1','T2','T3','T4','T5','T6'];
+      _f7Csv('typology.csv',[['Tipologie','ARH Won','ARH N','INT Won','INT N'],...TYPOS.map(t=>{const d=c.filter(l=>l.typology===t&&l.funnelType==='discovery'),g=c.filter(l=>l.typology===t&&l.funnelType==='design');return[t,d.filter(l=>l.status==='won').length,d.length,g.filter(l=>l.status==='won').length,g.length];})]);
+    }
+    function _f7CsvMonthly(){
+      const{leads=[],offers=[]}=AppState._f7data||{};
+      const months=[];for(let i=5;i>=0;i--){const d=new Date();d.setDate(1);d.setMonth(d.getMonth()-i);months.push(d.toISOString().slice(0,7));}
+      _f7Csv('monthly.csv',[['Luna','Oferte trimise','Valoare contractata EUR'],...months.map(m=>[m,offers.filter(o=>o.sentAt&&o.sentAt.slice(0,7)===m).length,leads.filter(l=>l.status==='won'&&(l.stageEnteredAt||'').slice(0,7)===m).reduce((s,l)=>s+(l.wonContractValue||0),0)])]);
+    }
+    function _f7CsvCycle(){
+      const won=(AppState._f7data?.closed||[]).filter(l=>l.status==='won'&&l.stageEnteredAt&&l.createdAt);
+      _f7Csv('cycle.csv',[['Proiect','Funnel','Zile brief-contract'],...won.map(l=>[l.projectName||'—',l.funnelType,Math.max(0,daysDiff(l.createdAt,l.stageEnteredAt))])]);
+    }
+    function _f7CsvScoring(){
+      const l=AppState._f7data?.leads||[],c=l.filter(x=>['won','lost'].includes(x.status));
+      _f7Csv('scoring.csv',[['Categorie','Won','Total','Win rate %'],...[['HOT ≥105',c.filter(x=>(x.scoreTotal||0)>=105)],['WARM 70-104',c.filter(x=>(x.scoreTotal||0)>=70&&(x.scoreTotal||0)<105)],['COLD <70',c.filter(x=>(x.scoreTotal||0)<70)]].map(([cat,arr])=>[cat,arr.filter(x=>x.status==='won').length,arr.length,arr.length?Math.round(arr.filter(x=>x.status==='won').length/arr.length*100):0])]);
+    }
+  </script>
   <script id="sf-f10">      /* M15 — Settings */  </script>
   <script id="sf-export">   /* M16 — Export */    </script>
   <script id="sf-shortcuts">/* M17 — Keys */      </script>
