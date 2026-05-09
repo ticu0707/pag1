@@ -3813,7 +3813,167 @@
       if (inf) inf.textContent = n ? `${n} imagini selectate` : 'Nicio imagine selectată';
     }
   </script>
-  <script id="sf-f6">       /* M13 — Clients */   </script>
+  <script id="sf-f6">
+    // ── Client list ──────────────────────────────────────────────────
+    async function renderClients() {
+      const el = document.getElementById('page-clients');
+      if (!el) return;
+      const [clients, leads] = await Promise.all([
+        AppState.db.getAll('clients'), AppState.db.getAll('leads')
+      ]);
+      const leadsMap = {};
+      leads.forEach(l => { (leadsMap[l.clientId] = leadsMap[l.clientId]||[]).push(l); });
+      clients.sort((a,b)=>(b.lastDealDate||b.createdAt||'').localeCompare(a.lastDealDate||a.createdAt||''));
+
+      el.innerHTML = `<div class="sf-page-header">
+        <h2 class="sf-page-title">Clienți (${clients.length})</h2></div>
+        ${!clients.length
+          ? '<p style="color:var(--sf-text-3);padding:20px 0">Niciun client. Clienții se creează automat la adăugarea unui Lead.</p>'
+          : `<div class="sf-table-wrap"><table class="sf-table">
+          <thead><tr><th>Nume</th><th>Tip</th><th>Proiecte</th><th>Valoare contractată (EUR)</th><th>Ultima collab.</th><th>Relație</th><th></th></tr></thead>
+          <tbody>${clients.map(c=>{
+            const cLeads = leadsMap[c.id]||[];
+            const won    = cLeads.filter(l=>l.status==='won').length;
+            const ltv    = c.totalContractsValue||0;
+            return `<tr>
+              <td style="font-weight:600">${c.name}</td>
+              <td style="font-size:12px">${c.type==='company'?'Companie':'Persoană fiz.'}</td>
+              <td style="font-size:12px">${cLeads.length} total · <strong>${won}</strong> câștigate</td>
+              <td style="font-weight:600">${ltv?ltv.toLocaleString('ro-RO')+' €':'—'}</td>
+              <td style="font-size:12px;color:var(--sf-text-2)">${c.lastDealDate?c.lastDealDate.slice(0,10):'—'}</td>
+              <td>${_f6Stars(c.relationshipRating||0)}</td>
+              <td><button class="sf-btn sf-btn--secondary" style="font-size:11px;padding:3px 8px"
+                onclick="renderClientDetail('${c.id}')">→ Detalii</button></td>
+            </tr>`;}).join('')}
+          </tbody></table></div>`}`;
+    }
+
+    // ── Client 360 detail ─────────────────────────────────────────────
+    async function renderClientDetail(clientId) {
+      const el = document.getElementById('page-clients');
+      if (!el) return;
+      const [client, allLeads, allOffers] = await Promise.all([
+        AppState.db.get('clients', clientId),
+        AppState.db.getAll('leads'),
+        AppState.db.getAll('offers')
+      ]);
+      if (!client) { renderClients(); return; }
+
+      const cLeads     = allLeads.filter(l=>l.clientId===clientId);
+      const wonLeads   = cLeads.filter(l=>l.status==='won');
+      const ltv        = client.totalContractsValue||0;
+      const cnt        = client.totalContractsCount||0;
+      const cOfferIds  = new Set(cLeads.map(l=>l.id));
+      const sentOffers = allOffers.filter(o=>cOfferIds.has(o.leadId)&&o.isLatestRevision!==false&&
+                         ['sent','negotiating','won','lost'].includes(o.status));
+      const convRate   = sentOffers.length ? Math.round(wonLeads.length/sentOffers.length*100) : null;
+
+      // Re-engagement alert
+      const reengDays    = client.reengagementAlertDays||365;
+      const lastDeal     = client.lastDealDate ? new Date(client.lastDealDate) : null;
+      const daysSinceLast= lastDeal ? daysDiff(lastDeal, new Date()) : null;
+      const showReeng    = daysSinceLast!==null && daysSinceLast>reengDays;
+
+      AppState._f6Rating = client.relationshipRating||0;
+      const sorted = [...cLeads].sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
+      const SL = { active:'Activ', won:'Câștigat', lost:'Pierdut', withdrawn:'Retras' };
+      const SC = { active:'info', won:'hot', lost:'cold', withdrawn:'neutral' };
+
+      el.innerHTML = `
+        <div class="sf-page-header">
+          <div style="display:flex;align-items:center;gap:10px">
+            <button class="sf-btn sf-btn--secondary" onclick="renderClients()">← Clienți</button>
+            <div>
+              <h2 class="sf-page-title" style="font-size:15px;margin:0">${client.name}</h2>
+              <p class="sf-page-subtitle" style="margin:2px 0">${client.type==='company'?'Companie':'Persoană fizică'}${client.email?' · '+client.email:''}${client.phone?' · '+client.phone:''}</p>
+            </div>
+          </div>
+        </div>
+
+        ${showReeng?`<div style="background:#FEF3C7;border:1px solid #F59E0B;border-radius:var(--sf-r);
+          padding:10px 16px;margin-bottom:16px;display:flex;align-items:center;gap:8px">
+          <span style="font-size:18px">⚠️</span>
+          <span style="font-size:13px">Nicio colaborare de <strong>${daysSinceLast} zile</strong> — client candidat la re-engagement (prag: ${reengDays} zile).</span>
+        </div>`:''}
+
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px">
+          <div class="sf-card" style="text-align:center;padding:14px 10px">
+            <div style="font-size:11px;color:var(--sf-text-3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Valoare totală</div>
+            <div style="font-size:20px;font-weight:700;color:var(--sf-primary)">${ltv?ltv.toLocaleString('ro-RO')+' €':'—'}</div>
+            <div style="font-size:11px;color:var(--sf-text-3);margin-top:2px">EUR contractat</div>
+          </div>
+          <div class="sf-card" style="text-align:center;padding:14px 10px">
+            <div style="font-size:11px;color:var(--sf-text-3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Proiecte</div>
+            <div style="font-size:20px;font-weight:700;color:var(--sf-primary)">${cnt}</div>
+            <div style="font-size:11px;color:var(--sf-text-3);margin-top:2px">câștigate din ${cLeads.length}</div>
+          </div>
+          <div class="sf-card" style="text-align:center;padding:14px 10px">
+            <div style="font-size:11px;color:var(--sf-text-3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Conv. rate</div>
+            <div style="font-size:20px;font-weight:700;color:var(--sf-primary)">${convRate!==null?convRate+'%':'—'}</div>
+            <div style="font-size:11px;color:var(--sf-text-3);margin-top:2px">${sentOffers.length} oferte trimise</div>
+          </div>
+          <div class="sf-card" style="text-align:center;padding:14px 10px">
+            <div style="font-size:11px;color:var(--sf-text-3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Relație</div>
+            <div id="f6-stars" style="font-size:22px;line-height:1.3;cursor:pointer">${_f6StarsEdit(clientId,client.relationshipRating||0)}</div>
+            <div style="font-size:11px;color:var(--sf-text-3);margin-top:2px">click pentru rating</div>
+          </div>
+        </div>
+
+        <div class="sf-card">
+          <h3 style="font-size:13px;font-weight:700;color:var(--sf-primary);margin-bottom:12px">Istoric proiecte (${cLeads.length})</h3>
+          ${!sorted.length?'<p style="color:var(--sf-text-3)">Niciun proiect înregistrat.</p>'
+            :sorted.map(l=>{
+              const amt = l.wonContractValue?`<span style="font-weight:600;color:var(--sf-hot);margin-left:4px">${l.wonContractValue.toLocaleString('ro-RO')} €</span>`:'';
+              const dot = `background:${l.status==='won'?'var(--sf-hot)':l.status==='lost'?'var(--sf-cold)':'var(--sf-primary)'}`;
+              return `<div style="display:flex;gap:12px;padding:10px 0;border-bottom:1px solid var(--sf-border)">
+                <div style="width:8px;height:8px;border-radius:50%;${dot};margin-top:5px;flex-shrink:0"></div>
+                <div style="flex:1">
+                  <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap">
+                    <span style="font-weight:600;font-size:13px">${l.projectName||'—'}</span>
+                    <span class="sf-badge sf-badge--${SC[l.status]||'neutral'}">${SL[l.status]||l.status}</span>${amt}
+                  </div>
+                  <div style="font-size:11px;color:var(--sf-text-3);margin-top:2px">
+                    ${l.funnelType==='discovery'?'Discovery':'Design'} · ${l.typology||'—'} · ${l.area||'?'} mp · ${(l.createdAt||'').slice(0,10)}
+                  </div>
+                </div>
+              </div>`;}).join('')}
+        </div>
+
+        ${client.notes?`<div class="sf-card" style="margin-top:12px">
+          <h3 style="font-size:13px;font-weight:700;color:var(--sf-primary);margin-bottom:8px">Note</h3>
+          <p style="font-size:13px;color:var(--sf-text-1);white-space:pre-wrap">${client.notes}</p>
+        </div>`:''}`;
+    }
+
+    // ── Star rating helpers ───────────────────────────────────────────
+    function _f6Stars(r) {
+      return [1,2,3,4,5].map(i=>`<span style="color:${i<=r?'#C9963A':'#ddd'};font-size:15px">★</span>`).join('');
+    }
+
+    function _f6StarsEdit(clientId, r) {
+      return [1,2,3,4,5].map(i=>
+        `<span onclick="_f6SetRating('${clientId}',${i})"
+          onmouseover="_f6Hover('${clientId}',${i})"
+          onmouseout="_f6Hover('${clientId}',AppState._f6Rating)"
+          style="color:${i<=r?'#C9963A':'#ddd'};user-select:none">★</span>`
+      ).join('');
+    }
+
+    function _f6Hover(clientId, r) {
+      const el = document.getElementById('f6-stars');
+      if (el) el.innerHTML = _f6StarsEdit(clientId, r);
+    }
+
+    async function _f6SetRating(clientId, r) {
+      AppState._f6Rating = r;
+      const el = document.getElementById('f6-stars');
+      if (el) el.innerHTML = _f6StarsEdit(clientId, r);
+      const client = await AppState.db.get('clients', clientId);
+      if (!client) return;
+      await AppState.db.put('clients', {...client, relationshipRating:r, updatedAt:new Date().toISOString()});
+      showToast('success','Rating relație salvat.');
+    }
+  </script>
   <script id="sf-f7">       /* M14 — Intel */     </script>
   <script id="sf-f10">      /* M15 — Settings */  </script>
   <script id="sf-export">   /* M16 — Export */    </script>
