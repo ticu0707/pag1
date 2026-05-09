@@ -1337,7 +1337,442 @@
       }
     }
   </script>
-  <script id="sf-f0">       /* M4 — Setup */      </script>
+  <script id="sf-f0">
+    // ── State wizard ────────────────────────────────────────
+    const SetupData = {
+      step: 1, studioName: 'HERTZ Studio', address: '', phone: '',
+      email: '', website: '', vatId: '', logoBlob: null,
+      hourlyRate: 65, weeklyHours: 40, activeProjects: 8
+    };
+
+    const SOURCE_LOOKUP = {
+      'recomandare colaboratori': 'recomandare_colaboratori',
+      'recomandare cunostinte':   'recomandare_cunostinte',
+      'client recurent':          'client_recurent',
+      'contact direct':           'contact_direct',
+      'recomandare clienti':      'recomandare_clienti',
+    };
+
+    const HERTZ_DEFAULT_RATES = {
+      arch: {
+        T1:{kDefault:0.9, refArea:100},  T2:{kDefault:1.1,  refArea:250},
+        T3:{kDefault:1.4, refArea:3000}, T4:{kDefault:1.75, refArea:10000},
+        T5:{kDefault:1.75,refArea:8000}, T6:{kDefault:2.25, refArea:20000}
+      },
+      int: {
+        T1:{kDefault:1.1, refArea:500}, T2:{kDefault:1.0, refArea:100},
+        T3:{kDefault:1.2, refArea:100}, T4:{kDefault:1.45,refArea:200},
+        T5:{kDefault:1.6, refArea:250}, T6:{kDefault:1.7, refArea:250}
+      },
+      archPhases: [
+        {id:'concept_preliminar',name:'Concept preliminar/schematic',baseHours:60,alpha:0.60},
+        {id:'concept_detaliat',  name:'Concept detaliat',            baseHours:80,alpha:0.70},
+        {id:'avizare',           name:'Avizare',                     baseHours:40,alpha:0.80},
+        {id:'autorizare_dtac',   name:'Autorizare (DTAC)',           baseHours:60,alpha:0.85},
+        {id:'proiect_tehnic',    name:'Proiect tehnic (PT)',         baseHours:80,alpha:0.90},
+        {id:'detalii_executie',  name:'Detalii execuție (DE)',       baseHours:60,alpha:0.95},
+        {id:'asistenta_tehnica', name:'Asistență tehnică',           baseHours:20,alpha:0.50}
+      ],
+      intPhases: [
+        {id:'A1_concept',   name:'A.1 Concept + Moodboard',baseHours:24,alpha:0.50},
+        {id:'A2_3d',        name:'A.2 Simulări 3D',         baseHours:48,alpha:0.80},
+        {id:'A3_tehnic',    name:'A.3 Proiect tehnic',      baseHours:48,alpha:0.90},
+        {id:'A4_coordonare',name:'A.4 Coordonare',          baseHours:24,alpha:0.60},
+        {id:'A5_mobilier',  name:'A.5 DT Mobilier',         baseHours:32,alpha:0.90},
+        {id:'A6_semna',     name:'A.6 Semnalistică',        baseHours:20,alpha:0.80},
+        {id:'A7_releveu',   name:'A.7 Releveu',             baseHours:16,alpha:0.50},
+        {id:'B1_bugetare',  name:'B.1 Bugetare',            baseHours:16,alpha:0.50},
+        {id:'B2_asistenta', name:'B.2 Asistență tehnică',   baseHours:20,alpha:0.50},
+        {id:'D1_grafica',   name:'D.1 Grafică',             baseHours:24,alpha:0.60}
+      ],
+      archSpecialConditions: [
+        {id:'patrimoniu_simplu', name:'Patrimoniu simplu',    delta:0.20},
+        {id:'patrimoniu_complex',name:'Patrimoniu complex',   delta:0.35},
+        {id:'zona_protejata',    name:'Zonă protejată',       delta:0.20},
+        {id:'subsol_2',          name:'Subsol 2 niveluri',    delta:0.20},
+        {id:'subsol_3plus',      name:'Subsol 3+ niveluri',   delta:0.35},
+        {id:'teren_dificil',     name:'Teren dificil',        delta:0.20},
+        {id:'peisaj',            name:'Peisaj',               delta:0.15},
+        {id:'confidential',      name:'Confidențial',         delta:0.15},
+        {id:'unicat',            name:'Unicat',               delta:0.60},
+        {id:'avizare_dificila',  name:'Avizare dificilă',     delta:0.25}
+      ],
+      intSpecialConditions: [
+        {id:'int_patrimoniu',       name:'Spațiu patrimoniu interior',         delta:0.20},
+        {id:'int_tehnic_complex',   name:'Spațiu tehnic complex (MEP)',         delta:0.20},
+        {id:'int_mobilier_complet', name:'Mobilier integral proiectat',         delta:0.30},
+        {id:'int_fast_track',       name:'Execuție fast-track (<3 luni)',        delta:0.25},
+        {id:'int_spatiu_ocupat',    name:'Spațiu funcțional în lucru',          delta:0.20},
+        {id:'int_fara_doc',         name:'Fără documentație existentă',         delta:0.15},
+        {id:'int_furnizori_int',    name:'Coordonare furnizori internaționali', delta:0.15},
+        {id:'int_certificare',      name:'Certificare ambiental (WELL/BREEAM)',  delta:0.20}
+      ],
+      archGamma: [{maxArea:250,gamma:1.15},{maxArea:800,gamma:1.05},
+                  {maxArea:3000,gamma:1.00},{maxArea:10000,gamma:0.90},{maxArea:null,gamma:0.80}],
+      intGamma:  [{maxArea:50,gamma:1.20},{maxArea:150,gamma:1.10},
+                  {maxArea:500,gamma:1.00},{maxArea:1500,gamma:0.90},{maxArea:null,gamma:0.80}]
+    };
+
+    // ── Wizard ───────────────────────────────────────────────
+    function runSetupWizard() {
+      const c = document.getElementById('page-setup');
+      c.hidden = false;
+      SetupData.step = 1;
+      renderSetupStep(1);
+    }
+
+    function renderSetupStep(n) {
+      SetupData.step = n;
+      const labels = ['Studio','Logo','Rate Card','Capacitate','Import','Gata!'];
+      const dots = labels.map((_,i) =>
+        `<div class="sf-wizard__step-dot ${i+1===n?'active':i+1<n?'done':''}"></div>`).join('');
+
+      let body = '', backBtn = '', nextBtn = '';
+      if (n > 1 && n < 6)
+        backBtn = `<button class="sf-btn sf-btn--secondary" onclick="renderSetupStep(${n-1})">← Înapoi</button>`;
+      else backBtn = '<span></span>';
+
+      if (n === 1) {
+        body = `
+          <div class="sf-form-group"><label class="sf-label">Nume Studio *</label>
+            <input id="ws-name" class="sf-input" value="${SetupData.studioName}"></div>
+          <div class="sf-form-group"><label class="sf-label">Adresă</label>
+            <input id="ws-addr" class="sf-input" value="${SetupData.address}"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="sf-form-group"><label class="sf-label">Telefon</label>
+              <input id="ws-phone" class="sf-input" value="${SetupData.phone}"></div>
+            <div class="sf-form-group"><label class="sf-label">Email</label>
+              <input id="ws-email" class="sf-input" type="email" value="${SetupData.email}"></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="sf-form-group"><label class="sf-label">Website</label>
+              <input id="ws-web" class="sf-input" value="${SetupData.website}"></div>
+            <div class="sf-form-group"><label class="sf-label">CUI</label>
+              <input id="ws-vat" class="sf-input" value="${SetupData.vatId}"></div>
+          </div>`;
+        nextBtn = `<button class="sf-btn sf-btn--primary" onclick="nextSetupStep(1)">Continuă →</button>`;
+
+      } else if (n === 2) {
+        body = `
+          <p class="sf-wizard__subtitle">Logo-ul studioului (max 200KB, comprimat automat)</p>
+          <div style="text-align:center;margin-bottom:16px">
+            <div id="ws-logo-preview" style="width:80px;height:80px;border-radius:50%;
+              background:var(--sf-primary);color:white;font-size:28px;font-weight:700;
+              display:inline-flex;align-items:center;justify-content:center;overflow:hidden">
+              ${SetupData.logoBlob ? '' : 'H'}
+            </div>
+          </div>
+          <div class="sf-form-group">
+            <input type="file" id="ws-logo" class="sf-input" accept="image/*" onchange="onLogoChange(this)">
+          </div>`;
+        nextBtn = `<button class="sf-btn sf-btn--primary" onclick="renderSetupStep(3)">Continuă →</button>`;
+        if (SetupData.logoBlob) {
+          setTimeout(() => {
+            const p = document.getElementById('ws-logo-preview');
+            if (p) p.innerHTML = `<img src="${URL.createObjectURL(SetupData.logoBlob)}"
+              style="width:100%;height:100%;object-fit:contain">`;
+          }, 0);
+        }
+
+      } else if (n === 3) {
+        body = `
+          <div class="sf-form-group"><label class="sf-label">Tarif orar (EUR/h)</label>
+            <div style="display:flex;gap:8px;align-items:center">
+              <button class="sf-btn sf-btn--secondary" onclick="adjustRate(-5)">−5</button>
+              <input id="ws-rate" class="sf-input" type="number" min="20" max="500"
+                value="${SetupData.hourlyRate}" style="text-align:center;font-size:22px;font-weight:700;flex:1">
+              <button class="sf-btn sf-btn--secondary" onclick="adjustRate(5)">+5</button>
+            </div>
+          </div>
+          <label style="display:flex;gap:8px;align-items:center;margin-top:12px;font-size:13px">
+            <input type="checkbox" checked disabled>
+            Pre-populate cu valorile HERTZ Studio (recomandat)
+          </label>`;
+        nextBtn = `<button class="sf-btn sf-btn--primary" onclick="nextSetupStep(3)">Continuă →</button>`;
+
+      } else if (n === 4) {
+        body = `
+          <div class="sf-form-group"><label class="sf-label">Ore/săptămână disponibile</label>
+            <input id="ws-hours" class="sf-input" type="number" min="1" max="80" value="${SetupData.weeklyHours}"></div>
+          <div class="sf-form-group"><label class="sf-label">Proiecte active simultan (max)</label>
+            <input id="ws-proj" class="sf-input" type="number" min="1" max="30" value="${SetupData.activeProjects}"></div>
+          <p class="text-muted text-sm" style="margin-top:8px">
+            Go/No-Go automat calculat la fiecare cerere nouă în funcție de capacitatea disponibilă.
+          </p>`;
+        nextBtn = `<button class="sf-btn sf-btn--primary" onclick="nextSetupStep(4)">Continuă →</button>`;
+
+      } else if (n === 5) {
+        body = `
+          <p class="sf-wizard__subtitle">Importă registrul de oferte din Excel (salvat ca CSV).</p>
+          <div class="sf-form-group">
+            <label class="sf-label">Fișier CSV</label>
+            <input type="file" id="ws-csv" class="sf-input" accept=".csv" onchange="onCSVChange(this)">
+          </div>
+          <p class="text-muted text-sm">Câmpuri detectate: NR.OFERTA, CLIENT, DATA, STATUS, PRET etc.</p>`;
+        nextBtn = `<button class="sf-btn sf-btn--ghost" onclick="renderSetupStep(6)">Sari peste →</button>`;
+
+      } else if (n === 6) {
+        const logo = SetupData.logoBlob
+          ? `<img src="${URL.createObjectURL(SetupData.logoBlob)}" style="width:56px;height:56px;object-fit:contain;border-radius:4px">`
+          : `<div style="width:56px;height:56px;background:var(--sf-primary);border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:white;font-size:22px;font-weight:700">H</div>`;
+        body = `
+          <div style="text-align:center;margin-bottom:20px">${logo}
+            <h3 style="margin-top:8px">${SetupData.studioName}</h3></div>
+          <div class="sf-kpi-grid">
+            <div class="sf-kpi-card"><div class="sf-kpi-value">${SetupData.hourlyRate}€</div><div class="sf-kpi-label">Tarif/oră</div></div>
+            <div class="sf-kpi-card"><div class="sf-kpi-value">${SetupData.weeklyHours}h</div><div class="sf-kpi-label">Ore/săpt</div></div>
+            <div class="sf-kpi-card"><div class="sf-kpi-value">${SetupData.activeProjects}</div><div class="sf-kpi-label">Proiecte max</div></div>
+          </div>`;
+        nextBtn = `<button class="sf-btn sf-btn--primary" onclick="finishSetup()">Intră în StudioFlow →</button>`;
+      }
+
+      document.getElementById('page-setup').innerHTML = `
+        <div class="sf-wizard">
+          <div class="sf-wizard__card">
+            <div class="sf-wizard__step-indicator">${dots}</div>
+            <div class="sf-wizard__title">${labels[n-1]} <span style="font-weight:400;color:var(--sf-text-2);font-size:14px">${n}/6</span></div>
+            <div id="wizard-body">${body}</div>
+            <div class="sf-wizard__actions">${backBtn}${nextBtn}</div>
+          </div>
+        </div>`;
+    }
+
+    // ── Step navigation ──────────────────────────────────────
+    function nextSetupStep(n) {
+      if (n === 1) {
+        const name = document.getElementById('ws-name')?.value?.trim();
+        if (!name) { showToast('warning', 'Introdu numele studioului.'); return; }
+        SetupData.studioName = name;
+        SetupData.address = document.getElementById('ws-addr')?.value || '';
+        SetupData.phone   = document.getElementById('ws-phone')?.value || '';
+        SetupData.email   = document.getElementById('ws-email')?.value || '';
+        SetupData.website = document.getElementById('ws-web')?.value || '';
+        SetupData.vatId   = document.getElementById('ws-vat')?.value || '';
+      } else if (n === 3) {
+        SetupData.hourlyRate = parseFloat(document.getElementById('ws-rate')?.value) || 65;
+      } else if (n === 4) {
+        SetupData.weeklyHours    = parseInt(document.getElementById('ws-hours')?.value) || 40;
+        SetupData.activeProjects = parseInt(document.getElementById('ws-proj')?.value)  || 8;
+      }
+      renderSetupStep(n + 1);
+    }
+
+    function adjustRate(delta) {
+      const el = document.getElementById('ws-rate');
+      if (el) el.value = Math.max(20, Math.min(500, (parseFloat(el.value)||65) + delta));
+    }
+
+    async function onLogoChange(input) {
+      const file = input.files[0];
+      if (!file) return;
+      SetupData.logoBlob = await compressImage(file, 200, 800);
+      const p = document.getElementById('ws-logo-preview');
+      if (p && SetupData.logoBlob) {
+        p.innerHTML = `<img src="${URL.createObjectURL(SetupData.logoBlob)}"
+          style="width:100%;height:100%;object-fit:contain">`;
+      }
+    }
+
+    async function onCSVChange(input) {
+      const file = input.files[0];
+      if (file) await importCSV(file);
+    }
+
+    // ── Image compression ────────────────────────────────────
+    async function compressImage(file, maxKB = 200, maxDim = 800) {
+      return new Promise(resolve => {
+        const reader = new FileReader();
+        reader.onload = e => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            let w = img.width, h = img.height;
+            if (w > maxDim || h > maxDim) {
+              const r = Math.min(maxDim/w, maxDim/h);
+              w = Math.round(w*r); h = Math.round(h*r);
+            }
+            canvas.width = w; canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            let q = 0.90;
+            const compress = () => canvas.toBlob(blob => {
+              if (!blob) { resolve(null); return; }
+              if (blob.size <= maxKB * 1024 || q < 0.30) resolve(blob);
+              else { q -= 0.10; compress(); }
+            }, 'image/jpeg', q);
+            compress();
+          };
+          img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // ── CSV parsing & import ─────────────────────────────────
+    function readFileAsText(file, encoding = 'utf-8') {
+      return new Promise((res, rej) => {
+        const r = new FileReader();
+        r.onload = e => res(e.target.result);
+        r.onerror = () => rej(r.error);
+        r.readAsText(file, encoding);
+      });
+    }
+
+    function parseCSV(text) {
+      const clean = text.replace(/^﻿/, '');
+      const lines = clean.split(/\r?\n/).filter(l => l.trim());
+      if (lines.length < 2) return [];
+      const sep = (lines[0].match(/;/g)||[]).length > (lines[0].match(/,/g)||[]).length ? ';' : ',';
+      const headers = lines[0].split(sep).map(h => h.trim().replace(/^"|"$/g,''));
+      return lines.slice(1).map(line => {
+        const vals = line.split(sep).map(v => v.trim().replace(/^"|"$/g,''));
+        return Object.fromEntries(headers.map((h,i) => [h, vals[i]??'']));
+      });
+    }
+
+    async function importCSV(file) {
+      let text;
+      try { text = await readFileAsText(file, 'utf-8'); }
+      catch { showToast('error', 'Nu s-a putut citi fișierul CSV.'); return; }
+      const rows = parseCSV(text);
+      if (!rows.length) { showToast('warning', 'CSV gol sau format nerecunoscut.'); return; }
+      const errors = [], warnings = [], imported = { clients: 0, leads: 0, offers: 0 };
+      for (const [i, row] of rows.entries()) {
+        try { await importRow(row, imported, warnings); }
+        catch (err) { errors.push({ row: i+2, data: row['CLIENT'], error: err.message }); }
+      }
+      showImportReport({ imported, errors, warnings });
+    }
+
+    function mapSource(raw) {
+      return SOURCE_LOOKUP[raw?.toLowerCase().trim()] || 'other';
+    }
+
+    async function importRow(row, imported, warnings) {
+      if (!row['CLIENT']?.trim())    throw new Error('CLIENT lipsă');
+      if (!row['NR.OFERTA']?.trim()) throw new Error('NR.OFERTA lipsă');
+      const db = AppState.db;
+      const existing = await db.getAllByIndex('offers', 'offerCode', row['NR.OFERTA'].trim());
+      if (existing.length) { warnings.push(`Duplicat ${row['NR.OFERTA'].trim()} — sărit`); return; }
+
+      const allClients = await db.getAll('clients');
+      let client = allClients.find(c => c.name.toLowerCase() === row['CLIENT'].trim().toLowerCase());
+      if (!client) {
+        client = { id: uuid(), name: row['CLIENT'].trim(), type: 'company', contactPerson: '',
+          email: '', phone: '', address: '', fiscalCode: '', totalContractsValue: 0,
+          totalContractsCount: 0, ltvFormula: 'sum_contracts', relationshipRating: 3,
+          lastDealDate: null, reengagementAlertDays: 365, notes: '', tags: [],
+          createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+        await db.put('clients', client);
+        imported.clients++;
+      }
+
+      let createdAt = new Date().toISOString();
+      const dp = row['DATA (REV.00)']?.split('.');
+      if (dp?.length === 3) {
+        const d = new Date(+dp[2], +dp[1]-1, +dp[0]);
+        if (!isNaN(d)) createdAt = d.toISOString();
+      }
+
+      const funnel  = row['SPECIALITATI']?.toLowerCase();
+      const funnelType = funnel === 'db' ? 'discovery' : 'design';
+      const rawSt   = row['STATUS'];
+      const status  = rawSt === '1' ? 'won' : rawSt === '-1' ? 'withdrawn' : 'lost';
+      const rawTyp  = row['TIP PROIECT']?.trim().toUpperCase();
+      const typology = ['T1','T2','T3','T4','T5','T6'].includes(rawTyp) ? rawTyp : 'T1';
+      const emptyScore = { profitabilitateBruta:0,termenLivrare:0,clientRecurent:0,
+        claritate_brief:0,interesStrategic:0,dificultateTehnLegala:0,alinieEstetica:0,
+        reputatieClient:0,referinte:0,bugetRealismCoerenta:0,urgentaClient:0,
+        locatieAccesibilitate:0,scalaProiect:0,complexitateProgram:0,total:0 };
+
+      const lead = { id: uuid(), clientId: client.id,
+        projectName: row['ADRESA']?.trim() || row['CLIENT'].trim(),
+        address: row['ADRESA']?.trim() || '', area: parseFloat(row['S.D.'])||null,
+        typology, funnelType, sourceType: mapSource(row['SURSA LEAD']),
+        sourceDetail: row['SURSA LEAD']?.trim() || '',
+        status, wonContractValue: parseFloat(row['VALOARE CONTRACT'])||null,
+        estimatedEndDate: null,
+        pipelineStage: status === 'won' ? 'contractat' : 'pierdut',
+        stageEnteredAt: createdAt, score: emptyScore, scoreCategory: 'cold',
+        createdAt, updatedAt: new Date().toISOString() };
+      await db.put('leads', lead);
+      imported.leads++;
+
+      const offer = { id: uuid(), leadId: lead.id, clientId: client.id,
+        offerCode: row['NR.OFERTA'].trim(), type: funnelType,
+        status: row['CONTRACT']?.trim().toUpperCase() === 'DA' ? 'won' : 'sent',
+        revisionNumber: 0,
+        content: { approach: row['FAZE']?.trim()||'',
+                   totalPriceEUR: parseFloat(row['PRET OFERTAT (REV.00)'])||0 },
+        createdAt, updatedAt: new Date().toISOString() };
+      await db.put('offers', offer);
+      imported.offers++;
+    }
+
+    function showImportReport({ imported, errors, warnings }) {
+      const errHTML = errors.length ? `
+        <h4 style="margin-top:16px">Erori (${errors.length} rânduri sărite)</h4>
+        <table class="sf-table"><thead><tr><th>Rând</th><th>Client</th><th>Eroare</th></tr></thead>
+        <tbody>${errors.map(e=>`<tr><td>${e.row}</td><td>${e.data||'—'}</td><td>${e.error}</td></tr>`).join('')}
+        </tbody></table>` : '';
+      const warnHTML = warnings.length ? `
+        <h4 style="margin-top:16px">Avertismente</h4>
+        <ul class="text-sm">${warnings.map(w=>`<li>${w}</li>`).join('')}</ul>` : '';
+      showModal(`
+        <div class="sf-kpi-grid">
+          <div class="sf-kpi-card"><div class="sf-kpi-value">${imported.clients}</div><div class="sf-kpi-label">Clienți</div></div>
+          <div class="sf-kpi-card"><div class="sf-kpi-value">${imported.leads}</div><div class="sf-kpi-label">Leads</div></div>
+          <div class="sf-kpi-card"><div class="sf-kpi-value">${imported.offers}</div><div class="sf-kpi-label">Oferte</div></div>
+        </div>${errHTML}${warnHTML}
+        <div class="sf-form-actions" style="margin-top:16px">
+          <button class="sf-btn sf-btn--primary" onclick="closeModal();renderSetupStep(6)">Continuă →</button>
+        </div>`, { title: 'Raport Import CSV', wide: true });
+    }
+
+    // ── Save & finish ────────────────────────────────────────
+    async function saveSetupData() {
+      const db = AppState.db;
+      const now = new Date().toISOString();
+      await db.put('studio', {
+        id: 1, name: SetupData.studioName, address: SetupData.address,
+        phone: SetupData.phone, email: SetupData.email, website: SetupData.website,
+        vatId: SetupData.vatId, logoBlob: SetupData.logoBlob || null,
+        defaultCurrency: 'EUR', hourlyRateEUR: SetupData.hourlyRate,
+        weeklyCapacityHours: SetupData.weeklyHours,
+        activeProjectsLimit: SetupData.activeProjects,
+        createdAt: now, updatedAt: now
+      });
+      await db.put('rateCards', {
+        id: uuid(), name: 'Standard HERTZ', currency: 'EUR', isDefault: true,
+        hourlyRateEUR: SetupData.hourlyRate, rates: HERTZ_DEFAULT_RATES,
+        createdAt: now, updatedAt: now
+      });
+      await db.put('settings', {
+        id: 'settings',
+        scoreThresholds: { hot: 105, warm: 70 },
+        goNoGoRules: { minScore: 70, maxActiveProjects: SetupData.activeProjects, maxUtilizationPct: 85 },
+        winProbWeights: { scoreWeight: 0.40, sourceWeight: 0.20, typologyWeight: 0.15, pricePositionWeight: 0.25 },
+        cadenceDays: [0, 3, 7, 14, 30], priceIntelMinSamples: 30,
+        lastOfferCodeYear: new Date().getFullYear(), lastOfferCodeSeq: 0,
+        lastBackupAt: null, schemaVersion: 1, updatedAt: now
+      });
+    }
+
+    async function finishSetup() {
+      try {
+        await saveSetupData();
+        renderSidebarLogo(SetupData.logoBlob);
+        renderSidebarStudioName(SetupData.studioName);
+        document.getElementById('page-setup').hidden = true;
+        document.getElementById('page-setup').innerHTML = '';
+        scheduleBackupCheck();
+        registerServiceWorker();
+        navigate('#today');
+        showToast('success', `Bun venit în StudioFlow, ${SetupData.studioName}!`);
+      } catch (err) {
+        showToast('error', 'Eroare la salvarea configurației: ' + err.message);
+      }
+    }
+  </script>
   <script id="sf-f2">       /* M5 — Leads */      </script>
   <script id="sf-f3">       /* M6 — Pipeline */   </script>
   <script id="sf-f3-dnd">   /* M10 — DnD */       </script>
