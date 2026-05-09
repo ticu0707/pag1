@@ -2882,7 +2882,8 @@
         .catch(() => showToast('error','Clipboard indisponibil.'));
     }
     function f1SaveAsOffer() {
-      showToast('info','Generatorul de oferte va fi disponibil în M12.');
+      navigate('#leads');
+      showToast('info','Deschide un lead → butonul 📄 pentru a crea oferta cu prețul calculat.');
     }
   </script>
   <script id="sf-f4">
@@ -4045,8 +4046,8 @@
     // ── Panel 1: Funnel (grouped bar) ─────────────────────────
     function _f7DrawFunnel(canvas,leads){
       if(!canvas)return;
-      const stages=['brief_primit','propunere_trimisa','negociere','contractat','pierdut'];
-      const labels=['Brief','Propunere','Negociere','Contractat','Pierdut'];
+      const stages=['brief_primit','oferta_trimisa','negociere','contractat','pierdut'];
+      const labels=['Brief','Ofertă trimisă','Negociere','Contractat','Pierdut'];
       const ctx=canvas.getContext('2d'),W=canvas.width,H=canvas.height;
       ctx.clearRect(0,0,W,H);
       const dD=stages.map(s=>leads.filter(l=>l.funnelType==='discovery'&&l.pipelineStage===s).length);
@@ -4238,11 +4239,13 @@
     // ── CSV export ────────────────────────────────────────────
     function _f7Csv(fname,rows){
       const csv='﻿'+rows.map(r=>r.map(c=>typeof c==='string'&&c.includes(',')? `"${c}"`:c).join(',')).join('\n');
-      const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download=fname;a.click();
+      const url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));
+      const a=document.createElement('a');a.href=url;a.download=fname;a.click();
+      URL.revokeObjectURL(url);
     }
     function _f7CsvFunnel(){
       const l=AppState._f7data?.leads||[];
-      const s=['brief_primit','propunere_trimisa','negociere','contractat','pierdut','retras'];
+      const s=['brief_primit','oferta_trimisa','negociere','contractat','pierdut','retras'];
       _f7Csv('funnel.csv',[['Stagiu','Discovery','Design','Total'],...s.map(st=>[st,l.filter(x=>x.funnelType==='discovery'&&x.pipelineStage===st).length,l.filter(x=>x.funnelType==='design'&&x.pipelineStage===st).length,l.filter(x=>x.pipelineStage===st).length])]);
     }
     function _f7CsvSource(){
