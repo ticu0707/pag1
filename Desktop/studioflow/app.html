@@ -3563,10 +3563,10 @@
     async function generateOfferCode(db) {
       const settings = await db.get('settings','settings');
       const year = new Date().getFullYear();
-      const prevYear = settings.lastOfferCodeYear || year;
-      const prevSeq  = settings.lastOfferCodeSeq  || 0;
-      const seq = prevYear === year ? prevSeq + 1 : 1;
-      await db.put('settings', {...settings, lastOfferCodeYear:year, lastOfferCodeSeq:seq, updatedAt:new Date().toISOString()});
+      const prevYear = settings?.lastOfferCodeYear ?? year;
+      const prevSeq  = settings?.lastOfferCodeSeq  ?? 0;
+      const seq = (settings && prevYear === year) ? prevSeq + 1 : 1;
+      await db.put('settings', {...(settings||{}), lastOfferCodeYear:year, lastOfferCodeSeq:seq, updatedAt:new Date().toISOString()});
       return `${year}_${String(seq).padStart(2,'0')}`;
     }
 
@@ -3605,7 +3605,7 @@
 
     function _renderOfferEditor(el, lead, client, offer) {
       const c = offer.content;
-      const isSent = !['draft','negotiating'].includes(offer.status);
+      const isSent = offer.status !== 'draft';
       const pbRows = (c.priceBreakdown||[]).map(r=>`<tr>
         <td><input class="sf-input" style="width:100%" value="${r.item}" oninput="_pbRow(this)"></td>
         <td><input class="sf-input" type="number" style="width:70px" value="${r.hours||0}" oninput="_pbRow(this);_pbTotal()"></td>
@@ -3703,7 +3703,7 @@
       </tr>`);
     }
 
-    async function _saveOfferDraft() {
+    async function _saveOfferDraft(silent = false) {
       const offerId = AppState._editingOfferId;
       if (!offerId) return;
       const offer = await AppState.db.get('offers', offerId);
@@ -3730,11 +3730,11 @@
           paymentTerms: document.getElementById('f5-pay')?.value||'',
           validityDays: parseInt(document.getElementById('f5-val')?.value)||30},
         updatedAt: new Date().toISOString()});
-      showToast('success','Ofertă salvată.');
+      if (!silent) showToast('success','Ofertă salvată.');
     }
 
     async function _markOfferSent(offerId) {
-      await _saveOfferDraft();
+      await _saveOfferDraft(true);
       const offer = await AppState.db.get('offers', offerId);
       if (!offer) return;
       const now = new Date().toISOString();
