@@ -811,6 +811,34 @@
     /* ── Kanban Drag-and-Drop (sf-f3-dnd) ──────────── */
     .sf-lead-card[draggable="true"] { cursor:grab; }
     .sf-lead-card.sf-dragging       { opacity:0.4; transform:scale(0.97); box-shadow:none; cursor:grabbing; }
+
+    /* ── Portfolio Manager (sf-f5a) ─────────────────── */
+    .f5a-toolbar      { display:flex; align-items:center; gap:10px; margin-bottom:16px; flex-wrap:wrap; }
+    .f5a-storage      { font-size:12px; color:var(--sf-text-3); margin-left:auto; }
+    .f5a-warn-banner  { display:flex; align-items:center; gap:10px; background:#FFF8E1;
+                        border:1px solid #F9C74F; border-radius:var(--sf-r);
+                        padding:10px 14px; margin-bottom:12px; font-size:13px; }
+    .f5a-grid         { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:16px; }
+    .f5a-card         { background:var(--sf-surface); border:1px solid var(--sf-border);
+                        border-radius:var(--sf-r); overflow:hidden; cursor:grab; transition:box-shadow .15s; }
+    .f5a-card:hover   { box-shadow:0 4px 16px rgba(0,0,0,.10); }
+    .f5a-card.f5a-dragging  { opacity:0.4; transform:scale(0.97); cursor:grabbing; }
+    .f5a-card.f5a-drag-over { outline:2px dashed var(--sf-primary); outline-offset:2px; }
+    .f5a-thumb        { width:100%; height:150px; object-fit:cover; display:block; background:#eee; }
+    .f5a-thumb-empty  { width:100%; height:150px; display:flex; align-items:center; justify-content:center;
+                        background:#f5f5f3; color:#bbb; font-size:12px; }
+    .f5a-card-body    { padding:10px 12px; }
+    .f5a-card-title   { font-weight:600; font-size:13px; margin-bottom:4px; color:var(--sf-text);
+                        white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .f5a-card-meta    { display:flex; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:6px; }
+    .f5a-badge        { font-size:10px; font-weight:600; padding:2px 7px; border-radius:9px; }
+    .f5a-cat-arch     { background:#EEF4FF; color:#2C6FAD; }
+    .f5a-cat-interior { background:#FFF0F0; color:#C0392B; }
+    .f5a-cat-concept  { background:#F0FFF4; color:#1E8449; }
+    .f5a-used         { font-size:11px; color:var(--sf-text-3); }
+    .f5a-card-actions { display:flex; gap:6px; }
+    .f5a-empty        { grid-column:1/-1; text-align:center; padding:60px 20px;
+                        color:var(--sf-text-3); font-size:14px; }
   </style>
 </head>
 <body class="sf-body" id="sf-body">
@@ -3226,7 +3254,273 @@
       }
     }
   </script>
-  <script id="sf-f5a">      /* M11 — Portfolio */ </script>
+  <script id="sf-f5a">
+    const CAT_LABEL = { architecture:'Arhitectură', interior:'Interior', concept:'Concept' };
+    const CAT_CLS   = { architecture:'f5a-cat-arch', interior:'f5a-cat-interior', concept:'f5a-cat-concept' };
+
+    async function renderPortfolio() {
+      const el = document.getElementById('page-portfolio');
+      if (!el) return;
+      const items   = await AppState.db.getAll('portfolio');
+      const totalSz = items.reduce((s, i) => s + (i.fileSize || 0), 0);
+      const totalMB = (totalSz / (1024 * 1024)).toFixed(1);
+      const warnHTML = totalSz > 50 * 1024 * 1024
+        ? `<div class="f5a-warn-banner">⚠ Portofoliul ocupă <strong>${totalMB} MB</strong> — șterge imaginile nefolosite.</div>` : '';
+
+      el.innerHTML = `
+        <div class="sf-page-header">
+          <div><h2 class="sf-page-title">Portofoliu</h2>
+          <p class="sf-page-subtitle">${items.length} imagini · ${totalMB} MB</p></div>
+          <button class="sf-btn sf-btn--primary" onclick="openPortfolioUploadModal()">+ Adaugă imagine</button>
+        </div>
+        ${warnHTML}
+        <div class="f5a-toolbar">
+          <select class="sf-select" id="f5a-filter-cat" onchange="_renderPortfolioGrid()" style="width:160px">
+            <option value="">Toate categoriile</option>
+            <option value="architecture">Arhitectură</option>
+            <option value="interior">Interior</option>
+            <option value="concept">Concept</option>
+          </select>
+        </div>
+        <div id="f5a-grid" class="f5a-grid"></div>`;
+
+      await _renderPortfolioGrid();
+    }
+
+    async function _renderPortfolioGrid() {
+      const grid = document.getElementById('f5a-grid');
+      if (!grid) return;
+      const catFil   = document.getElementById('f5a-filter-cat')?.value || '';
+      const items    = await AppState.db.getAll('portfolio');
+      items.sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+      const filtered = catFil ? items.filter(i => i.category === catFil) : items;
+
+      if (!filtered.length) {
+        grid.innerHTML = `<div class="f5a-empty">Nicio imagine în portofoliu.<br>Adaugă proiecte cu butonul de mai sus.</div>`;
+        return;
+      }
+
+      grid.innerHTML = filtered.map(item => {
+        const thumbURL = item.thumbnailBlob ? URL.createObjectURL(item.thumbnailBlob) : '';
+        const usedCnt  = (item.usedInOffers || []).length;
+        return `<div class="f5a-card" data-portfolio-id="${item.id}" draggable="true">
+          ${thumbURL
+            ? `<img class="f5a-thumb" src="${thumbURL}" alt="${item.title}" loading="lazy">`
+            : `<div class="f5a-thumb-empty">Fără preview</div>`}
+          <div class="f5a-card-body">
+            <div class="f5a-card-title" title="${item.title}">${item.title}</div>
+            <div class="f5a-card-meta">
+              <span class="f5a-badge ${CAT_CLS[item.category]||''}">${CAT_LABEL[item.category]||item.category}</span>
+              ${usedCnt ? `<span class="f5a-used">Folosit în ${usedCnt} oferte</span>` : ''}
+            </div>
+            <div class="f5a-card-actions">
+              <button class="sf-btn sf-btn--secondary" style="font-size:11px;padding:3px 8px"
+                onclick="openPortfolioPreview('${item.id}')">🔍 Preview</button>
+              <button class="sf-btn sf-btn--secondary" style="font-size:11px;padding:3px 8px"
+                onclick="deletePortfolioItem('${item.id}')">🗑 Șterge</button>
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+
+      _initPortfolioDnD(grid);
+    }
+
+    function loadImage(file) {
+      return new Promise((resolve, reject) => {
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload  = () => { URL.revokeObjectURL(url); resolve(img); };
+        img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Imagine invalidă')); };
+        img.src = url;
+      });
+    }
+
+    async function processImage(file) {
+      const MAX_SIZE = 800 * 1024;
+      const THUMB_W  = 300, THUMB_H = 200, MAX_DIM = 1920;
+      const img      = await loadImage(file);
+      let w = img.naturalWidth, h = img.naturalHeight;
+
+      if (w > MAX_DIM || h > MAX_DIM) {
+        const ratio = Math.min(MAX_DIM / w, MAX_DIM / h);
+        w = Math.round(w * ratio); h = Math.round(h * ratio);
+      }
+
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+
+      let quality = 0.92, blob;
+      do {
+        blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', quality));
+        quality -= 0.05;
+      } while (blob.size > MAX_SIZE && quality > 0.50);
+
+      // Cover-fit thumbnail: centered crop to 300×200
+      const tc    = document.createElement('canvas');
+      tc.width = THUMB_W; tc.height = THUMB_H;
+      const scale = Math.max(THUMB_W / w, THUMB_H / h);
+      const sw    = Math.round(THUMB_W / scale), sh = Math.round(THUMB_H / scale);
+      const sx    = Math.round((w - sw) / 2),    sy = Math.round((h - sh) / 2);
+      tc.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, THUMB_W, THUMB_H);
+      const thumb = await new Promise(res => tc.toBlob(res, 'image/jpeg', 0.80));
+
+      return { imageBlob: blob, thumbnailBlob: thumb, imageWidth: w, imageHeight: h };
+    }
+
+    function openPortfolioUploadModal() {
+      showModal(`
+        <div class="sf-modal-header">
+          <h2 class="sf-modal-title">+ Adaugă imagine portofoliu</h2>
+          <button class="sf-btn sf-btn--secondary" onclick="closeModal()">✕</button>
+        </div>
+        <label class="sf-label">Titlu proiect *</label>
+        <input class="sf-input" id="f5a-title" placeholder="ex: Vila Floreasca — living" style="margin-bottom:10px">
+        <label class="sf-label">Categorie *</label>
+        <select class="sf-select" id="f5a-cat" style="margin-bottom:10px">
+          <option value="architecture">Arhitectură</option>
+          <option value="interior">Interior</option>
+          <option value="concept">Concept</option>
+        </select>
+        <label class="sf-label">Tag-uri (separate prin virgulă)</label>
+        <input class="sf-input" id="f5a-tags" placeholder="ex: rezidential, minimal, lumina naturala" style="margin-bottom:10px">
+        <label class="sf-label">Imagine * (JPEG/PNG/WebP, max 10MB)</label>
+        <input type="file" id="f5a-file" accept="image/jpeg,image/png,image/webp" style="margin-bottom:14px">
+        <div id="f5a-progress" hidden style="font-size:12px;color:var(--sf-text-3);margin-bottom:10px">
+          ⏳ Se procesează imaginea...
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="sf-btn sf-btn--primary" onclick="_savePortfolioItem()">Salvează</button>
+          <button class="sf-btn sf-btn--secondary" onclick="closeModal()">Anulează</button>
+        </div>`);
+    }
+
+    async function _savePortfolioItem() {
+      const title   = document.getElementById('f5a-title')?.value?.trim();
+      const cat     = document.getElementById('f5a-cat')?.value;
+      const tagsRaw = document.getElementById('f5a-tags')?.value || '';
+      const file    = document.getElementById('f5a-file')?.files?.[0];
+
+      if (!title) { showToast('error', 'Titlul este obligatoriu.'); return; }
+      if (!file)  { showToast('error', 'Selectează o imagine.'); return; }
+      if (file.size > 10 * 1024 * 1024) { showToast('error', 'Imaginea depășește 10MB.'); return; }
+
+      const prog = document.getElementById('f5a-progress');
+      if (prog) prog.hidden = false;
+
+      try {
+        const { imageBlob, thumbnailBlob, imageWidth, imageHeight } = await processImage(file);
+        const tags     = tagsRaw.split(',').map(t => t.trim()).filter(Boolean);
+        const all      = await AppState.db.getAll('portfolio');
+        const maxOrder = all.length ? Math.max(...all.map(i => i.sortOrder ?? 0)) : 0;
+
+        await AppState.db.put('portfolio', {
+          id: uuid(), title, category: cat, tags,
+          imageBlob, thumbnailBlob, imageWidth, imageHeight,
+          fileSize: imageBlob.size, usedInOffers: [],
+          sortOrder: maxOrder + 1, createdAt: new Date().toISOString()
+        });
+        closeModal();
+        showToast('success', 'Imagine adăugată în portofoliu.');
+        await renderPortfolio();
+      } catch(err) {
+        showToast('error', `Eroare procesare: ${err.message}`);
+        if (prog) prog.hidden = true;
+      }
+    }
+
+    async function deletePortfolioItem(id) {
+      const item = await AppState.db.get('portfolio', id);
+      if (!item) return;
+      const usedCnt = (item.usedInOffers || []).length;
+      const msg = usedCnt
+        ? `Imaginea este folosită în ${usedCnt} oferte. Ești sigur că vrei să o ștergi?`
+        : `Ștergi "${item.title}" din portofoliu?`;
+      const ok = await showConfirmDialog({
+        title: 'Șterge imagine', message: msg,
+        confirmText: 'Șterge', dangerKeyword: 'Șterge'
+      });
+      if (!ok) return;
+      await AppState.db.delete('portfolio', id);
+      showToast('info', 'Imagine ștearsă.');
+      await renderPortfolio();
+    }
+
+    async function openPortfolioPreview(id) {
+      const item = await AppState.db.get('portfolio', id);
+      if (!item?.imageBlob) { showToast('error', 'Imaginea nu poate fi afișată.'); return; }
+      const url = URL.createObjectURL(item.imageBlob);
+      showModal(`
+        <div class="sf-modal-header">
+          <h2 class="sf-modal-title">${item.title}</h2>
+          <button class="sf-btn sf-btn--secondary"
+            onclick="closeModal(); URL.revokeObjectURL('${url}')">✕</button>
+        </div>
+        <img src="${url}" alt="${item.title}"
+          style="width:100%;max-height:65vh;object-fit:contain;border-radius:4px;display:block">
+        <p style="margin-top:8px;font-size:12px;color:var(--sf-text-3)">
+          ${item.imageWidth}×${item.imageHeight}px · ${(item.fileSize/1024).toFixed(0)} KB
+          · ${CAT_LABEL[item.category]||item.category}
+        </p>`, { wide: true });
+    }
+
+    function _initPortfolioDnD(grid) {
+      if (grid._dndReady) return;
+      grid._dndReady = true;
+
+      let dragId = null, dragEl = null;
+
+      grid.addEventListener('dragstart', e => {
+        const card = e.target.closest('.f5a-card');
+        if (!card) return;
+        dragId = card.dataset.portfolioId;
+        dragEl = card;
+        e.dataTransfer.effectAllowed = 'move';
+        setTimeout(() => card.classList.add('f5a-dragging'), 0);
+      });
+
+      grid.addEventListener('dragend', () => {
+        if (dragEl) dragEl.classList.remove('f5a-dragging');
+        grid.querySelectorAll('.f5a-drag-over').forEach(c => c.classList.remove('f5a-drag-over'));
+        dragId = null; dragEl = null;
+      });
+
+      grid.addEventListener('dragover', e => {
+        const card = e.target.closest('.f5a-card');
+        if (!card || card.dataset.portfolioId === dragId) return;
+        e.preventDefault();
+        card.classList.add('f5a-drag-over');
+      });
+
+      grid.addEventListener('dragleave', e => {
+        const card = e.target.closest('.f5a-card');
+        if (card && !card.contains(e.relatedTarget)) card.classList.remove('f5a-drag-over');
+      });
+
+      grid.addEventListener('drop', async e => {
+        const targetCard = e.target.closest('.f5a-card');
+        if (!targetCard || !dragId) return;
+        e.preventDefault();
+        targetCard.classList.remove('f5a-drag-over');
+        const targetId = targetCard.dataset.portfolioId;
+        if (targetId === dragId) return;
+
+        const [src, tgt] = await Promise.all([
+          AppState.db.get('portfolio', dragId),
+          AppState.db.get('portfolio', targetId)
+        ]);
+        if (!src || !tgt) return;
+        const tmp = src.sortOrder;
+        await Promise.all([
+          AppState.db.put('portfolio', {...src, sortOrder: tgt.sortOrder }),
+          AppState.db.put('portfolio', {...tgt, sortOrder: tmp })
+        ]);
+        dragId = null; dragEl = null;
+        await _renderPortfolioGrid();
+      });
+    }
+  </script>
   <script id="sf-f5">       /* M12 — Offers */    </script>
   <script id="sf-f6">       /* M13 — Clients */   </script>
   <script id="sf-f7">       /* M14 — Intel */     </script>
