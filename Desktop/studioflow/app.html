@@ -764,6 +764,27 @@
       z-index: 200;
       pointer-events: none;
     }
+
+    /* ── Activity Timeline (sf-f4) ─────────────────────── */
+    .f4-timeline { display:flex; flex-direction:column; gap:8px; max-height:420px; overflow-y:auto; }
+    .f4-activity-item {
+      display:flex; gap:12px; align-items:flex-start;
+      background:var(--sf-surface); border:1px solid var(--sf-border);
+      border-radius:var(--sf-r); padding:10px 12px;
+    }
+    .f4-activity-item.f4-overdue { border-left:3px solid var(--sf-cold); }
+    .f4-activity-item.f4-done    { opacity:0.6; }
+    .f4-act-icon   { font-size:18px; flex-shrink:0; margin-top:2px; }
+    .f4-act-body   { flex:1; min-width:0; }
+    .f4-act-meta   { display:flex; gap:6px; align-items:center; margin-bottom:3px; flex-wrap:wrap; }
+    .f4-act-type   { font-weight:600; font-size:13px; }
+    .f4-act-badge  { font-size:10px; background:var(--sf-surface-2); padding:1px 6px;
+                     border-radius:var(--sf-r-pill); color:var(--sf-text-2); }
+    .f4-act-date   { font-size:11px; color:var(--sf-text-3); margin-left:auto; }
+    .f4-act-desc   { font-size:13px; color:var(--sf-text); }
+    .f4-act-outcome{ font-size:12px; color:var(--sf-text-2); margin-top:2px; }
+    .f4-act-done   { font-size:11px; color:var(--sf-hot); margin-top:2px; }
+    .f4-act-actions{ display:flex; gap:4px; flex-shrink:0; }
   </style>
 </head>
 <body class="sf-body" id="sf-body">
@@ -1966,6 +1987,7 @@
           <td>${badge(SL[l.status]||l.status,l.status==='active'?'info':l.status==='won'?'hot':l.status==='lost'?'cold':'neutral')}</td>
           <td style="white-space:nowrap;display:flex;gap:4px">
             <button class="sf-btn sf-btn--secondary" onclick="openEditLeadModal('${l.id}')" style="font-size:11px;padding:3px 8px">Edit</button>
+            <button class="sf-btn sf-btn--secondary" onclick="openLeadActivities('${l.id}')" style="font-size:11px;padding:3px 8px" title="Activități">⏱</button>
             ${l.status==='active'?`
             <button class="sf-btn sf-btn--secondary" onclick="markLeadWon('${l.id}')" style="font-size:11px;padding:3px 8px;color:var(--sf-hot)">✓</button>
             <button class="sf-btn sf-btn--secondary" onclick="markLeadLost('${l.id}')" style="font-size:11px;padding:3px 8px;color:var(--sf-cold)">✕</button>`:''}
@@ -2742,7 +2764,203 @@
       showToast('info','Generatorul de oferte va fi disponibil în M12.');
     }
   </script>
-  <script id="sf-f4">       /* M8 — Cadence */    </script>
+  <script id="sf-f4">
+    // ══════════════════════════════════════════════════════
+    //  sf-f4 — Activity CRUD + Cadence (M8)
+    //  PRD StudioFlow v6.0 § F4
+    // ══════════════════════════════════════════════════════
+
+    const CADENCE_TEMPLATES = {
+      0:  'Confirmare primire ofertă',
+      3:  'Verificare întrebări după studiu ofertă',
+      7:  'Status urmărire — decizie preliminară?',
+      14: 'Timeline decizie finale',
+      30: 'Check final — arhivare sau re-deschidere'
+    };
+
+    const ACT_LABELS = {
+      call:'Apel', email:'Email', meeting:'Întâlnire',
+      offer_sent:'Ofertă trimisă', follow_up:'Follow-up', note:'Notă'
+    };
+    const ACT_ICONS = {
+      call:'📞', email:'✉️', meeting:'🤝',
+      offer_sent:'📄', follow_up:'🔔', note:'📝'
+    };
+
+    // ── Open activities modal for a lead ──────────────────
+    async function openLeadActivities(leadId) {
+      const [lead, clients] = await Promise.all([
+        AppState.db.get('leads', leadId),
+        AppState.db.getAll('clients')
+      ]);
+      if (!lead) return;
+      const client = clients.find(c => c.id === lead.clientId);
+      const today  = new Date().toISOString().slice(0,10);
+      const typeOpts = Object.entries(ACT_LABELS)
+        .map(([v,l])=>`<option value="${v}">${l}</option>`).join('');
+
+      showModal(`
+        <div class="sf-modal-header">
+          <h2 class="sf-modal-title">Activități — ${client?.name||'—'} / ${lead.projectName||'—'}</h2>
+          <button class="sf-btn sf-btn--secondary" onclick="closeModal()">✕</button>
+        </div>
+        <div style="background:var(--sf-surface-2);border-radius:var(--sf-r);padding:12px;margin-bottom:16px">
+          <div style="font-size:11px;font-weight:600;color:var(--sf-text-2);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px">Loghează activitate</div>
+          <div style="display:grid;grid-template-columns:130px 1fr 1fr 120px auto;gap:8px;align-items:end">
+            <div>
+              <label class="sf-label" style="font-size:11px">Tip</label>
+              <select class="sf-select" id="f4-qt" style="height:32px;font-size:12px">${typeOpts}</select>
+            </div>
+            <div>
+              <label class="sf-label" style="font-size:11px">Descriere</label>
+              <input class="sf-input" id="f4-qd" placeholder="Scurtă descriere" style="height:32px;font-size:12px">
+            </div>
+            <div>
+              <label class="sf-label" style="font-size:11px">Outcome</label>
+              <input class="sf-input" id="f4-qo" placeholder="Rezultat (opțional)" style="height:32px;font-size:12px">
+            </div>
+            <div>
+              <label class="sf-label" style="font-size:11px">Data</label>
+              <input class="sf-input" type="date" id="f4-qdate" value="${today}" style="height:32px;font-size:12px">
+            </div>
+            <button class="sf-btn sf-btn--primary" onclick="f4QuickSave('${leadId}')" style="height:32px;font-size:12px;padding:0 12px">+ Log</button>
+          </div>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <span style="font-size:12px;font-weight:600;color:var(--sf-text-2)">Timeline</span>
+          <button class="sf-btn sf-btn--secondary" onclick="f4GenerateCadenceManual('${leadId}')" style="font-size:11px;padding:3px 10px">⚡ Generează cadence</button>
+        </div>
+        <div id="f4-timeline" class="f4-timeline"></div>
+      `, { wide: true });
+
+      await f4RefreshTimeline(leadId);
+    }
+
+    // ── Render timeline inside modal ──────────────────────
+    async function f4RefreshTimeline(leadId) {
+      const el = document.getElementById('f4-timeline');
+      if (!el) return;
+      const acts = await AppState.db.getAllByIndex('activities', 'leadId', leadId);
+      acts.sort((a,b) => (b.scheduledAt||b.createdAt).localeCompare(a.scheduledAt||a.createdAt));
+
+      if (!acts.length) {
+        el.innerHTML = `<div style="text-align:center;padding:40px;color:var(--sf-text-2)">
+          Nicio activitate înregistrată.<br>
+          <span style="font-size:12px">Loghează prima interacțiune sau generează cadence automat.</span>
+        </div>`;
+        return;
+      }
+
+      const today = new Date().toISOString().slice(0,10);
+      el.innerHTML = acts.map(a => {
+        const d = a.scheduledAt?.slice(0,10) || '';
+        const isOverdue = !a.completedAt && d && d < today;
+        return `<div class="f4-activity-item ${a.completedAt?'f4-done':''} ${isOverdue?'f4-overdue':''}">
+          <div class="f4-act-icon">${ACT_ICONS[a.type]||'•'}</div>
+          <div class="f4-act-body">
+            <div class="f4-act-meta">
+              <span class="f4-act-type">${ACT_LABELS[a.type]||a.type}</span>
+              ${a.isAutoCadence?'<span class="f4-act-badge">AUTO</span>':''}
+              ${isOverdue?'<span class="f4-act-badge" style="color:var(--sf-cold)">Întârziat</span>':''}
+              <span class="f4-act-date">${d?formatDate(d):'—'}</span>
+            </div>
+            <div class="f4-act-desc">${a.description||''}</div>
+            ${a.outcome?`<div class="f4-act-outcome">↳ ${a.outcome}</div>`:''}
+            ${a.completedAt?`<div class="f4-act-done">✓ Finalizat ${formatDate(a.completedAt.slice(0,10))}</div>`:''}
+          </div>
+          <div class="f4-act-actions">
+            ${!a.completedAt?`<button class="sf-btn sf-btn--secondary" title="Marchează complet"
+              onclick="f4CompleteAct('${a.id}','${leadId}')" style="font-size:11px;padding:3px 8px">✓</button>`:''}
+            <button class="sf-btn sf-btn--secondary" title="Șterge"
+              onclick="f4DeleteAct('${a.id}','${leadId}')" style="font-size:11px;padding:3px 8px">🗑</button>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    // ── Quick log save ────────────────────────────────────
+    async function f4QuickSave(leadId) {
+      const type    = document.getElementById('f4-qt')?.value;
+      const desc    = document.getElementById('f4-qd')?.value?.trim() || '';
+      const outcome = document.getElementById('f4-qo')?.value?.trim() || null;
+      const dateVal = document.getElementById('f4-qdate')?.value || new Date().toISOString().slice(0,10);
+      if (!type) { showToast('error','Selectează tipul activității'); return; }
+
+      const now = new Date().toISOString();
+      await AppState.db.put('activities', {
+        id: uuid(), leadId, type, description: desc, outcome,
+        scheduledAt: dateVal + 'T09:00:00.000Z',
+        completedAt: null, isAutoCadence: false, cadenceStep: null, createdAt: now
+      });
+
+      const lead = await AppState.db.get('leads', leadId);
+      if (lead) await AppState.db.put('leads', { ...lead, updatedAt: now });
+
+      const descEl = document.getElementById('f4-qd');
+      const outEl  = document.getElementById('f4-qo');
+      if (descEl) descEl.value = '';
+      if (outEl)  outEl.value  = '';
+
+      showToast('success', 'Activitate logată');
+      await f4RefreshTimeline(leadId);
+    }
+
+    // ── Complete activity ─────────────────────────────────
+    async function f4CompleteAct(actId, leadId) {
+      const a = await AppState.db.get('activities', actId);
+      if (!a) return;
+      await AppState.db.put('activities', { ...a, completedAt: new Date().toISOString() });
+      await f4RefreshTimeline(leadId);
+    }
+
+    // ── Delete activity ───────────────────────────────────
+    async function f4DeleteAct(actId, leadId) {
+      const ok = await showConfirmDialog({
+        title:'Șterge activitate', message:'Confirmi ștergerea acestei activități?', confirmText:'Șterge'
+      });
+      if (!ok) return;
+      await AppState.db.delete('activities', actId);
+      await f4RefreshTimeline(leadId);
+    }
+
+    // ── Auto-cadence generation (wired from M12 la offer sent) ───────
+    async function generateCadenceActivities(leadId, offerSentDate) {
+      const [settings, existing] = await Promise.all([
+        AppState.db.get('settings', 'settings'),
+        AppState.db.getAllByIndex('activities', 'leadId', leadId)
+      ]);
+      const cadenceDays = settings?.cadenceDays || [0, 3, 7, 14, 30];
+      const existingSteps = new Set(existing.filter(a => a.isAutoCadence).map(a => a.cadenceStep));
+      const sentDate = offerSentDate instanceof Date ? offerSentDate : new Date(offerSentDate);
+
+      const toCreate = cadenceDays
+        .filter(day => !existingSteps.has(day))
+        .map(day => ({
+          id: uuid(), leadId, type: 'follow_up',
+          description: CADENCE_TEMPLATES[day] ?? `Follow-up zi ${day}`,
+          outcome: null,
+          scheduledAt: addDays(sentDate, day).toISOString(),
+          completedAt: null, isAutoCadence: true, cadenceStep: day,
+          createdAt: new Date().toISOString()
+        }));
+
+      if (toCreate.length) await AppState.db.putBulk('activities', toCreate);
+      return toCreate.length;
+    }
+
+    // ── Manual cadence trigger ────────────────────────────
+    async function f4GenerateCadenceManual(leadId) {
+      const count = await generateCadenceActivities(leadId, new Date());
+      if (count === 0) showToast('info', 'Cadence complet — toate etapele există deja.');
+      else { showToast('success', `${count} activități cadence generate`); await f4RefreshTimeline(leadId); }
+    }
+
+    // ── Quick log shortcut (L key — wired în sf-shortcuts M17) ───────
+    async function openQuickLogModal(leadId) {
+      if (leadId) { await openLeadActivities(leadId); return; }
+      showToast('info', 'Selectează un lead din pagina Leads pentru a loga activitate.');
+    }
+  </script>
   <script id="sf-f9">       /* M9 — Today */      </script>
   <script id="sf-f5a">      /* M11 — Portfolio */ </script>
   <script id="sf-f5">       /* M12 — Offers */    </script>
