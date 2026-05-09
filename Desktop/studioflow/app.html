@@ -807,6 +807,10 @@
                        background:#EEF4FF; border:1px solid #BDD4F0; border-radius:var(--sf-r);
                        padding:10px 14px; margin-bottom:12px; font-size:13px; gap:12px; }
     .f9-notif-note   { font-size:11px; color:var(--sf-text-3); margin-bottom:20px; }
+
+    /* ── Kanban Drag-and-Drop (sf-f3-dnd) ──────────── */
+    .sf-lead-card[draggable="true"] { cursor:grab; }
+    .sf-lead-card.sf-dragging       { opacity:0.4; transform:scale(0.97); box-shadow:none; cursor:grabbing; }
   </style>
 </head>
 <body class="sf-body" id="sf-body">
@@ -2392,6 +2396,7 @@
           }</div>
         </div>`;
       }).join('')}</div>`;
+      typeof initKanbanDnD === 'function' && initKanbanDnD();
     }
 
     // ── Stage age ─────────────────────────────────────────────────
@@ -2429,7 +2434,7 @@
       const dispVal = lead.status==='won'
         ? (lead.wonContractValue||lead.estimatedValue||0)
         : (lead.estimatedValue||0);
-      return `<div class="sf-lead-card sf-lead-card--${cat}" data-lead-id="${lead.id}">
+      return `<div class="sf-lead-card sf-lead-card--${cat}" data-lead-id="${lead.id}"${lead.status==='active'?' draggable="true"':''}>
         <div class="sf-lead-card__title">${client?.name||'—'}</div>
         <div class="sf-lead-card__sub">${lead.projectName||'—'}</div>
         <div class="sf-lead-card__meta">
@@ -2493,7 +2498,65 @@
       }
     }
   </script>
-  <script id="sf-f3-dnd">   /* M10 — DnD */       </script>
+  <script id="sf-f3-dnd">
+    function initKanbanDnD() {
+      const pipeline = document.getElementById('page-pipeline');
+      if (!pipeline) return;
+
+      // Event delegation — attach listeners once on the static parent
+      if (!pipeline._dndReady) {
+        pipeline._dndReady = true;
+
+        pipeline.addEventListener('dragstart', e => {
+          const card = e.target.closest('.sf-lead-card');
+          if (!card || !card.draggable) return;
+          AppState.draggedLeadId = card.dataset.leadId;
+          e.dataTransfer.effectAllowed = 'move';
+          setTimeout(() => card.classList.add('sf-dragging'), 0);
+        });
+
+        pipeline.addEventListener('dragend', e => {
+          const card = e.target.closest('.sf-lead-card');
+          if (card) card.classList.remove('sf-dragging');
+          pipeline.querySelectorAll('.drag-over')
+            .forEach(c => c.classList.remove('drag-over'));
+        });
+
+        pipeline.addEventListener('dragover', e => {
+          const col = e.target.closest('.sf-kanban-col');
+          if (!col) return;
+          e.preventDefault();
+          col.classList.add('drag-over');
+        });
+
+        pipeline.addEventListener('dragleave', e => {
+          const col = e.target.closest('.sf-kanban-col');
+          if (!col || col.contains(e.relatedTarget)) return;
+          col.classList.remove('drag-over');
+        });
+
+        pipeline.addEventListener('drop', async e => {
+          const col = e.target.closest('.sf-kanban-col');
+          if (!col) return;
+          e.preventDefault();
+          col.classList.remove('drag-over');
+          const leadId  = AppState.draggedLeadId;
+          const toStage = col.dataset.stage;
+          AppState.draggedLeadId = null;
+          if (!leadId || !toStage) return;
+          if (TERMINAL_STAGE_KEYS.includes(toStage)) {
+            await handleTerminalStageDrop(leadId, toStage);
+          } else {
+            await moveLead(leadId, toStage);
+            const label = [...DISCOVERY_STAGES, ...DESIGN_STAGES]
+              .find(s => s.key === toStage)?.label || toStage;
+            showToast('success', `Lead mutat în "${label}"`);
+            await _renderPipelineContent();
+          }
+        });
+      }
+    }
+  </script>
   <script id="sf-f1">
     let _f1RC  = null; // RateCard cache
     let _f1Tab = 'arch';
