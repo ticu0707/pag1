@@ -2639,7 +2639,8 @@
       if (!resEl) return;
       if (area <= 0 || hTotal === 0) {
         resEl.innerHTML = `<div style="color:var(--sf-text-2);font-size:13px">Introduceți suprafața și selectați cel puțin o fază.</div>`;
-        document.getElementById('f1-price-intel').innerHTML = '';
+        const piEl = document.getElementById('f1-price-intel');
+        if (piEl) piEl.innerHTML = '';
         return;
       }
       resEl.innerHTML = `
@@ -2674,26 +2675,22 @@
 
     // ── Price Intelligence ────────────────────────────────────────────
     async function f1QueryPI(typology, funnelType, area) {
-      const [wonOffers, allLeads, settings] = await Promise.all([
-        AppState.db.getAllByIndex('offers', 'status', 'won'),
+      const [allLeads, settings] = await Promise.all([
         AppState.db.getAll('leads'),
         AppState.db.get('settings', 'settings')
       ]);
-      const lm = Object.fromEntries(allLeads.map(l => [l.id, l]));
       const minN = settings?.priceIntelMinSamples || 30;
-      const prices = wonOffers
-        .filter(o => {
-          const l = lm[o.leadId];
-          return l && l.typology === typology && l.funnelType === funnelType
-              && l.area >= area * 0.50 && l.area <= area * 1.50;
-        })
-        .map(o => o.totalPriceEUR || 0)
-        .filter(p => p > 0)
+      const prices = allLeads
+        .filter(l => l.status === 'won' && l.typology === typology
+                  && l.funnelType === funnelType
+                  && (l.wonContractValue || 0) > 0
+                  && (l.area || 0) >= area * 0.50 && (l.area || 0) <= area * 1.50)
+        .map(l => l.wonContractValue)
         .sort((a, b) => a - b);
       if (!prices.length) return null;
       return {
         samples: prices.length, minN, typology,
-        hr: { min: prices[0], max: prices[prices.length-1], median: prices[Math.floor(prices.length/2)] },
+        hr: { min: prices[0], max: prices[prices.length - 1], median: prices[Math.floor(prices.length / 2)] },
         ok: prices.length >= minN
       };
     }
