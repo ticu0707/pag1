@@ -449,15 +449,27 @@
       max-width: 360px;
       pointer-events: all;
       border-left: 3px solid var(--sf-info);
+      display: flex;
+      align-items: center;
+      gap: var(--sp-2);
       animation: sf-toast-in 200ms ease;
     }
     .sf-toast--success { border-left-color: var(--sf-hot); }
     .sf-toast--warning { border-left-color: var(--sf-warm); }
     .sf-toast--error   { border-left-color: var(--sf-cold); }
     .sf-toast--info    { border-left-color: var(--sf-info); }
+    .sf-toast__icon  { flex-shrink: 0; font-size: 14px; }
+    .sf-toast__msg   { flex: 1; line-height: 1.4; }
+    .sf-toast__close { flex-shrink: 0; font-size: 16px; opacity: 0.5; background: none; border: none; cursor: pointer; padding: 0 2px; line-height: 1; }
+    .sf-toast__close:hover { opacity: 1; }
+    .sf-toast--dismiss { animation: sf-toast-out 300ms ease forwards; pointer-events: none; }
     @keyframes sf-toast-in {
       from { opacity: 0; transform: translateX(20px); }
       to   { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes sf-toast-out {
+      from { opacity: 1; transform: translateX(0); }
+      to   { opacity: 0; transform: translateX(20px); }
     }
 
     /* ── Modal ─────────────────────────────────────── */
@@ -694,6 +706,18 @@
       justify-content: space-between;
       margin-top: var(--sp-6);
     }
+
+    /* ── KPI Cards (wizard + import report) ───────── */
+    .sf-kpi-grid  { display: grid; grid-template-columns: repeat(3,1fr); gap: var(--sp-4); margin-bottom: var(--sp-4); }
+    .sf-kpi-card  { background: var(--sf-surface-2); border-radius: var(--sf-r); padding: var(--sp-3) var(--sp-4); text-align: center; }
+    .sf-kpi-value { font-size: 24px; font-weight: 700; color: var(--sf-primary); font-family: var(--sf-font-num); }
+    .sf-kpi-label { font-size: 12px; color: var(--sf-text-2); margin-top: 2px; }
+
+    /* ── Modal header / title / body ───────────────── */
+    .sf-modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--sp-4); }
+    .sf-modal-title  { font-size: 18px; font-weight: 600; color: var(--sf-text); }
+    .sf-modal-body   { color: var(--sf-text-2); }
+    .sf-modal--danger { border-top: 3px solid var(--sf-cold); }
 
     /* ── Misc ──────────────────────────────────────── */
     .sf-spinner {
@@ -1072,10 +1096,9 @@
         <span class="sf-toast__msg">${message}</span>
         <button class="sf-toast__close" onclick="this.parentElement.remove()">×</button>`;
       root.appendChild(toast);
-      requestAnimationFrame(() => toast.classList.add('sf-toast--visible'));
       setTimeout(() => {
-        toast.classList.remove('sf-toast--visible');
-        toast.addEventListener('transitionend', () => toast.remove(), { once: true });
+        toast.classList.add('sf-toast--dismiss');
+        toast.addEventListener('animationend', () => toast.remove(), { once: true });
       }, durationMs);
     }
 
@@ -1332,6 +1355,8 @@
         renderSidebarLogo(studio.logoBlob);
         renderSidebarStudioName(studio.name);
         navigate(location.hash || '#today');
+        // Dispatch manual în caz că hash-ul nu s-a schimbat (reload pe aceeași pagină)
+        window.dispatchEvent(new Event('hashchange'));
         scheduleBackupCheck();
         registerServiceWorker();
       }
