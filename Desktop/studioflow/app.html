@@ -1798,7 +1798,406 @@
       }
     }
   </script>
-  <script id="sf-f2">       /* M5 — Leads */      </script>
+  <script id="sf-f2">
+    // ── Scoring constants ────────────────────────────────────────────
+    const SCORING_CRITERIA = [
+      { key:'profitabilitateBruta',   label:'Profitabilitate brută',    hint:'0=pierdere · 10=profit excelent' },
+      { key:'termenLivrare',          label:'Termen de livrare',         hint:'0=imposibil · 10=confortabil' },
+      { key:'clientRecurent',         label:'Client recurent',            hint:'0=prim contact · 10=client fidel' },
+      { key:'claritate_brief',        label:'Claritate brief',            hint:'0=brief absent · 10=complet' },
+      { key:'interesStrategic',       label:'Interes strategic',          hint:'0=irelevant · 10=ref. portofoliu' },
+      { key:'dificultateTehnLegala',  label:'Complexitate tech/legală',   hint:'0=extrem complex · 10=standard' },
+      { key:'alinieEstetica',         label:'Aliniere estetică',          hint:'0=contrar · 10=perfect aliniat' },
+      { key:'plata',                  label:'Comportament la plată',      hint:'0=risc neplată · 10=plătitor rapid' },
+      { key:'disponibilitateEchipa',  label:'Disponibilitate echipă',     hint:'0=echipa plină · 10=capacitate liberă' },
+      { key:'impactReputational',     label:'Impact reputațional',        hint:'0=risc reputație · 10=vizibilitate max' },
+      { key:'incarcareEchipaInterna', label:'Încărcare echipă internă',   hint:'0=supraîncărcare · 10=spațiu disponibil' },
+      { key:'capacitateColaboratori', label:'Capacitate colaboratori',    hint:'0=indisponibili · 10=disponibili' },
+      { key:'cashflowIntern',         label:'Cashflow intern',            hint:'0=criză · 10=lichiditate bună' },
+      { key:'timpOnboarding',         label:'Efort onboarding',           hint:'0=dificil/lung · 10=start rapid' },
+    ];
+    const SOURCE_LABELS = {
+      recomandare_colaboratori:'Rec. colaboratori', recomandare_clienti:'Rec. clienți',
+      client_recurent:'Client recurent', recomandare_cunostinte:'Rec. cunoștințe',
+      contact_direct:'Contact direct', other:'Altă sursă'
+    };
+
+    // ── Pure helpers ─────────────────────────────────────────────────
+    function computeScoreTotal(score) {
+      return SCORING_CRITERIA.reduce((s,c) => s + (Number(score[c.key]) || 0), 0);
+    }
+    function getScoreCategory(total) {
+      return total >= 105 ? 'hot' : total >= 70 ? 'warm' : 'cold';
+    }
+    function getPricePosition(priceEUR, intel) {
+      if (!intel || intel.confidenceFlag === 'insufficient_data') return null;
+      const dev = (priceEUR - intel.historicalRange.median) / intel.historicalRange.median;
+      return dev < -0.10 ? -1 : dev > 0.10 ? 1 : 0;
+    }
+    function getWinRateBySource(src, hist) {
+      const rel = hist.filter(l => l.sourceType === src && ['won','lost'].includes(l.status));
+      return rel.length < 5 ? (DEFAULT_SOURCE_RATES[src] ?? DEFAULT_SOURCE_RATES._global) : rel.filter(l=>l.status==='won').length/rel.length;
+    }
+    function getWinRateByTypology(typ, hist) {
+      const rel = hist.filter(l => l.typology === typ && ['won','lost'].includes(l.status));
+      return rel.length < 5 ? (DEFAULT_TYPOLOGY_RATES[typ] ?? DEFAULT_TYPOLOGY_RATES._global) : rel.filter(l=>l.status==='won').length/rel.length;
+    }
+    function computeWinProbability(lead, settings, hist=[], intel=null) {
+      const w = settings.winProbWeights;
+      const pricePos = getPricePosition(lead.estimatedValue, intel);
+      const raw = (lead.scoreTotal/140)*w.scoreWeight
+                + getWinRateBySource(lead.sourceType, hist)*w.sourceWeight
+                + getWinRateByTypology(lead.typology, hist)*w.typologyWeight
+                + (pricePos===null ? 0.5 : Math.max(0,0.5-pricePos*0.15))*w.pricePositionWeight;
+      return Math.round(Math.min(95, Math.max(5, raw*100)));
+    }
+
+    async function computeGoNoGo(lead, db) {
+      const [settings, studio, allLeads] = await Promise.all([
+        db.get('settings','settings'), db.get('studio',1), db.getAll('leads')
+      ]);
+      const reasons = []; let decision = 'go';
+      const today = new Date().toISOString();
+      if ((lead.scoreTotal||0) < settings.goNoGoRules.minScore) {
+        decision='nogo'; reasons.push(`Scor ${lead.scoreTotal} sub minimul ${settings.goNoGoRules.minScore}`);
+      }
+      const activeWon = allLeads.filter(l => l.status==='won' && l.estimatedEndDate && l.estimatedEndDate>today);
+      if (activeWon.length >= studio.activeProjectsLimit) {
+        decision='nogo'; reasons.push(`Proiecte active (${activeWon.length}) ≥ limita (${studio.activeProjectsLimit})`);
+      }
+      const hist = allLeads.filter(l => ['won','lost'].includes(l.status));
+      const winProbability = computeWinProbability(lead, settings, hist, null);
+      return { decision, reason: reasons.join(' | ') || 'Toate criteriile îndeplinite', winProbability, sampleSize: hist.length };
+    }
+
+    // ── Scoring panel ─────────────────────────────────────────────────
+    function renderScoringPanel(score, container, onChange) {
+      const total = computeScoreTotal(score);
+      const cat   = getScoreCategory(total);
+      const pct   = Math.round(total/140*100);
+      container.innerHTML = `
+        <div class="sf-score-panel">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <span class="sf-score-total">${total} / 140</span>
+            <span class="sf-badge sf-badge--${cat}">${cat.toUpperCase()}</span>
+          </div>
+          <div class="sf-score-bar"><div class="sf-score-bar__fill ${cat}" id="sp-fill" style="width:${pct}%"></div></div>
+          ${SCORING_CRITERIA.map(c=>`
+            <div class="sf-criterion" title="${c.hint}">
+              <span class="sf-criterion__label">${c.label}</span>
+              <input type="range" class="sf-criterion__slider" min="0" max="10" value="${score[c.key]||0}" data-key="${c.key}">
+              <span class="sf-criterion__value">${score[c.key]||0}</span>
+            </div>`).join('')}
+        </div>`;
+      container.querySelectorAll('input[type=range]').forEach(sl => {
+        sl.addEventListener('input', () => {
+          sl.nextElementSibling.textContent = sl.value;
+          score[sl.dataset.key] = Number(sl.value);
+          const t = computeScoreTotal(score); const c = getScoreCategory(t);
+          container.querySelector('.sf-score-total').textContent = `${t} / 140`;
+          container.querySelector('.sf-badge').className = `sf-badge sf-badge--${c}`;
+          container.querySelector('.sf-badge').textContent = c.toUpperCase();
+          container.querySelector('#sp-fill').className = `sf-score-bar__fill ${c}`;
+          container.querySelector('#sp-fill').style.width = Math.round(t/140*100)+'%';
+          onChange && onChange(score);
+        });
+      });
+    }
+
+    // ── Leads list page ───────────────────────────────────────────────
+    async function renderLeads() {
+      const page = document.getElementById('page-leads');
+      if (!page) return;
+      if (!page.querySelector('#f2-filter-status')) {
+        page.innerHTML = `<div class="sf-page-header">
+          <div><div class="sf-page-title">Leads</div></div>
+          <button class="sf-btn sf-btn--primary" onclick="openNewLeadModal()">+ Lead nou</button>
+        </div>
+        <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center">
+          <select class="sf-select" id="f2-filter-status" onchange="renderLeadsTable()" style="width:160px">
+            <option value="">Toate statusurile</option><option value="active">Active</option>
+            <option value="won">Câștigate</option><option value="lost">Pierdute</option>
+            <option value="withdrawn">Retrase</option>
+          </select>
+          <select class="sf-select" id="f2-filter-funnel" onchange="renderLeadsTable()" style="width:150px">
+            <option value="">Toate funnel-urile</option>
+            <option value="discovery">Discovery</option><option value="design">Design</option>
+          </select>
+          <input type="search" class="sf-search" id="f2-search" placeholder="Caută client / proiect…"
+            value="${AppState.searchQuery}" oninput="AppState.searchQuery=this.value;renderLeadsTable()" style="flex:1;max-width:300px">
+        </div>
+        <div id="f2-table-wrap"></div>`;
+      }
+      await renderLeadsTable();
+    }
+
+    async function renderLeadsTable() {
+      const wrap = document.getElementById('f2-table-wrap');
+      if (!wrap || !AppState.db) return;
+      let [leads, clients] = await Promise.all([AppState.db.getAll('leads'), AppState.db.getAll('clients')]);
+      const cm = Object.fromEntries(clients.map(c=>[c.id,c]));
+      const fs = document.getElementById('f2-filter-status')?.value || '';
+      const ff = document.getElementById('f2-filter-funnel')?.value || '';
+      const q  = (AppState.searchQuery||'').toLowerCase();
+      if (fs) leads = leads.filter(l=>l.status===fs);
+      if (ff) leads = leads.filter(l=>l.funnelType===ff);
+      if (q)  leads = leads.filter(l=>(l.projectName||'').toLowerCase().includes(q)||(cm[l.clientId]?.name||'').toLowerCase().includes(q));
+      leads.sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
+      if (!leads.length) {
+        wrap.innerHTML=`<div style="padding:48px;text-align:center;color:var(--sf-text-2)">Niciun lead găsit.
+          <br><button class="sf-btn sf-btn--primary" style="margin-top:16px" onclick="openNewLeadModal()">Adaugă primul lead</button></div>`;
+        return;
+      }
+      const SL={'active':'Activ','won':'Câștigat','lost':'Pierdut','withdrawn':'Retras'};
+      const badge=(t,cat)=>`<span class="sf-badge sf-badge--${cat}">${t}</span>`;
+      wrap.innerHTML=`<table class="sf-table"><thead><tr>
+        <th>Client / Proiect</th><th>Funnel</th><th>Tip</th><th>Scor</th><th>Win%</th><th>Stagiu</th><th>Status</th><th>Acțiuni</th>
+      </tr></thead><tbody>${leads.map(l=>{
+        const c=getScoreCategory(l.scoreTotal||0);
+        return`<tr>
+          <td><div style="font-weight:600">${cm[l.clientId]?.name||'—'}</div>
+            <div style="font-size:12px;color:var(--sf-text-2)">${l.projectName||'—'} · ${l.area||'?'} mp</div></td>
+          <td>${l.funnelType==='discovery'?'Discovery':'Design'}</td>
+          <td>${badge(l.typology||'—','neutral')}</td>
+          <td>${badge(c.toUpperCase(),c)} <span style="font-size:11px;color:var(--sf-text-2)">${l.scoreTotal||0}</span></td>
+          <td style="font-weight:600">${l.winProbability||'—'}%</td>
+          <td style="font-size:12px;color:var(--sf-text-2)">${(l.pipelineStage||'').replace(/_/g,' ')}</td>
+          <td>${badge(SL[l.status]||l.status,l.status==='active'?'info':l.status==='won'?'hot':l.status==='lost'?'cold':'neutral')}</td>
+          <td style="white-space:nowrap;display:flex;gap:4px">
+            <button class="sf-btn sf-btn--secondary" onclick="openEditLeadModal('${l.id}')" style="font-size:11px;padding:3px 8px">Edit</button>
+            ${l.status==='active'?`
+            <button class="sf-btn sf-btn--secondary" onclick="markLeadWon('${l.id}')" style="font-size:11px;padding:3px 8px;color:var(--sf-hot)">✓</button>
+            <button class="sf-btn sf-btn--secondary" onclick="markLeadLost('${l.id}')" style="font-size:11px;padding:3px 8px;color:var(--sf-cold)">✕</button>`:''}
+            <button class="sf-btn sf-btn--secondary" onclick="deleteLead('${l.id}')" style="font-size:11px;padding:3px 8px">🗑</button>
+          </td>
+        </tr>`;}).join('')}</tbody></table>`;
+    }
+
+    // ── Lead modal (create / edit) ────────────────────────────────────
+    async function openNewLeadModal()     { await _openLeadModal(null); }
+    async function openEditLeadModal(id)  { await _openLeadModal(id);   }
+
+    async function _openLeadModal(leadId) {
+      const [clients, existing] = await Promise.all([
+        AppState.db.getAll('clients'),
+        leadId ? AppState.db.get('leads', leadId) : Promise.resolve(null)
+      ]);
+      const score = existing?.score ? {...existing.score} : Object.fromEntries(SCORING_CRITERIA.map(c=>[c.key,5]));
+      const fId   = existing?.clientId || '';
+      const cOpts = clients.map(c=>`<option value="${c.id}" ${c.id===fId?'selected':''}>${c.name}</option>`).join('');
+      const sOpts = Object.entries(SOURCE_LABELS).map(([v,l])=>
+        `<option value="${v}" ${existing?.sourceType===v?'selected':''}>${l}</option>`).join('');
+      const tOpts = ['T1','T2','T3','T4','T5','T6'].map(t=>
+        `<option value="${t}" ${existing?.typology===t?'selected':''}>${t}</option>`).join('');
+
+      showModal(`
+        <div class="sf-modal-header">
+          <h2 class="sf-modal-title">${leadId?'Editează lead':'Lead nou'}</h2>
+          <button class="sf-btn sf-btn--secondary" onclick="closeModal()">✕</button>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 300px;gap:20px;align-items:start">
+          <div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+              <div>
+                <label class="sf-label">Client *</label>
+                <select class="sf-select" id="f2-client">${cOpts||'<option value="">— adaugă mai jos —</option>'}</select>
+                <a href="#" onclick="document.getElementById('f2-nc').hidden=!document.getElementById('f2-nc').hidden;return false"
+                  style="font-size:11px;display:block;margin-top:3px">+ client nou</a>
+                <div id="f2-nc" hidden style="display:flex;gap:6px;margin-top:6px">
+                  <input class="sf-input" id="f2-nc-name" placeholder="Nume client" style="flex:1">
+                  <select class="sf-select" id="f2-nc-type" style="width:110px">
+                    <option value="company">Companie</option><option value="individual">Persoană fiz.</option>
+                  </select>
+                  <button class="sf-btn sf-btn--secondary" onclick="createClientInline()" style="font-size:11px;padding:3px 8px">+</button>
+                </div>
+              </div>
+              <div><label class="sf-label">Funnel *</label>
+                <select class="sf-select" id="f2-funnel">
+                  <option value="discovery" ${existing?.funnelType==='discovery'||!existing?'selected':''}>Discovery</option>
+                  <option value="design" ${existing?.funnelType==='design'?'selected':''}>Design</option>
+                </select></div>
+              <div><label class="sf-label">Nume proiect *</label>
+                <input class="sf-input" id="f2-name" value="${existing?.projectName||''}" placeholder="ex: Vilă Chitila"></div>
+              <div><label class="sf-label">Adresă</label>
+                <input class="sf-input" id="f2-addr" value="${existing?.address||''}"></div>
+              <div><label class="sf-label">Suprafață (mp)</label>
+                <input class="sf-input" type="number" id="f2-area" value="${existing?.area||''}"></div>
+              <div><label class="sf-label">Tipologie *</label>
+                <select class="sf-select" id="f2-typo">${tOpts}</select></div>
+              <div><label class="sf-label">Sursă</label>
+                <select class="sf-select" id="f2-source">${sOpts}</select></div>
+              <div><label class="sf-label">Detaliu sursă</label>
+                <input class="sf-input" id="f2-src-detail" value="${existing?.sourceDetail||''}"></div>
+              <div><label class="sf-label">Valoare estimată (EUR)</label>
+                <input class="sf-input" type="number" id="f2-value" value="${existing?.estimatedValue||''}"></div>
+              <div><label class="sf-label">Data estimată finalizare</label>
+                <input class="sf-input" type="date" id="f2-end-date" value="${existing?.estimatedEndDate?.slice(0,10)||''}"></div>
+            </div>
+            <div id="f2-gng" style="margin-bottom:12px"></div>
+            <div style="display:flex;gap:8px">
+              <button class="sf-btn sf-btn--primary" onclick="saveLead('${leadId||''}')">${leadId?'Salvează modificări':'Creează lead'}</button>
+              <button class="sf-btn sf-btn--secondary" onclick="closeModal()">Anulează</button>
+            </div>
+          </div>
+          <div id="f2-score-panel"></div>
+        </div>`, { wide: true });
+
+      const panelEl = document.getElementById('f2-score-panel');
+      const refreshGng = async () => {
+        const tmp = { scoreTotal:computeScoreTotal(score), sourceType:document.getElementById('f2-source')?.value,
+          typology:document.getElementById('f2-typo')?.value,
+          estimatedValue:Number(document.getElementById('f2-value')?.value)||0 };
+        const gng = await computeGoNoGo(tmp, AppState.db);
+        const el = document.getElementById('f2-gng');
+        if (el) el.innerHTML=`<div style="display:flex;gap:10px;align-items:center;padding:8px 12px;background:var(--sf-surface-2);border-radius:8px;font-size:13px">
+          <span style="font-weight:700;color:var(--sf-${gng.decision==='go'?'hot':'cold'})">${gng.decision==='go'?'✓ GO':'✕ NO-GO'}</span>
+          <span style="color:var(--sf-text-2);flex:1">${gng.reason}</span>
+          <span style="font-weight:600">${gng.winProbability}% <span style="font-size:11px;color:var(--sf-text-3)">(n=${gng.sampleSize})</span></span>
+        </div>`;
+      };
+      renderScoringPanel(score, panelEl, () => refreshGng());
+      refreshGng();
+    }
+
+    async function createClientInline() {
+      const name = document.getElementById('f2-nc-name')?.value?.trim();
+      if (!name) { showToast('error','Introdu un nume de client'); return; }
+      const type = document.getElementById('f2-nc-type')?.value||'company';
+      const now = new Date().toISOString();
+      const client = { id:uuid(), name, type, contactPerson:'', email:'', phone:'', address:'',
+        fiscalCode:'', totalContractsValue:0, totalContractsCount:0, ltvFormula:'sum_contracts',
+        relationshipRating:3, lastDealDate:null, reengagementAlertDays:365, notes:'', tags:[], createdAt:now, updatedAt:now };
+      await AppState.db.put('clients', client);
+      const sel = document.getElementById('f2-client');
+      const opt = new Option(name, client.id, true, true);
+      sel.appendChild(opt);
+      document.getElementById('f2-nc').hidden = true;
+      showToast('success',`Client "${name}" creat.`);
+    }
+
+    // ── Save lead ─────────────────────────────────────────────────────
+    async function saveLead(leadId) {
+      const clientId    = document.getElementById('f2-client')?.value;
+      const projectName = document.getElementById('f2-name')?.value?.trim();
+      if (!clientId || !projectName) { showToast('error','Client și nume proiect sunt obligatorii'); return; }
+      const existing = leadId ? await AppState.db.get('leads', leadId) : null;
+      const score = {};
+      SCORING_CRITERIA.forEach(c => {
+        const el = document.querySelector(`input[data-key="${c.key}"]`);
+        score[c.key] = el ? Number(el.value) : 5;
+      });
+      const scoreTotal    = computeScoreTotal(score);
+      const scoreCategory = getScoreCategory(scoreTotal);
+      const [settings, allLeads] = await Promise.all([AppState.db.get('settings','settings'), AppState.db.getAll('leads')]);
+      const hist = allLeads.filter(l=>['won','lost'].includes(l.status));
+      const sourceType    = document.getElementById('f2-source')?.value||'other';
+      const typology      = document.getElementById('f2-typo')?.value;
+      const estimatedValue = Number(document.getElementById('f2-value')?.value)||0;
+      const tmp = { scoreTotal, sourceType, typology, estimatedValue };
+      const winProbability = computeWinProbability(tmp, settings, hist, null);
+      const gng = await computeGoNoGo(tmp, AppState.db);
+      const now = new Date().toISOString();
+      const endDateVal = document.getElementById('f2-end-date')?.value;
+      await AppState.db.put('leads', {
+        id: existing?.id || uuid(),
+        clientId, projectName,
+        address:      document.getElementById('f2-addr')?.value?.trim()||'',
+        area:         parseFloat(document.getElementById('f2-area')?.value)||0,
+        typology, funnelType: document.getElementById('f2-funnel')?.value,
+        sourceType, sourceDetail: document.getElementById('f2-src-detail')?.value?.trim()||'',
+        score, scoreTotal, scoreCategory,
+        goNoGo: gng.decision, goNoGoReason: gng.reason, winProbability,
+        pipelineStage:    existing?.pipelineStage||'brief_primit',
+        estimatedValue,
+        estimatedEndDate: endDateVal ? new Date(endDateVal).toISOString() : (existing?.estimatedEndDate||null),
+        status:           existing?.status||'active',
+        wonContractValue: existing?.wonContractValue||null,
+        lostReason:       existing?.lostReason||null,
+        lostToCompetitor: existing?.lostToCompetitor||'',
+        debrief:          existing?.debrief||{completed:false,whatWorked:'',whatFailed:'',scoringAccurate:true,priceAccurate:true,priceDirection:null,completedAt:null},
+        notes: existing?.notes||'',
+        createdAt:      existing?.createdAt||now,
+        stageEnteredAt: existing?.stageEnteredAt||now,
+        updatedAt: now,
+      });
+      closeModal();
+      showToast('success', leadId?'Lead actualizat.':'Lead creat cu succes!');
+      renderLeads();
+    }
+
+    // ── Delete ────────────────────────────────────────────────────────
+    async function deleteLead(id) {
+      const ok = await showConfirmDialog({ title:'Șterge lead', confirmText:'Șterge definitiv', dangerKeyword:'ȘTERGE',
+        message:'Această acțiune șterge lead-ul, ofertele și activitățile asociate. Scrie <strong>ȘTERGE</strong> pentru confirmare.' });
+      if (!ok) return;
+      const [allOffers, allActivities] = await Promise.all([AppState.db.getAll('offers'), AppState.db.getAll('activities')]);
+      await Promise.all([
+        AppState.db.delete('leads', id),
+        ...allOffers.filter(o=>o.leadId===id).map(o=>AppState.db.delete('offers',o.id)),
+        ...allActivities.filter(a=>a.leadId===id).map(a=>AppState.db.delete('activities',a.id)),
+      ]);
+      showToast('success','Lead șters.'); renderLeads();
+    }
+
+    // ── Mark Won ──────────────────────────────────────────────────────
+    async function markLeadWon(leadId) {
+      const lead = await AppState.db.get('leads', leadId);
+      const def  = addDays(new Date(),365).toISOString().slice(0,10);
+      showModal(`
+        <div class="sf-modal-header"><h2 class="sf-modal-title">✓ Marchează câștigat</h2>
+          <button class="sf-btn sf-btn--secondary" onclick="closeModal()">✕</button></div>
+        <label class="sf-label">Valoare contract (EUR)</label>
+        <input class="sf-input" id="won-value" type="number" value="${lead.estimatedValue||''}" style="margin-bottom:10px">
+        <label class="sf-label">Data estimată finalizare *</label>
+        <input class="sf-input" id="won-end" type="date" value="${def}" style="margin-bottom:14px">
+        <div style="display:flex;gap:8px">
+          <button class="sf-btn sf-btn--primary" onclick="_confirmWon('${leadId}')">Confirmă</button>
+          <button class="sf-btn sf-btn--secondary" onclick="closeModal()">Anulează</button>
+        </div>`);
+    }
+    async function _confirmWon(leadId) {
+      const lead = await AppState.db.get('leads', leadId);
+      const wonVal  = parseFloat(document.getElementById('won-value')?.value)||0;
+      const endDate = document.getElementById('won-end')?.value;
+      if (!endDate) { showToast('error','Data finalizare este obligatorie'); return; }
+      const now = new Date().toISOString();
+      await AppState.db.put('leads', {...lead, status:'won', wonContractValue:wonVal,
+        estimatedEndDate:new Date(endDate).toISOString(), updatedAt:now});
+      const cl = await AppState.db.get('clients', lead.clientId);
+      if (cl) await AppState.db.put('clients', {...cl, totalContractsValue:(cl.totalContractsValue||0)+wonVal,
+        totalContractsCount:(cl.totalContractsCount||0)+1, lastDealDate:now, updatedAt:now});
+      closeModal(); showToast('success','Lead marcat câștigat!'); renderLeads();
+    }
+
+    // ── Mark Lost ─────────────────────────────────────────────────────
+    async function markLeadLost(leadId) {
+      showModal(`
+        <div class="sf-modal-header"><h2 class="sf-modal-title">✕ Marchează pierdut</h2>
+          <button class="sf-btn sf-btn--secondary" onclick="closeModal()">✕</button></div>
+        <label class="sf-label">Motiv *</label>
+        <select class="sf-select" id="lost-reason" style="margin-bottom:8px"
+          onchange="document.getElementById('lost-comp-wrap').hidden=this.value!=='competitor'">
+          <option value="price">Preț</option><option value="timing">Timing</option>
+          <option value="competitor">Competitor</option><option value="scope">Scop</option>
+          <option value="other">Altul</option>
+        </select>
+        <div id="lost-comp-wrap" hidden style="margin-bottom:10px">
+          <input class="sf-input" id="lost-competitor" placeholder="Firma concurentă (opțional)">
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="sf-btn sf-btn--primary" onclick="_confirmLost('${leadId}')">Confirmă</button>
+          <button class="sf-btn sf-btn--secondary" onclick="closeModal()">Anulează</button>
+        </div>`);
+    }
+    async function _confirmLost(leadId) {
+      const lead = await AppState.db.get('leads', leadId);
+      const reason     = document.getElementById('lost-reason')?.value;
+      const competitor = document.getElementById('lost-competitor')?.value?.trim()||'';
+      const now = new Date().toISOString();
+      await AppState.db.put('leads', {...lead, status:'lost', lostReason:reason, lostToCompetitor:competitor, updatedAt:now});
+      closeModal(); showToast('info','Lead marcat pierdut. Completează debrieful în Intelligence.'); renderLeads();
+    }
+  </script>
   <script id="sf-f3">       /* M6 — Pipeline */   </script>
   <script id="sf-f3-dnd">   /* M10 — DnD */       </script>
   <script id="sf-f1">       /* M7 — Calculator */ </script>
