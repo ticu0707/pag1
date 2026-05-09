@@ -2043,6 +2043,7 @@
           <td style="white-space:nowrap;display:flex;gap:4px">
             <button class="sf-btn sf-btn--secondary" onclick="openEditLeadModal('${l.id}')" style="font-size:11px;padding:3px 8px">Edit</button>
             <button class="sf-btn sf-btn--secondary" onclick="openLeadActivities('${l.id}')" style="font-size:11px;padding:3px 8px" title="Activități">⏱</button>
+            <button class="sf-btn sf-btn--secondary" onclick="openOfferEditor('${l.id}')" style="font-size:11px;padding:3px 8px" title="Ofertă nouă">📄</button>
             ${l.status==='active'?`
             <button class="sf-btn sf-btn--secondary" onclick="markLeadWon('${l.id}')" style="font-size:11px;padding:3px 8px;color:var(--sf-hot)">✓</button>
             <button class="sf-btn sf-btn--secondary" onclick="markLeadLost('${l.id}')" style="font-size:11px;padding:3px 8px;color:var(--sf-cold)">✕</button>`:''}
@@ -3520,7 +3521,298 @@
       });
     }
   </script>
-  <script id="sf-f5">       /* M12 — Offers */    </script>
+  <script id="sf-f5">
+    const OFFER_METHOD_TPL = `Metodologia HERTZ are 3 faze: Cercetare & Analiză (brief aprofundat, documentare amplasament, întâlniri), Proiectare (concept → proiect tehnic → detalii de execuție), Coordonare (asistență pe șantier, recepție finală). Lucrăm transparent, cu update săptămânal și un punct de contact dedicat.`;
+    const F5_STATUS     = { draft:'Draft', sent:'Trimisă', negotiating:'Negociere', won:'Câștigată', lost:'Pierdută' };
+    const F5_STATUS_CLS = { sent:'sf-badge--warm', negotiating:'sf-badge--hot', lost:'sf-badge--cold' };
+
+    async function renderOffers() {
+      const el = document.getElementById('page-offers');
+      if (!el) return;
+      const [allOffers, allLeads, allClients] = await Promise.all([
+        AppState.db.getAll('offers'), AppState.db.getAll('leads'), AppState.db.getAll('clients')
+      ]);
+      const leadMap = Object.fromEntries(allLeads.map(l=>[l.id,l]));
+      const cliMap  = Object.fromEntries(allClients.map(c=>[c.id,c]));
+      const latest  = allOffers.filter(o=>o.isLatestRevision!==false)
+        .sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
+
+      el.innerHTML = `<div class="sf-page-header">
+        <h2 class="sf-page-title">Oferte</h2></div>
+        ${!latest.length
+          ? '<p style="color:var(--sf-text-3);padding:20px 0">Nicio ofertă. Creează din pagina Leads → buton "+ Ofertă".</p>'
+          : `<div class="sf-table-wrap"><table class="sf-table">
+          <thead><tr><th>Cod</th><th>Client</th><th>Proiect</th><th>Tip</th><th>Status</th><th>Data</th><th></th></tr></thead>
+          <tbody>${latest.map(o=>{
+            const lead=leadMap[o.leadId], cli=lead?cliMap[lead.clientId]:null;
+            return `<tr>
+              <td style="font-weight:600;font-size:12px;font-family:monospace">${o.offerCodeDisplay||o.offerCode}</td>
+              <td>${cli?.name||'—'}</td><td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${lead?.projectName||'—'}</td>
+              <td style="font-size:12px">${o.type==='discovery'?'Discovery':'Design'}</td>
+              <td><span class="sf-badge ${F5_STATUS_CLS[o.status]||''}">${F5_STATUS[o.status]||o.status}</span></td>
+              <td style="font-size:12px;color:var(--sf-text-3)">${o.createdAt?.slice(0,10)||'—'}</td>
+              <td style="display:flex;gap:4px">
+                <button class="sf-btn sf-btn--secondary" style="font-size:11px;padding:3px 8px"
+                  onclick="openOfferEditor('${o.leadId}','${o.id}')">✏ Edit</button>
+                <button class="sf-btn sf-btn--secondary" style="font-size:11px;padding:3px 8px"
+                  onclick="openOfferPreview('${o.id}')">👁</button>
+              </td></tr>`;}).join('')}
+          </tbody></table></div>`}`;
+    }
+
+    async function generateOfferCode(db) {
+      const settings = await db.get('settings','settings');
+      const year = new Date().getFullYear();
+      const prevYear = settings.lastOfferCodeYear || year;
+      const prevSeq  = settings.lastOfferCodeSeq  || 0;
+      const seq = prevYear === year ? prevSeq + 1 : 1;
+      await db.put('settings', {...settings, lastOfferCodeYear:year, lastOfferCodeSeq:seq, updatedAt:new Date().toISOString()});
+      return `${year}_${String(seq).padStart(2,'0')}`;
+    }
+
+    async function openOfferEditor(leadId, existingOfferId) {
+      const el = document.getElementById('page-offers');
+      if (!el) return;
+      // Navigate without triggering hashchange → avoids race with renderOffers()
+      if (location.hash !== '#offers') {
+        history.replaceState(null, '', '#offers');
+        document.querySelectorAll('.sf-page').forEach(p => { p.hidden = true; });
+        document.querySelectorAll('.sf-nav-item').forEach(n => n.classList.remove('active'));
+        document.querySelector('[data-route="#offers"]')?.classList.add('active');
+        el.hidden = false;
+      }
+      const lead   = await AppState.db.get('leads', leadId);
+      const client = lead ? (await AppState.db.get('clients', lead.clientId))||{} : {};
+      let offer = existingOfferId ? await AppState.db.get('offers', existingOfferId) : null;
+
+      if (!offer) {
+        const code = await generateOfferCode(AppState.db);
+        offer = { id:uuid(), leadId, offerCode:code,
+          offerCodeDisplay:`${code} / REV.00`, type:lead?.funnelType||'discovery',
+          revision:0, isLatestRevision:true,
+          content:{ clientSituation:'', clientChallenge:'', clientGoal:'', scopeDescription:'',
+            deliverables:[], approach:OFFER_METHOD_TPL, portfolioImageIds:[],
+            priceBreakdown:[], totalPriceEUR:0, paymentTerms:'', validityDays:30, aboutText:'' },
+          calculatorSnapshot:null, priceIntelligenceData:null,
+          status:'draft', sentAt:null,
+          createdAt:new Date().toISOString(), updatedAt:new Date().toISOString() };
+        await AppState.db.put('offers', offer);
+      }
+      AppState._editingOfferId      = offer.id;
+      AppState._editingPortfolioIds = [...(offer.content.portfolioImageIds||[])];
+      _renderOfferEditor(el, lead, client, offer);
+    }
+
+    function _renderOfferEditor(el, lead, client, offer) {
+      const c = offer.content;
+      const isSent = !['draft','negotiating'].includes(offer.status);
+      const pbRows = (c.priceBreakdown||[]).map(r=>`<tr>
+        <td><input class="sf-input" style="width:100%" value="${r.item}" oninput="_pbRow(this)"></td>
+        <td><input class="sf-input" type="number" style="width:70px" value="${r.hours||0}" oninput="_pbRow(this);_pbTotal()"></td>
+        <td><input class="sf-input" type="number" style="width:80px" value="${r.rateEUR||0}" oninput="_pbRow(this);_pbTotal()"></td>
+        <td class="pb-tot" style="font-weight:600;text-align:right;white-space:nowrap">${((r.hours||0)*(r.rateEUR||0)).toLocaleString('ro-RO')} €</td>
+        <td><button class="sf-btn sf-btn--secondary" style="font-size:11px;padding:2px 6px"
+          onclick="this.closest('tr').remove();_pbTotal()">✕</button></td>
+      </tr>`).join('');
+      const delivBadges = (c.deliverables||[]).map(d=>`<span class="sf-badge" style="background:#EEF4FF;color:#2C6FAD;padding:4px 10px;cursor:pointer" onclick="this.remove()">${d} ×</span>`).join('');
+
+      el.innerHTML = `<div class="sf-page-header">
+        <div style="display:flex;align-items:center;gap:10px">
+          <button class="sf-btn sf-btn--secondary" onclick="renderOffers()">← Înapoi</button>
+          <div><h2 class="sf-page-title" style="font-size:15px;margin:0">${offer.offerCodeDisplay}</h2>
+          <p class="sf-page-subtitle" style="margin:2px 0">${client.name||'—'} · ${lead?.projectName||'—'}</p></div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="sf-btn sf-btn--secondary" onclick="openOfferPreview('${offer.id}')">👁 Preview</button>
+          <button class="sf-btn sf-btn--secondary" onclick="_saveOfferDraft()">💾 Salvează</button>
+          ${!isSent
+            ? `<button class="sf-btn sf-btn--primary" onclick="_markOfferSent('${offer.id}')">✉ Marchează Trimisă</button>`
+            : `<button class="sf-btn sf-btn--secondary" onclick="createRevision('${offer.id}')">+ Revizie nouă</button>`}
+        </div></div>
+
+      <div class="sf-card" style="margin-bottom:16px">
+        <label class="sf-label">1. Situația clientului</label>
+        <textarea class="sf-input" id="f5-sit" rows="3" style="width:100%;margin-bottom:10px">${c.clientSituation}</textarea>
+        <label class="sf-label">2. Provocarea specifică</label>
+        <textarea class="sf-input" id="f5-ch" rows="2" style="width:100%;margin-bottom:10px">${c.clientChallenge}</textarea>
+        <label class="sf-label">3. Obiectivul comun</label>
+        <textarea class="sf-input" id="f5-goal" rows="2" style="width:100%;margin-bottom:10px">${c.clientGoal}</textarea>
+        <label class="sf-label">4. Soluția propusă</label>
+        <textarea class="sf-input" id="f5-scope" rows="3" style="width:100%;margin-bottom:10px">${c.scopeDescription}</textarea>
+        <label class="sf-label">5. Livrabile <small style="color:var(--sf-text-3)">(Enter = adaugă)</small></label>
+        <div id="f5-deliv" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px">${delivBadges}</div>
+        <input class="sf-input" placeholder="ex: Planșe arhitectură → Enter" style="width:300px;margin-bottom:10px"
+          onkeydown="if(event.key==='Enter'&&this.value.trim()){document.getElementById('f5-deliv').insertAdjacentHTML('beforeend',\`<span class='sf-badge' style='background:#EEF4FF;color:#2C6FAD;padding:4px 10px;cursor:pointer' onclick='this.remove()'>\${this.value.trim()} ×</span>\`);this.value='';}">
+        <label class="sf-label">6. Metodologie</label>
+        <textarea class="sf-input" id="f5-appr" rows="3" style="width:100%">${c.approach}</textarea>
+      </div>
+
+      <div class="sf-card" style="margin-bottom:16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <strong>🖼 Portofoliu referință</strong>
+          <button class="sf-btn sf-btn--secondary" id="f5-port-btn" onclick="_openPortfolioSelector()">
+            Selectează imagini (${AppState._editingPortfolioIds.length}/5)</button>
+        </div>
+        <p id="f5-port-info" style="font-size:12px;color:var(--sf-text-3);margin:0">
+          ${AppState._editingPortfolioIds.length ? AppState._editingPortfolioIds.length+' imagini selectate' : 'Nicio imagine selectată'}</p>
+      </div>
+
+      <div class="sf-card" style="margin-bottom:16px">
+        <strong>💰 Deviz preț</strong>
+        <div style="margin:10px 0;overflow-x:auto">
+          <table class="sf-table"><thead><tr><th>Serviciu</th><th>Ore</th><th>€/h</th><th>Total</th><th></th></tr></thead>
+          <tbody id="f5-pb">${pbRows}</tbody></table>
+        </div>
+        <button class="sf-btn sf-btn--secondary" onclick="_pbAdd()" style="margin-bottom:12px">+ Linie</button>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
+          <div style="flex:1;min-width:200px"><label class="sf-label">Termeni plată</label>
+            <textarea class="sf-input" id="f5-pay" rows="2">${c.paymentTerms}</textarea></div>
+          <div><label class="sf-label">Valabilitate (zile)</label>
+            <input class="sf-input" type="number" id="f5-val" value="${c.validityDays||30}" style="width:100px"></div>
+        </div>
+        <div style="text-align:right;margin-top:10px;font-weight:700;font-size:16px" id="f5-total">
+          Total: ${(c.totalPriceEUR||0).toLocaleString('ro-RO')} €</div>
+      </div>`;
+    }
+
+    function _pbRow(inp) {
+      const row = inp.closest('tr');
+      const ins = row.querySelectorAll('input');
+      const tot = row.querySelector('.pb-tot');
+      if (tot) tot.textContent = ((parseFloat(ins[1]?.value)||0)*(parseFloat(ins[2]?.value)||0)).toLocaleString('ro-RO')+' €';
+    }
+
+    function _pbTotal() {
+      let t = 0;
+      document.querySelectorAll('#f5-pb tr').forEach(row=>{
+        const i=row.querySelectorAll('input');
+        t += (parseFloat(i[1]?.value)||0)*(parseFloat(i[2]?.value)||0);
+      });
+      const el = document.getElementById('f5-total');
+      if (el) el.textContent = `Total: ${t.toLocaleString('ro-RO')} €`;
+    }
+
+    function _pbAdd() {
+      document.getElementById('f5-pb')?.insertAdjacentHTML('beforeend',`<tr>
+        <td><input class="sf-input" style="width:100%" placeholder="Serviciu" oninput="_pbRow(this)"></td>
+        <td><input class="sf-input" type="number" style="width:70px" value="0" oninput="_pbRow(this);_pbTotal()"></td>
+        <td><input class="sf-input" type="number" style="width:80px" value="0" oninput="_pbRow(this);_pbTotal()"></td>
+        <td class="pb-tot" style="font-weight:600;text-align:right;white-space:nowrap">0 €</td>
+        <td><button class="sf-btn sf-btn--secondary" style="font-size:11px;padding:2px 6px"
+          onclick="this.closest('tr').remove();_pbTotal()">✕</button></td>
+      </tr>`);
+    }
+
+    async function _saveOfferDraft() {
+      const offerId = AppState._editingOfferId;
+      if (!offerId) return;
+      const offer = await AppState.db.get('offers', offerId);
+      if (!offer) return;
+      const pbRows = [];
+      document.querySelectorAll('#f5-pb tr').forEach(row=>{
+        const i = row.querySelectorAll('input');
+        const item = i[0]?.value?.trim()||'';
+        const hours = parseFloat(i[1]?.value)||0;
+        const rateEUR = parseFloat(i[2]?.value)||0;
+        if (item) pbRows.push({item, hours, rateEUR, totalEUR: hours*rateEUR});
+      });
+      const deliverables = [...document.querySelectorAll('#f5-deliv .sf-badge')]
+        .map(el=>el.textContent.replace(' ×','').trim()).filter(Boolean);
+      await AppState.db.put('offers', {...offer,
+        content: {...offer.content,
+          clientSituation:  document.getElementById('f5-sit')?.value||'',
+          clientChallenge:  document.getElementById('f5-ch')?.value||'',
+          clientGoal:       document.getElementById('f5-goal')?.value||'',
+          scopeDescription: document.getElementById('f5-scope')?.value||'',
+          deliverables, approach: document.getElementById('f5-appr')?.value||'',
+          portfolioImageIds: AppState._editingPortfolioIds||[],
+          priceBreakdown: pbRows, totalPriceEUR: pbRows.reduce((s,r)=>s+r.totalEUR,0),
+          paymentTerms: document.getElementById('f5-pay')?.value||'',
+          validityDays: parseInt(document.getElementById('f5-val')?.value)||30},
+        updatedAt: new Date().toISOString()});
+      showToast('success','Ofertă salvată.');
+    }
+
+    async function _markOfferSent(offerId) {
+      await _saveOfferDraft();
+      const offer = await AppState.db.get('offers', offerId);
+      if (!offer) return;
+      const now = new Date().toISOString();
+      await AppState.db.put('offers', {...offer, status:'sent', sentAt:now, updatedAt:now});
+      await generateCadenceActivities(offer.leadId, now);
+      showToast('success','Ofertă marcată trimisă — cadență follow-up activată.');
+      renderOffers();
+    }
+
+    async function createRevision(originalOfferId) {
+      const original = await AppState.db.get('offers', originalOfferId);
+      if (!original) return;
+      await AppState.db.put('offers', {...original, isLatestRevision:false});
+      const newOffer = {...original, id:uuid(),
+        revision: original.revision+1,
+        offerCodeDisplay: `${original.offerCode} / REV.${String(original.revision+1).padStart(2,'0')}`,
+        isLatestRevision:true, status:'draft', sentAt:null,
+        createdAt:new Date().toISOString(), updatedAt:new Date().toISOString()};
+      await AppState.db.put('offers', newOffer);
+      openOfferEditor(newOffer.leadId, newOffer.id);
+    }
+
+    function openOfferPreview(offerId) {
+      sessionStorage.setItem('activeOfferId', offerId);
+      window.open(`offer.html?offerId=${offerId}`, '_blank');
+    }
+
+    async function _openPortfolioSelector() {
+      const all = await AppState.db.getAll('portfolio');
+      all.sort((a,b)=>(a.sortOrder??0)-(b.sortOrder??0));
+      const sel = new Set(AppState._editingPortfolioIds||[]);
+      showModal(`<div class="sf-modal-header">
+        <h2 class="sf-modal-title">Selectează imagini referință (max 5)</h2>
+        <button class="sf-btn sf-btn--secondary" onclick="closeModal()">✕</button></div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;max-height:55vh;overflow-y:auto;padding:2px">
+          ${all.map(item=>{
+            const u = item.thumbnailBlob ? URL.createObjectURL(item.thumbnailBlob) : '';
+            const on = sel.has(item.id);
+            return `<div id="psel-${item.id}" class="f5a-card" style="cursor:pointer;${on?'outline:3px solid var(--sf-primary)':''}"
+              onclick="_togglePSel('${item.id}')">
+              ${u?`<img class="f5a-thumb" src="${u}" style="height:80px" onload="URL.revokeObjectURL(this.src)">`
+                 :`<div class="f5a-thumb-empty" style="height:80px">—</div>`}
+              <div style="padding:4px 8px;font-size:11px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${item.title}</div>
+              <div id="psel-chk-${item.id}" style="text-align:center;color:var(--sf-primary);height:18px">${on?'✓':''}</div>
+            </div>`;}).join('')}
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px">
+          <button class="sf-btn sf-btn--primary" onclick="_confirmPSel()">Confirmă selecția</button>
+          <button class="sf-btn sf-btn--secondary" onclick="closeModal()">Anulează</button>
+        </div>`, {wide:true});
+    }
+
+    function _togglePSel(id) {
+      const sel  = new Set(AppState._editingPortfolioIds||[]);
+      const card = document.getElementById(`psel-${id}`);
+      const chk  = document.getElementById(`psel-chk-${id}`);
+      if (sel.has(id)) {
+        sel.delete(id);
+        if (card) card.style.outline = '';
+        if (chk)  chk.textContent = '';
+      } else {
+        if (sel.size >= 5) { showToast('warning','Maxim 5 imagini selectate.'); return; }
+        sel.add(id);
+        if (card) card.style.outline = '3px solid var(--sf-primary)';
+        if (chk)  chk.textContent = '✓';
+      }
+      AppState._editingPortfolioIds = [...sel];
+    }
+
+    function _confirmPSel() {
+      closeModal();
+      const n = AppState._editingPortfolioIds.length;
+      const btn = document.getElementById('f5-port-btn');
+      const inf = document.getElementById('f5-port-info');
+      if (btn) btn.textContent = `Selectează imagini (${n}/5)`;
+      if (inf) inf.textContent = n ? `${n} imagini selectate` : 'Nicio imagine selectată';
+    }
+  </script>
   <script id="sf-f6">       /* M13 — Clients */   </script>
   <script id="sf-f7">       /* M14 — Intel */     </script>
   <script id="sf-f10">      /* M15 — Settings */  </script>

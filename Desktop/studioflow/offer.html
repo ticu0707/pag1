@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Ofertă — HERTZ Studio</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body   { font-family: 'Segoe UI', Arial, sans-serif; font-size: 11pt; color: #1a1a1a; background: #fff; }
+    #offer-loading { text-align: center; padding: 80px; color: #888; font-size: 16px; }
+    #offer-error   { text-align: center; padding: 80px; color: #C0392B; }
+    .offer-wrap    { max-width: 820px; margin: 0 auto; padding: 40px 48px; }
+    .offer-header  { display: flex; justify-content: space-between; align-items: flex-start;
+                     border-bottom: 2px solid #1C3557; padding-bottom: 16px; margin-bottom: 32px; }
+    .offer-logo    { height: 52px; width: auto; object-fit: contain; }
+    .offer-logo-txt{ font-size: 20px; font-weight: 700; color: #1C3557; }
+    .offer-meta    { text-align: right; font-size: 10pt; color: #555; }
+    .offer-code    { font-size: 13pt; font-weight: 700; color: #1C3557; }
+    .offer-section { margin-bottom: 28px; }
+    .offer-section h2 { font-size: 11pt; font-weight: 700; color: #1C3557; text-transform: uppercase;
+                        letter-spacing: .5px; border-left: 3px solid #C9963A;
+                        padding-left: 8px; margin-bottom: 8px; }
+    .offer-section p  { font-size: 11pt; line-height: 1.65; color: #222; white-space: pre-wrap; }
+    .offer-section ol { padding-left: 18px; }
+    .offer-section ol li { font-size: 11pt; line-height: 1.65; margin-bottom: 2px; }
+    .offer-images  { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 8px; }
+    .offer-images img { width: 100%; height: 200px; object-fit: cover; border-radius: 4px; }
+    .price-table   { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 10.5pt; }
+    .price-table th{ background: #1C3557; color: #fff; padding: 6px 10px; text-align: left; font-weight: 600; }
+    .price-table td{ padding: 6px 10px; border-bottom: 1px solid #e8e8e6; }
+    .price-table tr:last-child td { border-bottom: none; }
+    .price-total   { font-weight: 700; font-size: 13pt; text-align: right; margin-top: 10px; color: #1C3557; }
+    .price-meta    { font-size: 10pt; color: #555; margin-top: 6px; }
+    .offer-about   { background: #F7F7F5; border-radius: 4px; padding: 14px 18px; margin-top: 8px; }
+    .offer-about p { font-size: 10pt; line-height: 1.6; color: #444; }
+    .offer-footer  { border-top: 1px solid #ddd; margin-top: 40px; padding-top: 10px;
+                     display: flex; justify-content: space-between; font-size: 9pt; color: #999; }
+    /* Toolbar (screen only) */
+    #offer-toolbar { position: fixed; top: 0; right: 0; left: 0; z-index: 99;
+                     background: #1C3557; padding: 8px 24px; display: flex;
+                     align-items: center; gap: 12px; }
+    #offer-toolbar button { background: #fff; color: #1C3557; border: none;
+                            padding: 6px 16px; border-radius: 4px; cursor: pointer; font-weight: 600; font-size: 13px; }
+    #offer-toolbar button:hover { background: #C9963A; color: #fff; }
+    #offer-toolbar span { color: #fff; font-size: 13px; font-weight: 600; }
+    body:has(.offer-wrap) #offer-toolbar + * { margin-top: 52px; }
+    @media print {
+      #offer-toolbar  { display: none !important; }
+      .offer-wrap     { padding: 0; margin: 0; max-width: 100%; }
+      body            { font-size: 11pt; }
+      img             { max-width: 100%; page-break-inside: avoid; }
+      h2              { page-break-after: avoid; }
+      .offer-section  { page-break-inside: avoid; margin-bottom: 24pt; }
+      .price-table tr { page-break-inside: avoid; }
+      @page           { margin: 2cm 2.5cm; size: A4; }
+    }
+  </style>
+</head>
+<body>
+  <div id="offer-toolbar" class="no-print">
+    <span>HERTZ Studio — Previzualizare ofertă</span>
+    <button onclick="window.print()">🖨 Printează / PDF</button>
+    <button onclick="window.close()">✕ Închide</button>
+  </div>
+  <div id="offer-root"><div id="offer-loading">⏳ Se încarcă oferta...</div></div>
+
+  <script>
+    // ── Minimal DB wrapper (read-only) ─────────────────
+    class DB {
+      constructor(idb) { this._idb = idb; }
+      get(store, key) {
+        return new Promise((res,rej)=>{
+          const req = this._idb.transaction(store,'readonly').objectStore(store).get(key);
+          req.onsuccess = ()=>res(req.result??null); req.onerror=()=>rej(req.error);
+        });
+      }
+      getAll(store) {
+        return new Promise((res,rej)=>{
+          const req = this._idb.transaction(store,'readonly').objectStore(store).getAll();
+          req.onsuccess = ()=>res(req.result); req.onerror=()=>rej(req.error);
+        });
+      }
+    }
+    async function openDB() {
+      return new Promise((resolve,reject)=>{
+        const req = indexedDB.open('studioflow', 1);
+        req.onsuccess = e => resolve(new DB(e.target.result));
+        req.onerror   = e => reject(e.target.error);
+        req.onblocked = () => reject(new Error('IndexedDB blocat'));
+      });
+    }
+
+    // ── Load & render ──────────────────────────────────
+    async function loadOffer() {
+      try {
+        const params  = new URLSearchParams(window.location.search);
+        const offerId = params.get('offerId') ?? sessionStorage.getItem('activeOfferId');
+        if (!offerId) { showError('ID ofertă lipsă.'); return; }
+
+        const db    = await openDB();
+        const offer = await db.get('offers', offerId);
+        if (!offer)  { showError(`Oferta ${offerId} nu a fost găsită în această bază de date.`); return; }
+
+        const lead = await db.get('leads', offer.leadId);
+        const [client, studio] = await Promise.all([
+          db.get('clients', lead?.clientId),
+          db.get('studio', 1)
+        ]);
+        const images = await Promise.all(
+          (offer.content.portfolioImageIds||[]).map(id => db.get('portfolio', id))
+        );
+        renderOffer({ offer, lead, client, studio, images: images.filter(Boolean) });
+      } catch(err) {
+        showError(`Eroare la încărcare: ${err.message}`);
+      }
+    }
+
+    function renderOffer({ offer, lead, client, studio, images }) {
+      const c    = offer.content;
+      const date = new Date(offer.createdAt).toLocaleDateString('ro-RO',{day:'numeric',month:'long',year:'numeric'});
+      const validity = new Date(Date.now() + (c.validityDays||30)*86400000).toLocaleDateString('ro-RO',{day:'numeric',month:'long',year:'numeric'});
+
+      const logoHTML = studio?.logoBlob
+        ? `<img class="offer-logo" src="${URL.createObjectURL(studio.logoBlob)}" alt="Logo" onload="URL.revokeObjectURL(this.src)">`
+        : `<span class="offer-logo-txt">${studio?.name||'HERTZ Studio'}</span>`;
+
+      const delivHTML = (c.deliverables||[]).length
+        ? `<ol>${c.deliverables.map(d=>`<li>${d}</li>`).join('')}</ol>`
+        : '<p style="color:#888">—</p>';
+
+      const pbTotal = (c.priceBreakdown||[]).reduce((s,r)=>s+r.totalEUR,0);
+      const pbHTML = (c.priceBreakdown||[]).length ? `
+        <table class="price-table">
+          <thead><tr><th>Serviciu</th><th style="text-align:right">Ore</th><th style="text-align:right">€/h</th><th style="text-align:right">Total EUR</th></tr></thead>
+          <tbody>${(c.priceBreakdown).map(r=>`<tr>
+            <td>${r.item}</td>
+            <td style="text-align:right">${r.hours}</td>
+            <td style="text-align:right">${r.rateEUR}</td>
+            <td style="text-align:right;font-weight:600">${r.totalEUR.toLocaleString('ro-RO')} €</td>
+          </tr>`).join('')}</tbody>
+        </table>
+        <div class="price-total">Total: ${pbTotal.toLocaleString('ro-RO')} EUR (fără TVA)</div>` : '';
+
+      const imagesHTML = images.length ? `<div class="offer-images">${images.map(img=>{
+        const u = img.imageBlob ? URL.createObjectURL(img.imageBlob) : '';
+        return u ? `<img src="${u}" alt="${img.title}" onload="URL.revokeObjectURL(this.src)" title="${img.title}">` : '';
+      }).join('')}</div>` : '<p style="color:#888">—</p>';
+
+      const aboutDefault = `${studio?.name||'HERTZ Studio'} este un birou de arhitectură și design interior cu sediul în București. Oferim soluții complete de proiectare, de la concept până la detalii de execuție, cu accent pe calitate și atenție la detaliu.\n\n${studio?.address||''} · ${studio?.phone||''} · ${studio?.email||''}`;
+
+      document.getElementById('offer-root').innerHTML = `<div class="offer-wrap">
+        <div class="offer-header">
+          <div>${logoHTML}</div>
+          <div class="offer-meta">
+            <div class="offer-code">${offer.offerCodeDisplay||offer.offerCode}</div>
+            <div>${date}</div>
+            <div style="margin-top:4px;font-size:9.5pt">${client?.name||'—'} · ${lead?.projectName||'—'}</div>
+          </div>
+        </div>
+
+        ${c.clientSituation?`<div class="offer-section"><h2>1. Situația actuală</h2><p>${c.clientSituation}</p></div>`:''}
+        ${c.clientChallenge?`<div class="offer-section"><h2>2. Provocarea specifică</h2><p>${c.clientChallenge}</p></div>`:''}
+        ${c.clientGoal?`<div class="offer-section"><h2>3. Obiectivul comun</h2><p>${c.clientGoal}</p></div>`:''}
+        ${c.scopeDescription?`<div class="offer-section"><h2>4. Soluția propusă</h2><p>${c.scopeDescription}</p></div>`:''}
+        ${(c.deliverables||[]).length?`<div class="offer-section"><h2>5. Livrabile</h2>${delivHTML}</div>`:''}
+        ${c.approach?`<div class="offer-section"><h2>6. Metodologie</h2><p>${c.approach}</p></div>`:''}
+        ${images.length?`<div class="offer-section"><h2>7. Referințe portofoliu</h2>${imagesHTML}</div>`:''}
+        ${pbTotal>0?`<div class="offer-section"><h2>8. Investiție</h2>${pbHTML}
+          ${c.paymentTerms?`<p class="price-meta"><strong>Termeni plată:</strong> ${c.paymentTerms}</p>`:''}
+          <p class="price-meta">Oferta este valabilă până la <strong>${validity}</strong>.</p>
+        </div>`:''}
+
+        <div class="offer-section"><h2>9. Despre noi</h2>
+          <div class="offer-about"><p>${c.aboutText||aboutDefault}</p></div>
+        </div>
+
+        <div class="offer-footer">
+          <span>${studio?.name||'HERTZ Studio'} · ${studio?.vatId||''}</span>
+          <span>${offer.offerCodeDisplay||offer.offerCode}</span>
+          <span>${studio?.email||''}</span>
+        </div>
+      </div>`;
+    }
+
+    function showError(msg) {
+      document.getElementById('offer-root').innerHTML =
+        `<div id="offer-error"><h2>Eroare</h2><p style="margin-top:10px">${msg}</p>
+         <p style="margin-top:20px;font-size:12px;color:#aaa">Asigură-te că aplicația StudioFlow este deschisă în același browser.</p></div>`;
+    }
+
+    document.addEventListener('DOMContentLoaded', loadOffer);
+  </script>
+</body>
+</html>
