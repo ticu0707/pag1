@@ -4347,8 +4347,8 @@
     <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px">
       <button class="sf-btn sf-btn--primary" onclick="selectBackupFolder()">Folder backup (sesiune)</button>
       <button class="sf-btn" onclick="manualExportBackup()">Exportă JSON</button>
-      <button class="sf-btn" onclick="_s10ImportBackup()">Importă din JSON</button>
-      <button class="sf-btn" onclick="_s10ExportLeadsCSV()">Exportă leads CSV</button>
+      <button class="sf-btn" onclick="triggerImportBackup()">Importă din JSON</button>
+      <button class="sf-btn" onclick="exportLeadsCSV()">Exportă leads CSV</button>
     </div>
     <div id="s10-storage" style="font-size:12px;color:var(--sf-text-3);margin-bottom:12px">
       <button class="sf-btn s10-sm-btn" onclick="_s10CalcStorage()">Calculează spațiu utilizat</button>
@@ -4467,47 +4467,6 @@
       ]);
     }
 
-    function _s10ImportBackup(){
-      const inp=document.createElement('input');inp.type='file';inp.accept='.json,application/json';
-      inp.onchange=async()=>{
-        const file=inp.files[0];if(!file)return;
-        let backup;
-        try{backup=JSON.parse(await file.text());}catch{showToast('error','Fișier invalid — nu este JSON valid.');return;}
-        if(!backup._meta?.version){showToast('error','Fișier incompatibil.');return;}
-        const ok=await showConfirmDialog({title:'Restaurare date',message:`Toate datele curente vor fi înlocuite cu backup-ul din ${backup._meta.exportedAt||'?'}. Continui?`,confirmText:'RESTAUREAZĂ',dangerKeyword:'RESTAUREAZĂ'});
-        if(!ok)return;
-        try{
-          await clearAllData(AppState.db);
-          if(backup.studio)await AppState.db.put('studio',{...backup.studio,logoBlob:null});
-          await Promise.all([
-            backup.clients?.length&&AppState.db.putBulk('clients',backup.clients),
-            backup.leads?.length&&AppState.db.putBulk('leads',backup.leads),
-            backup.offers?.length&&AppState.db.putBulk('offers',backup.offers),
-            backup.activities?.length&&AppState.db.putBulk('activities',backup.activities),
-            backup.rateCards?.length&&AppState.db.putBulk('rateCards',backup.rateCards),
-            backup.portfolio?.length&&AppState.db.putBulk('portfolio',backup.portfolio.map(p=>({...p,imageBlob:base64ToBlob(p.imageBlob),thumbnailBlob:base64ToBlob(p.thumbnailBlob)}))),
-            backup.settings&&AppState.db.put('settings',backup.settings)
-          ].filter(Boolean));
-          showToast('success','Restaurare completă. Se reîncarcă...');setTimeout(()=>location.reload(),1500);
-        }catch(err){showToast('error','Eroare restaurare: '+err.message);}
-      };
-      inp.click();
-    }
-
-    async function _s10ExportLeadsCSV(){
-      const[leads,clients,offers]=await Promise.all([AppState.db.getAll('leads'),AppState.db.getAll('clients'),AppState.db.getAll('offers')]);
-      const cMap=Object.fromEntries(clients.map(c=>[c.id,c]));
-      const rows=leads.map(l=>{
-        const cl=cMap[l.clientId]||{};
-        const lo=offers.filter(o=>o.leadId===l.id).sort((a,b)=>b.revision-a.revision)[0];
-        return[lo?.offerCode||'',l.createdAt?.split('T')[0]||'',cl.name||'',l.address||'',l.typology||'',l.area||'',l.funnelType==='design'?'ARH/INT':'DB',l.sourceType||'',lo?.content?.totalPriceEUR||'',l.status||'',l.wonContractValue||'',l.scoreTotal||'',l.scoreCategory||''].join(';');
-      });
-      const a=document.createElement('a');
-      a.href=URL.createObjectURL(new Blob(['﻿NR.OFERTA;DATA;CLIENT;ADRESA;TIP;MP;SPECIALITATI;SURSA;PRET;STATUS;CONTRACT;SCOR;CATEGORIE\n'+rows.join('\n')],{type:'text/csv;charset=utf-8'}));
-      a.download=`studioflow-leads-${new Date().toISOString().split('T')[0]}.csv`;a.click();
-      showToast('success','CSV exportat.');
-    }
-
     async function _s10CalcStorage(){
       const el=document.getElementById('s10-storage');if(!el)return;
       try{
@@ -4569,7 +4528,69 @@
       showToast('success','Update solicitat — reîncarcă pagina pentru a aplica.');
     }
   </script>
-  <script id="sf-export">   /* M16 — Export */    </script>
+  <script id="sf-export">
+    // ── sf-export: M16 — Export / Import public API ──────────────────────
+    // Depends on: sf-f8 (exportAllData, blobToBase64), sf-f10 (base64ToBlob, clearAllData)
+
+    async function importFromBackup(file){
+      let backup;
+      try{backup=JSON.parse(await file.text());}catch{showToast('error','Fișier invalid — nu este JSON valid.');return;}
+      if(!backup._meta?.version){showToast('error','Fișier incompatibil — versiune necunoscută.');return;}
+      const ok=await showConfirmDialog({
+        title:'Restaurare date',
+        message:`Toate datele curente vor fi înlocuite cu backup-ul din ${backup._meta.exportedAt||'?'}. Continui?`,
+        confirmText:'RESTAUREAZĂ',dangerKeyword:'RESTAUREAZĂ'
+      });
+      if(!ok)return;
+      try{
+        await clearAllData(AppState.db);
+        if(backup.studio)await AppState.db.put('studio',{...backup.studio,logoBlob:null});
+        await Promise.all([
+          backup.clients?.length   &&AppState.db.putBulk('clients',   backup.clients),
+          backup.leads?.length     &&AppState.db.putBulk('leads',     backup.leads),
+          backup.offers?.length    &&AppState.db.putBulk('offers',    backup.offers),
+          backup.activities?.length&&AppState.db.putBulk('activities',backup.activities),
+          backup.rateCards?.length &&AppState.db.putBulk('rateCards', backup.rateCards),
+          backup.portfolio?.length &&AppState.db.putBulk('portfolio', backup.portfolio.map(p=>({
+            ...p,imageBlob:base64ToBlob(p.imageBlob),thumbnailBlob:base64ToBlob(p.thumbnailBlob)
+          }))),
+          backup.settings&&AppState.db.put('settings',backup.settings)
+        ].filter(Boolean));
+        showToast('success','Restaurare completă. Se reîncarcă...');
+        setTimeout(()=>location.reload(),1500);
+      }catch(err){showToast('error','Eroare restaurare: '+err.message);}
+    }
+
+    function triggerImportBackup(){
+      const inp=document.createElement('input');inp.type='file';inp.accept='.json,application/json';
+      inp.onchange=()=>{if(inp.files[0])importFromBackup(inp.files[0]);};
+      inp.click();
+    }
+
+    async function exportLeadsCSV(){
+      const[leads,clients,offers]=await Promise.all([
+        AppState.db.getAll('leads'),AppState.db.getAll('clients'),AppState.db.getAll('offers')
+      ]);
+      const cMap=Object.fromEntries(clients.map(c=>[c.id,c]));
+      const rows=leads.map(l=>{
+        const cl=cMap[l.clientId]||{};
+        const lo=offers.filter(o=>o.leadId===l.id).sort((a,b)=>b.revision-a.revision)[0];
+        return[lo?.offerCode||'',l.createdAt?.split('T')[0]||'',cl.name||'',l.address||'',
+               l.typology||'',l.area||'',l.funnelType==='design'?'ARH/INT':'DB',l.sourceType||'',
+               lo?.content?.totalPriceEUR||'',l.status||'',l.wonContractValue||'',
+               l.scoreTotal||'',l.scoreCategory||''].join(';');
+      });
+      const url=URL.createObjectURL(new Blob(
+        ['﻿NR.OFERTA;DATA;CLIENT;ADRESA;TIP;MP;SPECIALITATI;SURSA;PRET;STATUS;CONTRACT;SCOR;CATEGORIE\n'+rows.join('\n')],
+        {type:'text/csv;charset=utf-8'}
+      ));
+      const a=Object.assign(document.createElement('a'),{
+        href:url,download:`studioflow-leads-${new Date().toISOString().split('T')[0]}.csv`
+      });
+      a.click();URL.revokeObjectURL(url);
+      showToast('success','CSV exportat — '+leads.length+' lead-uri.');
+    }
+  </script>
   <script id="sf-shortcuts">/* M17 — Keys */      </script>
   <script id="sf-init">
     document.addEventListener('DOMContentLoaded', initApp);
