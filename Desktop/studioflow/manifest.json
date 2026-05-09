@@ -1,0 +1,11 @@
+{
+  "name": "StudioFlow — HERTZ Studio",
+  "short_name": "StudioFlow",
+  "description": "CRM și BizDev pentru HERTZ Studio",
+  "start_url": "./app.html",
+  "display": "standalone",
+  "background_color": "#F7F7F5",
+  "theme_color": "#1C3557",
+  "orientation": "landscape",
+  "icons": []
+}

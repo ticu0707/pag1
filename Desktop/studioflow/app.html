@@ -1142,7 +1142,201 @@
       if (root) { root.hidden = true; root.innerHTML = ''; }
     }
   </script>
-  <script id="sf-f8">       /* M3 — Foundation */ </script>
+  <script id="sf-f8">
+    function showFatalError(err) {
+      const btnStyle = 'padding:10px 20px;border-radius:6px;border:none;cursor:pointer;font-size:14px';
+      document.body.innerHTML = `
+        <div style="display:flex;flex-direction:column;align-items:center;
+                    justify-content:center;height:100vh;font-family:sans-serif;padding:40px">
+          <h1 style="color:#DC2626">⚠ StudioFlow nu a putut porni</h1>
+          <p style="color:#374151;max-width:480px;text-align:center">
+            Baza de date locală nu s-a putut deschide.<br>
+            <strong>Cauze posibile:</strong> mod incognito, spațiu disk insuficient,
+            alt tab cu app-ul deschis.
+          </p>
+          <p style="color:#6B7280;font-size:13px">Eroare tehnică: ${err.message}</p>
+          <div style="display:flex;gap:16px;margin-top:24px">
+            <button onclick="location.reload()"
+              style="${btnStyle};background:#1C3557;color:white">Reîncarcă</button>
+            <button onclick="clearIDBAndReload()"
+              style="${btnStyle};background:#FEE2E2;color:#DC2626">Reset database</button>
+          </div>
+        </div>`;
+    }
+
+    function clearIDBAndReload() {
+      const req = indexedDB.deleteDatabase('studioflow');
+      req.onsuccess = () => location.reload();
+      req.onerror   = () => location.reload();
+    }
+
+    function renderSidebarLogo(blob) {
+      const el = document.getElementById('sf-logo');
+      if (!el || !blob) return;
+      const url = URL.createObjectURL(blob);
+      el.innerHTML = `<img src="${url}" alt="Logo"
+        style="width:100%;height:100%;object-fit:contain;border-radius:4px">`;
+    }
+
+    function renderSidebarStudioName(name) {
+      const el = document.getElementById('sf-studio-name');
+      if (el) el.textContent = name || 'HERTZ Studio';
+    }
+
+    function updateBackupStatusUI(status, msg) {
+      const el = document.getElementById('sf-backup-status');
+      if (!el) return;
+      el.className = 'sf-backup-status';
+      const label = el.querySelector('.backup-label');
+      if (status === 'success') {
+        el.classList.add('ok');
+        const t = new Date().toLocaleTimeString('ro-RO', { hour: '2-digit', minute: '2-digit' });
+        if (label) label.textContent = `✓ Backup: ${t}`;
+        el.title = 'Backup efectuat cu succes';
+      } else if (status === 'error') {
+        el.classList.add('error');
+        if (label) label.textContent = '✕ Backup eșuat';
+        el.title = msg || 'Backup eșuat';
+      } else {
+        if (label) label.textContent = '⚠ Fără backup';
+        el.title = 'Fără backup în această sesiune';
+      }
+    }
+
+    // Override stub-ul din M1 cu versiunea completă
+    function onBackupStatusClick() {
+      showModal(`
+        <p style="margin-bottom:16px">Backup-ul automat se salvează în folderul selectat.
+        Folderul trebuie re-selectat la fiecare pornire a aplicației.</p>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <button class="sf-btn sf-btn--primary" onclick="selectBackupFolder();closeModal()">
+            📂 Selectează folder (această sesiune)
+          </button>
+          <button class="sf-btn sf-btn--secondary" onclick="manualExportBackup();closeModal()">
+            ⬇ Export manual acum (JSON)
+          </button>
+        </div>
+      `, { title: 'Backup date' });
+    }
+
+    function blobToBase64(blob) {
+      if (!blob) return Promise.resolve(null);
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror   = () => reject(reader.error);
+        reader.readAsDataURL(blob);
+      });
+    }
+
+    async function exportAllData(db) {
+      const [studio, clients, leads, offers, activities, portfolio, rateCards, settings] =
+        await Promise.all([
+          db.get('studio', 1),
+          db.getAll('clients'),
+          db.getAll('leads'),
+          db.getAll('offers'),
+          db.getAll('activities'),
+          db.getAll('portfolio'),
+          db.getAll('rateCards'),
+          db.get('settings', 'settings')
+        ]);
+      const portfolioSerialized = await Promise.all(portfolio.map(async p => ({
+        ...p,
+        imageBlob:     await blobToBase64(p.imageBlob),
+        thumbnailBlob: await blobToBase64(p.thumbnailBlob)
+      })));
+      return {
+        _meta: { version: CURRENT_VERSION, exportedAt: new Date().toISOString(), appVersion: APP_VERSION },
+        studio, clients, leads, offers, activities,
+        portfolio: portfolioSerialized,
+        rateCards, settings
+      };
+    }
+
+    async function autoBackup() {
+      const handle = AppState.backupFolderHandle;
+      if (!handle) return;
+      try {
+        const perm = await handle.queryPermission({ mode: 'readwrite' });
+        if (perm !== 'granted') await handle.requestPermission({ mode: 'readwrite' });
+        const data     = await exportAllData(AppState.db);
+        const filename = `studioflow-${new Date().toISOString().split('T')[0]}.json`;
+        const fh       = await handle.getFileHandle(filename, { create: true });
+        const writable = await fh.createWritable();
+        await writable.write(JSON.stringify(data, null, 2));
+        await writable.close();
+        const settings = await AppState.db.get('settings', 'settings');
+        await AppState.db.put('settings', { ...settings, lastBackupAt: new Date().toISOString() });
+        updateBackupStatusUI('success');
+      } catch (err) {
+        updateBackupStatusUI('error', err.message);
+      }
+    }
+
+    async function manualExportBackup() {
+      const data = await exportAllData(AppState.db);
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url  = URL.createObjectURL(blob);
+      const a    = Object.assign(document.createElement('a'), {
+        href: url,
+        download: `studioflow-backup-${new Date().toISOString().split('T')[0]}.json`
+      });
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('success', 'Backup exportat local.');
+    }
+
+    async function selectBackupFolder() {
+      if (!window.showDirectoryPicker) {
+        showToast('warning', 'Browser-ul tău nu suportă selectarea automată a folderului. Folosește Export manual.');
+        return;
+      }
+      try {
+        AppState.backupFolderHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+        showToast('success', 'Folder backup selectat. Backup automat activat pentru această sesiune.');
+        autoBackup();
+      } catch { /* user cancelled */ }
+    }
+
+    function scheduleBackupCheck() {
+      setInterval(() => autoBackup(), 30 * 60 * 1000);
+    }
+
+    function registerServiceWorker() {
+      if (!('serviceWorker' in navigator)) return;
+      navigator.serviceWorker.register('./sw.js').then(reg => {
+        reg.addEventListener('updatefound', () => {
+          const nw = reg.installing;
+          nw.addEventListener('statechange', () => {
+            if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+              showToast('info', 'Versiune nouă disponibilă. <a href="#" onclick="location.reload()">Reîncarcă</a>', 8000);
+            }
+          });
+        });
+      });
+    }
+
+    async function initApp() {
+      try {
+        AppState.db = await openDB();
+      } catch (err) {
+        showFatalError(err);
+        return;
+      }
+      const studio = await AppState.db.get('studio', 1);
+      if (!studio) {
+        document.getElementById('page-setup').hidden = false;
+        if (typeof runSetupWizard === 'function') runSetupWizard();
+      } else {
+        renderSidebarLogo(studio.logoBlob);
+        renderSidebarStudioName(studio.name);
+        navigate(location.hash || '#today');
+        scheduleBackupCheck();
+        registerServiceWorker();
+      }
+    }
+  </script>
   <script id="sf-f0">       /* M4 — Setup */      </script>
   <script id="sf-f2">       /* M5 — Leads */      </script>
   <script id="sf-f3">       /* M6 — Pipeline */   </script>
@@ -1157,7 +1351,9 @@
   <script id="sf-f10">      /* M15 — Settings */  </script>
   <script id="sf-export">   /* M16 — Export */    </script>
   <script id="sf-shortcuts">/* M17 — Keys */      </script>
-  <script id="sf-init">     /* Boot */            </script>
+  <script id="sf-init">
+    document.addEventListener('DOMContentLoaded', initApp);
+  </script>
 
 </body>
 </html>
