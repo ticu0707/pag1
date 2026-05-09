@@ -1706,8 +1706,8 @@
       const typology = ['T1','T2','T3','T4','T5','T6'].includes(rawTyp) ? rawTyp : 'T1';
       const emptyScore = { profitabilitateBruta:0,termenLivrare:0,clientRecurent:0,
         claritate_brief:0,interesStrategic:0,dificultateTehnLegala:0,alinieEstetica:0,
-        reputatieClient:0,referinte:0,bugetRealismCoerenta:0,urgentaClient:0,
-        locatieAccesibilitate:0,scalaProiect:0,complexitateProgram:0,total:0 };
+        plata:0,disponibilitateEchipa:0,impactReputational:0,incarcareEchipaInterna:0,
+        capacitateColaboratori:0,cashflowIntern:0,timpOnboarding:0 };
 
       const lead = { id: uuid(), clientId: client.id,
         projectName: row['ADRESA']?.trim() || row['CLIENT'].trim(),
@@ -1717,7 +1717,8 @@
         status, wonContractValue: parseFloat(row['VALOARE CONTRACT'])||null,
         estimatedEndDate: null,
         pipelineStage: status === 'won' ? 'contractat' : 'pierdut',
-        stageEnteredAt: createdAt, score: emptyScore, scoreCategory: 'cold',
+        stageEnteredAt: createdAt, score: emptyScore, scoreTotal: 0, scoreCategory: 'cold',
+        goNoGo: 'nogo', winProbability: null,
         createdAt, updatedAt: new Date().toISOString() };
       await db.put('leads', lead);
       imported.leads++;
@@ -2056,6 +2057,9 @@
         </div>`;
       };
       renderScoringPanel(score, panelEl, () => refreshGng());
+      ['f2-source','f2-typo','f2-value'].forEach(id => {
+        document.getElementById(id)?.addEventListener('change', () => refreshGng());
+      });
       refreshGng();
     }
 
@@ -2162,11 +2166,12 @@
       if (!endDate) { showToast('error','Data finalizare este obligatorie'); return; }
       const now = new Date().toISOString();
       await AppState.db.put('leads', {...lead, status:'won', wonContractValue:wonVal,
-        estimatedEndDate:new Date(endDate).toISOString(), updatedAt:now});
+        estimatedEndDate:new Date(endDate).toISOString(), pipelineStage:'contractat', stageEnteredAt:now, updatedAt:now});
       const cl = await AppState.db.get('clients', lead.clientId);
       if (cl) await AppState.db.put('clients', {...cl, totalContractsValue:(cl.totalContractsValue||0)+wonVal,
         totalContractsCount:(cl.totalContractsCount||0)+1, lastDealDate:now, updatedAt:now});
       closeModal(); showToast('success','Lead marcat câștigat!'); renderLeads();
+      typeof _renderPipelineContent === 'function' && _renderPipelineContent();
     }
 
     // ── Mark Lost ─────────────────────────────────────────────────────
@@ -2194,11 +2199,252 @@
       const reason     = document.getElementById('lost-reason')?.value;
       const competitor = document.getElementById('lost-competitor')?.value?.trim()||'';
       const now = new Date().toISOString();
-      await AppState.db.put('leads', {...lead, status:'lost', lostReason:reason, lostToCompetitor:competitor, updatedAt:now});
+      await AppState.db.put('leads', {...lead, status:'lost', lostReason:reason, lostToCompetitor:competitor, pipelineStage:'pierdut', stageEnteredAt:now, updatedAt:now});
       closeModal(); showToast('info','Lead marcat pierdut. Completează debrieful în Intelligence.'); renderLeads();
+      typeof _renderPipelineContent === 'function' && _renderPipelineContent();
     }
   </script>
-  <script id="sf-f3">       /* M6 — Pipeline */   </script>
+  <script id="sf-f3">
+    // ── Stage definitions ────────────────────────────────────────
+    const DISCOVERY_STAGES = [
+      { key:'brief_primit',   label:'Brief primit',  terminal:false },
+      { key:'scoring',        label:'Scoring',        terminal:false },
+      { key:'oferta_trimisa', label:'Ofertă trimisă', terminal:false },
+      { key:'negociere',      label:'Negociere',       terminal:false },
+      { key:'contractat',     label:'Contractat',      terminal:true  },
+    ];
+    const DESIGN_STAGES = [
+      { key:'brief_primit',   label:'Brief primit',  terminal:false },
+      { key:'calculator',     label:'Calculator',     terminal:false },
+      { key:'oferta_trimisa', label:'Ofertă trimisă', terminal:false },
+      { key:'negociere',      label:'Negociere',       terminal:false },
+      { key:'prezentare',     label:'Prezentare',      terminal:false },
+      { key:'contractat',     label:'Contractat',      terminal:true  },
+    ];
+    const TERMINAL_STAGE_KEYS = ['contractat','pierdut','retras'];
+
+    // ── Entry point ───────────────────────────────────────────────
+    async function renderPipeline() {
+      const page = document.getElementById('page-pipeline');
+      if (!page) return;
+      if (!page.querySelector('#f3-board')) {
+        page.innerHTML = `
+          <div class="sf-page-header" style="margin-bottom:12px">
+            <div><div class="sf-page-title">Pipeline</div></div>
+          </div>
+          <div id="f3-filter-bar" style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center"></div>
+          <div id="f3-stats" style="display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap"></div>
+          <div style="display:flex;gap:6px;margin-bottom:12px">
+            <button class="sf-btn" id="f3-tab-disc" onclick="f3SetFunnel('discovery')">Discovery</button>
+            <button class="sf-btn" id="f3-tab-des"  onclick="f3SetFunnel('design')">Design</button>
+          </div>
+          <div id="f3-board"></div>`;
+        AppState._f3Funnel = localStorage.getItem('sf_f3_funnel') || 'discovery';
+        AppState._f3FiltersReady = false;
+      }
+      await _renderPipelineContent();
+    }
+
+    async function f3SetFunnel(funnel) {
+      AppState._f3Funnel = funnel;
+      localStorage.setItem('sf_f3_funnel', funnel);
+      await _renderPipelineContent();
+    }
+
+    // ── Main render ───────────────────────────────────────────────
+    async function _renderPipelineContent() {
+      const board = document.getElementById('f3-board');
+      if (!board || !AppState.db) return;
+      const [allLeads, clients] = await Promise.all([AppState.db.getAll('leads'), AppState.db.getAll('clients')]);
+      const cm     = Object.fromEntries(clients.map(c => [c.id, c]));
+      const funnel = AppState._f3Funnel || 'discovery';
+
+      // Tab styles
+      document.getElementById('f3-tab-disc')?.classList.toggle('sf-btn--primary',   funnel==='discovery');
+      document.getElementById('f3-tab-disc')?.classList.toggle('sf-btn--secondary', funnel!=='discovery');
+      document.getElementById('f3-tab-des')?.classList.toggle('sf-btn--primary',    funnel==='design');
+      document.getElementById('f3-tab-des')?.classList.toggle('sf-btn--secondary',  funnel!=='design');
+
+      // Filter bar (once)
+      const fb = document.getElementById('f3-filter-bar');
+      if (fb && !AppState._f3FiltersReady) {
+        AppState._f3FiltersReady = true;
+        const srcOpts = [...new Set(allLeads.map(l=>l.sourceType).filter(Boolean))]
+          .map(s=>`<option value="${s}">${SOURCE_LABELS[s]||s}</option>`).join('');
+        fb.innerHTML = `
+          <select class="sf-select" id="f3-f-score"  onchange="_renderPipelineContent()" style="width:130px">
+            <option value="">Toate scorurile</option>
+            <option value="hot">HOT</option><option value="warm">WARM</option><option value="cold">COLD</option>
+          </select>
+          <select class="sf-select" id="f3-f-period" onchange="_renderPipelineContent()" style="width:150px">
+            <option value="">Toate perioadele</option>
+            <option value="month">Luna aceasta</option><option value="90d">Ultimele 90 zile</option>
+          </select>
+          <select class="sf-select" id="f3-f-source" onchange="_renderPipelineContent()" style="width:160px">
+            <option value="">Toate sursele</option>${srcOpts}
+          </select>
+          <select class="sf-select" id="f3-f-sort"   onchange="_renderPipelineContent()" style="width:170px">
+            <option value="default">Sort: Activitate rec.</option>
+            <option value="value">Sort: Valoare ↓</option>
+            <option value="score">Sort: Scor ↓</option>
+            <option value="age">Sort: Vechime stagiu ↓</option>
+          </select>`;
+      }
+
+      // Read filters
+      const fScore  = document.getElementById('f3-f-score')?.value  || '';
+      const fPeriod = document.getElementById('f3-f-period')?.value || '';
+      const fSource = document.getElementById('f3-f-source')?.value || '';
+      const fSort   = document.getElementById('f3-f-sort')?.value   || 'default';
+
+      // Filter leads
+      let leads = allLeads.filter(l => l.funnelType===funnel && (l.status==='active'||l.status==='won'));
+      if (fScore)             leads = leads.filter(l => getScoreCategory(l.scoreTotal||0) === fScore);
+      if (fPeriod==='month')  leads = leads.filter(l => l.createdAt >= (() => { const d=new Date(); d.setDate(1); d.setHours(0,0,0,0); return d.toISOString(); })());
+      if (fPeriod==='90d')    leads = leads.filter(l => l.createdAt >= addDays(new Date(),-90).toISOString());
+      if (fSource)            leads = leads.filter(l => l.sourceType === fSource);
+      if (fSort==='value')    leads.sort((a,b) => (b.estimatedValue||0)-(a.estimatedValue||0));
+      else if (fSort==='score') leads.sort((a,b) => (b.scoreTotal||0)-(a.scoreTotal||0));
+      else if (fSort==='age')   leads.sort((a,b) => (a.stageEnteredAt||a.createdAt).localeCompare(b.stageEnteredAt||b.createdAt));
+      else                    leads.sort((a,b) => (b.updatedAt||b.createdAt).localeCompare(a.updatedAt||a.createdAt));
+
+      // Stats
+      const activePipe  = leads.filter(l => l.status==='active');
+      const allWon      = allLeads.filter(l => l.status==='won');
+      const allLost     = allLeads.filter(l => l.status==='lost');
+      const pipeTotal   = activePipe.reduce((s,l) => s+(l.estimatedValue||0), 0);
+      const totalClosed = allWon.length + allLost.length;
+      const winRate     = totalClosed>0 ? Math.round(allWon.length/totalClosed*100) : 0;
+      const todayISO    = new Date().toISOString();
+      const activeProjs = allWon.filter(l => l.estimatedEndDate && l.estimatedEndDate>todayISO).length;
+      const withTime    = allLeads.filter(l => ['won','lost'].includes(l.status) && l.createdAt && l.updatedAt);
+      const avgClose    = withTime.length>0 ? Math.round(withTime.reduce((s,l)=>s+daysDiff(l.createdAt,l.updatedAt),0)/withTime.length) : 0;
+
+      document.getElementById('f3-stats').innerHTML = `
+        <div class="sf-kpi-card" style="flex:1;min-width:130px"><div class="sf-kpi-value">${pipeTotal.toLocaleString('ro-RO')} €</div><div class="sf-kpi-label">Total pipeline</div></div>
+        <div class="sf-kpi-card" style="flex:1;min-width:130px"><div class="sf-kpi-value">${winRate}%</div><div class="sf-kpi-label">Win rate</div></div>
+        <div class="sf-kpi-card" style="flex:1;min-width:130px"><div class="sf-kpi-value">${activeProjs}</div><div class="sf-kpi-label">Proiecte active</div></div>
+        <div class="sf-kpi-card" style="flex:1;min-width:130px"><div class="sf-kpi-value">${avgClose>0?avgClose+'z':'—'}</div><div class="sf-kpi-label">Avg. close</div></div>`;
+
+      // Kanban board
+      const stages  = funnel==='discovery' ? DISCOVERY_STAGES : DESIGN_STAGES;
+      const avgDays = await calcAvgDaysPerStage(AppState.db, funnel);
+      board.innerHTML = `<div class="sf-kanban">${stages.map(s => {
+        const colLeads = leads.filter(l =>
+          l.pipelineStage===s.key && (s.terminal ? l.status==='won' : l.status==='active'));
+        const colVal = colLeads.reduce((acc,l) =>
+          acc + (s.terminal ? (l.wonContractValue||l.estimatedValue||0) : (l.estimatedValue||0)), 0);
+        return `<div class="sf-kanban-col" data-stage="${s.key}">
+          <div class="sf-kanban-col__header">
+            <span>${s.label}</span>
+            <span class="sf-kanban-col__count">${colLeads.length}</span>
+          </div>
+          <div class="sf-kanban-col__total">${colVal>0?colVal.toLocaleString('ro-RO')+' €':'—'}</div>
+          <div class="sf-kanban-cards">${
+            colLeads.map(l => renderKanbanCard(l, cm[l.clientId], avgDays[s.key], stages)).join('')
+          }</div>
+        </div>`;
+      }).join('')}</div>`;
+    }
+
+    // ── Stage age ─────────────────────────────────────────────────
+    function getStageAgeClass(daysInStage, avgDays) {
+      if (!avgDays || avgDays < 1) return null;
+      if (daysInStage < avgDays * 0.75) return 'good';
+      if (daysInStage < avgDays * 1.25) return 'normal';
+      return 'late';
+    }
+
+    async function calcAvgDaysPerStage(db, funnelType) {
+      const all    = await db.getAll('leads');
+      const stages = funnelType==='discovery' ? DISCOVERY_STAGES : DESIGN_STAGES;
+      const def    = {}; stages.forEach(s => { def[s.key] = 7; });
+      const closed = all.filter(l => l.funnelType===funnelType && ['won','lost'].includes(l.status) && l.createdAt && l.updatedAt);
+      if (closed.length < 3) return def;
+      const avgTotal    = closed.reduce((s,l) => s+daysDiff(l.createdAt,l.updatedAt), 0) / closed.length;
+      const nActive     = stages.filter(s => !s.terminal).length;
+      const perStage    = Math.max(3, Math.round(avgTotal / nActive));
+      const result      = {}; stages.forEach(s => { result[s.key] = s.terminal ? null : perStage; });
+      return result;
+    }
+
+    // ── Card ──────────────────────────────────────────────────────
+    function renderKanbanCard(lead, client, avgDays, stages) {
+      const cat         = getScoreCategory(lead.scoreTotal||0);
+      const daysInStage = daysDiff(lead.stageEnteredAt||lead.createdAt, new Date().toISOString());
+      const ageClass    = getStageAgeClass(daysInStage, avgDays);
+      const ageHTML     = `<span class="sf-lead-card__age${ageClass?' age--'+ageClass:''}">⏱ ${daysInStage}z în stagiu</span>`;
+      const moveOpts    = [
+        ...stages.filter(s => s.key!==lead.pipelineStage).map(s => `<option value="${s.key}">${s.label}</option>`),
+        `<option value="pierdut">✕ Pierdut</option>`,
+        `<option value="retras">○ Retras</option>`,
+      ].join('');
+      const dispVal = lead.status==='won'
+        ? (lead.wonContractValue||lead.estimatedValue||0)
+        : (lead.estimatedValue||0);
+      return `<div class="sf-lead-card sf-lead-card--${cat}" data-lead-id="${lead.id}">
+        <div class="sf-lead-card__title">${client?.name||'—'}</div>
+        <div class="sf-lead-card__sub">${lead.projectName||'—'}</div>
+        <div class="sf-lead-card__meta">
+          <span style="font-size:11px">${lead.area||'?'} mp · ${lead.typology||'—'}</span>
+          ${dispVal>0?`<span style="font-size:11px;font-weight:600">${dispVal.toLocaleString('ro-RO')} €</span>`:''}
+          <span class="sf-badge sf-badge--${cat}" style="font-size:10px">${cat.toUpperCase()}</span>
+        </div>
+        <div class="sf-lead-card__meta">
+          <span style="font-size:11px">Win: <strong>${lead.winProbability!=null?lead.winProbability+'%':'—'}</strong></span>
+          ${lead.sourceType?`<span style="font-size:11px;color:var(--sf-text-3)">${SOURCE_LABELS[lead.sourceType]||lead.sourceType}</span>`:''}
+        </div>
+        <div style="margin:4px 0 0">${ageHTML}</div>
+        <div class="sf-lead-card__actions">
+          <button class="sf-btn sf-btn--secondary" onclick="openEditLeadModal('${lead.id}')">Edit</button>
+          ${lead.status==='active'?`<select class="sf-select" style="font-size:11px;padding:3px 6px;flex:1"
+            onchange="f3MoveFromSelect(this,'${lead.id}')">
+            <option value="">Mută ▸</option>${moveOpts}
+          </select>`:'<span style="font-size:11px;color:var(--sf-hot);font-weight:600;margin-left:4px">✓ Câștigat</span>'}
+        </div>
+      </div>`;
+    }
+
+    // ── Move & terminal ───────────────────────────────────────────
+    async function moveLead(leadId, newStage) {
+      const lead = await AppState.db.get('leads', leadId);
+      if (!lead) return;
+      const now = new Date().toISOString();
+      await AppState.db.put('leads', {...lead, pipelineStage:newStage, stageEnteredAt:now, updatedAt:now});
+    }
+
+    async function f3MoveFromSelect(select, leadId) {
+      const toStage = select.value;
+      if (!toStage) return;
+      select.value = '';
+      if (TERMINAL_STAGE_KEYS.includes(toStage)) {
+        await handleTerminalStageDrop(leadId, toStage);
+      } else {
+        await moveLead(leadId, toStage);
+        const label = [...DISCOVERY_STAGES,...DESIGN_STAGES].find(s=>s.key===toStage)?.label||toStage;
+        showToast('success',`Lead mutat în "${label}"`);
+        await _renderPipelineContent();
+      }
+    }
+
+    async function handleTerminalStageDrop(leadId, toStage) {
+      if (toStage==='contractat') {
+        await markLeadWon(leadId);
+      } else if (toStage==='pierdut') {
+        await markLeadLost(leadId);
+      } else if (toStage==='retras') {
+        const ok = await showConfirmDialog({ title:'Retrage lead', confirmText:'Retrage',
+          message:'Lead-ul va fi marcat retras și nu va mai apărea în pipeline activ.' });
+        if (!ok) return;
+        const lead = await AppState.db.get('leads', leadId);
+        const now  = new Date().toISOString();
+        await AppState.db.put('leads', {...lead, status:'withdrawn', pipelineStage:'retras', stageEnteredAt:now, updatedAt:now});
+        showToast('info','Lead retras.');
+        await _renderPipelineContent();
+        typeof renderLeads === 'function' && renderLeads();
+      }
+    }
+  </script>
   <script id="sf-f3-dnd">   /* M10 — DnD */       </script>
   <script id="sf-f1">       /* M7 — Calculator */ </script>
   <script id="sf-f4">       /* M8 — Cadence */    </script>
