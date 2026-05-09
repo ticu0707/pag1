@@ -2450,7 +2450,301 @@
     }
   </script>
   <script id="sf-f3-dnd">   /* M10 — DnD */       </script>
-  <script id="sf-f1">       /* M7 — Calculator */ </script>
+  <script id="sf-f1">
+    let _f1RC  = null; // RateCard cache
+    let _f1Tab = 'arch';
+
+    async function renderCalculator() {
+      const page = document.getElementById('page-calculator');
+      if (!page) return;
+      if (!page.querySelector('#f1-content')) {
+        page.innerHTML = `
+          <div class="sf-page-header" style="margin-bottom:12px">
+            <div class="sf-page-title">Calculator</div>
+          </div>
+          <div style="display:flex;gap:6px;margin-bottom:16px">
+            <button class="sf-btn" id="f1-tab-arch" onclick="f1SetTab('arch')">ARH — Arhitectură</button>
+            <button class="sf-btn" id="f1-tab-int"  onclick="f1SetTab('int')">INT — Interior</button>
+          </div>
+          <div id="f1-content"></div>`;
+      }
+      await _f1LoadRC();
+      await _renderCalcContent();
+    }
+
+    async function f1SetTab(tab) {
+      _f1Tab = tab;
+      await _renderCalcContent();
+    }
+
+    async function _f1LoadRC() {
+      if (_f1RC) return;
+      const all = await AppState.db.getAll('rateCards');
+      _f1RC = all.find(r => r.isDefault) || all[0] || null;
+    }
+
+    async function _renderCalcContent() {
+      const content = document.getElementById('f1-content');
+      if (!content || !AppState.db) return;
+      const isArch = _f1Tab === 'arch';
+      document.getElementById('f1-tab-arch')?.classList.toggle('sf-btn--primary',   isArch);
+      document.getElementById('f1-tab-arch')?.classList.toggle('sf-btn--secondary', !isArch);
+      document.getElementById('f1-tab-int')?.classList.toggle('sf-btn--primary',    !isArch);
+      document.getElementById('f1-tab-int')?.classList.toggle('sf-btn--secondary',  isArch);
+
+      if (!_f1RC) {
+        content.innerHTML = `<div class="sf-empty-state">Niciun Rate Card configurat. Completați Setup-ul mai întâi.</div>`;
+        return;
+      }
+      const R = _f1RC.rates;
+      const typoMap  = isArch ? R.arch : R.int;
+      const phases   = isArch ? R.archPhases : R.intPhases;
+      const conds    = isArch ? R.archSpecialConditions : R.intSpecialConditions;
+      const typoLbls = {
+        arch: { T1:'T1 — Locuință individuală', T2:'T2 — Bloc locuințe', T3:'T3 — Comercial/Industrial',
+                T4:'T4 — City Scale', T5:'T5 — Logistic/Turism', T6:'T6 — Infrastructură' },
+        int:  { T1:'T1 — Office/Gym', T2:'T2 — Rezidențial/Hotel Room', T3:'T3 — Retail/Coffee',
+                T4:'T4 — Hotel Lobby', T5:'T5 — Medical/Restaurant', T6:'T6 — Wellness/SPA' }
+      }[_f1Tab];
+
+      const phaseChecks = phases.map(p => `
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <input type="checkbox" id="f1-ph-${p.id}" checked onchange="f1UpdateResult()"
+            style="width:16px;height:16px;flex-shrink:0">
+          <label for="f1-ph-${p.id}" style="flex:1;font-size:13px">${p.name}</label>
+          <span id="f1-ph-h-${p.id}" style="font-size:12px;color:var(--sf-text-2);min-width:44px;text-align:right">—h</span>
+        </div>`).join('');
+
+      const condChecks = conds.map(c => `
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+          <input type="checkbox" id="f1-cd-${c.id}" data-delta="${c.delta}" onchange="f1UpdateResult()"
+            style="width:16px;height:16px;flex-shrink:0">
+          <label for="f1-cd-${c.id}" style="flex:1;font-size:12px">${c.name}</label>
+          <span style="font-size:11px;color:var(--sf-warm);white-space:nowrap">+${Math.round(c.delta*100)}%</span>
+        </div>`).join('');
+
+      const typoOpts = Object.keys(typoMap).map(k =>
+        `<option value="${k}">${typoLbls[k]||k} (k=${typoMap[k].kDefault})</option>`).join('');
+
+      content.innerHTML = `
+        <div style="display:grid;grid-template-columns:1fr 380px;gap:20px;align-items:start">
+          <div>
+            <div class="sf-card" style="margin-bottom:12px">
+              <label class="sf-label">Tipologie</label>
+              <select class="sf-select" id="f1-typo" onchange="f1UpdateResult()" style="width:100%;margin-bottom:10px">${typoOpts}</select>
+              <div id="f1-typo-info" style="font-size:11px;color:var(--sf-text-2);margin-bottom:10px"></div>
+              <div style="display:flex;gap:12px">
+                <div style="flex:1">
+                  <label class="sf-label">Suprafață (mp)</label>
+                  <input class="sf-input" type="number" id="f1-area" min="1" max="200000"
+                    value="200" oninput="f1UpdateResult()" style="width:100%">
+                </div>
+                <div style="flex:1">
+                  <label class="sf-label">Unități repetitive</label>
+                  <input class="sf-input" type="number" id="f1-rep" min="1" max="500"
+                    value="1" oninput="f1UpdateResult()" style="width:100%">
+                  <div style="font-size:10px;color:var(--sf-text-3);margin-top:2px">⚠ Estimat — verificați față de Excel</div>
+                </div>
+              </div>
+              <div id="f1-gamma-info" style="font-size:12px;color:var(--sf-primary);margin-top:8px;font-weight:600"></div>
+            </div>
+            <div class="sf-card" style="margin-bottom:12px">
+              <div style="font-size:13px;font-weight:600;margin-bottom:10px">Faze incluse</div>
+              ${phaseChecks}
+            </div>
+            <div class="sf-card">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+                <span style="font-size:13px;font-weight:600">Condiții speciale</span>
+                <span id="f1-delta-total" style="font-size:12px;color:var(--sf-warm);font-weight:400"></span>
+              </div>
+              ${!isArch ? '<div style="font-size:11px;color:var(--sf-warm);margin-bottom:8px">⚠ Estimate — verificați față de Calculator Excel HERTZ</div>' : ''}
+              ${condChecks}
+            </div>
+          </div>
+          <div>
+            <div class="sf-card" style="background:var(--sf-surface-2)">
+              <div style="font-size:12px;font-weight:700;letter-spacing:0.05em;color:var(--sf-text-2);margin-bottom:12px">ESTIMARE PREȚ</div>
+              <div id="f1-result-content" style="min-height:120px"></div>
+              <div style="display:flex;gap:8px;margin-top:12px">
+                <button class="sf-btn sf-btn--secondary" onclick="f1CopyToClipboard()" style="flex:1">Copiază</button>
+                <button class="sf-btn sf-btn--primary"   onclick="f1SaveAsOffer()"     style="flex:1">Salvează ca ofertă</button>
+              </div>
+            </div>
+            <div id="f1-price-intel" style="margin-top:12px"></div>
+          </div>
+        </div>`;
+      f1UpdateResult();
+    }
+
+    // ── Math ─────────────────────────────────────────────────────────
+    function calcGamma(area, gammaTable) {
+      for (const g of gammaTable) {
+        if (g.maxArea === null || area <= g.maxArea) return g.gamma;
+      }
+      return 1.0;
+    }
+
+    function f1UpdateResult() {
+      if (!_f1RC) return;
+      const R      = _f1RC.rates;
+      const isArch = _f1Tab === 'arch';
+      const typo   = document.getElementById('f1-typo')?.value || 'T1';
+      const area   = parseFloat(document.getElementById('f1-area')?.value) || 0;
+      const rep    = parseInt(document.getElementById('f1-rep')?.value)   || 1;
+
+      const typoConf   = (isArch ? R.arch : R.int)[typo] || { kDefault:1, refArea:100 };
+      const phases     = isArch ? R.archPhases : R.intPhases;
+      const conds      = isArch ? R.archSpecialConditions : R.intSpecialConditions;
+      const gammaTable = isArch ? R.archGamma : R.intGamma;
+
+      // Typo info
+      const infoEl = document.getElementById('f1-typo-info');
+      if (infoEl) infoEl.textContent = `kDefault: ${typoConf.kDefault} | Referință: ${typoConf.refArea} mp`;
+
+      // Gamma
+      const gamma = area > 0 ? calcGamma(area, gammaTable) : 1.0;
+      const gammaEl = document.getElementById('f1-gamma-info');
+      if (gammaEl) gammaEl.textContent = area > 0 ? `Coeficient suprafață (γ): ${gamma.toFixed(2)}` : '';
+
+      // Per-phase hours + sum
+      let hSum = 0;
+      phases.forEach(p => {
+        const checked = document.getElementById(`f1-ph-${p.id}`)?.checked;
+        const hPhase  = area > 0
+          ? Math.round(p.baseHours * typoConf.kDefault * Math.pow(area / typoConf.refArea, p.alpha))
+          : 0;
+        const el = document.getElementById(`f1-ph-h-${p.id}`);
+        if (el) el.textContent = `${hPhase}h`;
+        if (checked) hSum += hPhase;
+      });
+
+      // Special conditions
+      let deltaSum = 0;
+      conds.forEach(c => {
+        if (document.getElementById(`f1-cd-${c.id}`)?.checked) deltaSum += c.delta;
+      });
+      const deltaEl = document.getElementById('f1-delta-total');
+      if (deltaEl) deltaEl.textContent = deltaSum > 0 ? `Condiții speciale: +${Math.round(deltaSum*100)}%` : '';
+
+      // Rep units discount (empiric: −4%/unitate, min 70%)
+      const repDisc = rep >= 2 ? Math.max(0.70, 1 - (rep - 1) * 0.04) : 1;
+      const hTotal  = Math.round(hSum * (1 + deltaSum) * gamma * repDisc);
+
+      const rate  = _f1RC.hourlyRateEUR || 65;
+      const std   = Math.round(hTotal * rate);
+      const min   = Math.round(std * 0.90);
+      const max   = Math.round(std * 1.15);
+
+      const resEl = document.getElementById('f1-result-content');
+      if (!resEl) return;
+      if (area <= 0 || hTotal === 0) {
+        resEl.innerHTML = `<div style="color:var(--sf-text-2);font-size:13px">Introduceți suprafața și selectați cel puțin o fază.</div>`;
+        document.getElementById('f1-price-intel').innerHTML = '';
+        return;
+      }
+      resEl.innerHTML = `
+        <div style="margin-bottom:12px">
+          <div style="font-size:13px;color:var(--sf-text-2)">Ore totale: <strong style="color:var(--sf-text);font-size:15px">${hTotal}h</strong></div>
+          ${rep >= 2 ? `<div style="font-size:11px;color:var(--sf-warm);margin-top:2px">Discount repetitive (${rep} unități): −${Math.round((1-repDisc)*100)}%</div>` : ''}
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-radius:6px;background:var(--sf-surface)">
+            <span style="font-size:12px;color:var(--sf-text-2)">Minim (×0.90)</span>
+            <span style="font-size:16px;font-weight:600;font-family:var(--sf-font-num)">${min.toLocaleString('ro-RO')} EUR</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px;border-radius:6px;background:var(--sf-primary);color:#fff">
+            <span style="font-size:12px;opacity:0.85">Standard ★</span>
+            <span style="font-size:18px;font-weight:700;font-family:var(--sf-font-num)">${std.toLocaleString('ro-RO')} EUR</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border-radius:6px;background:var(--sf-surface)">
+            <span style="font-size:12px;color:var(--sf-text-2)">Premium (×1.15)</span>
+            <span style="font-size:16px;font-weight:600;font-family:var(--sf-font-num);color:var(--sf-accent)">${max.toLocaleString('ro-RO')} EUR</span>
+          </div>
+        </div>`;
+      // Price Intelligence (async, fire-and-forget)
+      _f1LoadPI(typo, isArch ? 'discovery' : 'design', area, std);
+    }
+
+    async function _f1LoadPI(typology, funnelType, area, currentPrice) {
+      const c = document.getElementById('f1-price-intel');
+      if (!c) return;
+      const pi = await f1QueryPI(typology, funnelType, area);
+      f1RenderPI(c, pi, currentPrice);
+    }
+
+    // ── Price Intelligence ────────────────────────────────────────────
+    async function f1QueryPI(typology, funnelType, area) {
+      const [wonOffers, allLeads, settings] = await Promise.all([
+        AppState.db.getAllByIndex('offers', 'status', 'won'),
+        AppState.db.getAll('leads'),
+        AppState.db.get('settings', 'settings')
+      ]);
+      const lm = Object.fromEntries(allLeads.map(l => [l.id, l]));
+      const minN = settings?.priceIntelMinSamples || 30;
+      const prices = wonOffers
+        .filter(o => {
+          const l = lm[o.leadId];
+          return l && l.typology === typology && l.funnelType === funnelType
+              && l.area >= area * 0.50 && l.area <= area * 1.50;
+        })
+        .map(o => o.totalPriceEUR || 0)
+        .filter(p => p > 0)
+        .sort((a, b) => a - b);
+      if (!prices.length) return null;
+      return {
+        samples: prices.length, minN, typology,
+        hr: { min: prices[0], max: prices[prices.length-1], median: prices[Math.floor(prices.length/2)] },
+        ok: prices.length >= minN
+      };
+    }
+
+    function getPricePosition(currentPriceEUR, pi) {
+      if (!pi || !pi.ok) return null;
+      const dev = (currentPriceEUR - pi.hr.median) / pi.hr.median;
+      if (dev < -0.10) return -1;
+      if (dev >  0.10) return +1;
+      return 0;
+    }
+
+    function f1RenderPI(container, pi, currentPrice) {
+      if (!pi) { container.innerHTML = ''; return; }
+      const pos    = getPricePosition(currentPrice, pi);
+      const pct    = pi.hr.median > 0 ? Math.round((currentPrice - pi.hr.median) / pi.hr.median * 100) : 0;
+      const posLbl = pos === null ? '' : pos === 0 ? '≈ median' : (pct > 0 ? `+${pct}%` : `${pct}%`) + ' față de median';
+      const color  = pos === null ? '' : pos === 0 ? 'var(--sf-primary)' : pos > 0 ? 'var(--sf-warm)' : 'var(--sf-hot)';
+      container.innerHTML = `
+        <div class="sf-card" style="border-left:3px solid ${pi.ok?'var(--sf-primary)':'var(--sf-warm)'}">
+          <div style="font-size:11px;font-weight:700;letter-spacing:0.05em;color:var(--sf-text-2);margin-bottom:8px">CONTEXT PIAȚĂ (${pi.typology})</div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+            <span style="color:var(--sf-text-2)">Range câștigat</span>
+            <span><strong>${pi.hr.min.toLocaleString('ro-RO')}€</strong> – <strong>${pi.hr.max.toLocaleString('ro-RO')}€</strong></span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+            <span style="color:var(--sf-text-2)">Median</span>
+            <span><strong>${pi.hr.median.toLocaleString('ro-RO')}€</strong></span>
+          </div>
+          ${currentPrice > 0 ? `
+          <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:8px">
+            <span style="color:var(--sf-text-2)">Prețul tău</span>
+            <span style="color:${color};font-weight:600">${currentPrice.toLocaleString('ro-RO')}€ ${posLbl}</span>
+          </div>` : ''}
+          ${!pi.ok
+            ? `<div style="font-size:11px;color:var(--sf-warm);padding:6px 8px;background:var(--sf-warm-bg);border-radius:4px">⚠ DATE INSUFICIENTE (n=${pi.samples}, minim ${pi.minN} necesar)<br>Afișat informativ — fără recomandare automată</div>`
+            : `<div style="font-size:11px;color:var(--sf-primary)">n=${pi.samples} deals — Price Intelligence ACTIV</div>`}
+        </div>`;
+    }
+
+    function f1CopyToClipboard() {
+      const el = document.getElementById('f1-result-content');
+      if (!el || !el.textContent.includes('EUR')) return;
+      navigator.clipboard?.writeText(el.innerText || el.textContent)
+        .then(() => showToast('success','Copiat în clipboard.'))
+        .catch(() => showToast('error','Clipboard indisponibil.'));
+    }
+    function f1SaveAsOffer() {
+      showToast('info','Generatorul de oferte va fi disponibil în M12.');
+    }
+  </script>
   <script id="sf-f4">       /* M8 — Cadence */    </script>
   <script id="sf-f9">       /* M9 — Today */      </script>
   <script id="sf-f5a">      /* M11 — Portfolio */ </script>
