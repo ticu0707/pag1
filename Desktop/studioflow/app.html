@@ -4591,7 +4591,74 @@
       showToast('success','CSV exportat — '+leads.length+' lead-uri.');
     }
   </script>
-  <script id="sf-shortcuts">/* M17 — Keys */      </script>
+  <script id="sf-shortcuts">
+    // ── M17 Keyboard Shortcuts ──────────────────────────────────────────────
+    (function () {
+      const NAV_KEYS = {
+        '1':'#today','2':'#pipeline','3':'#leads','4':'#offers',
+        '5':'#portfolio','6':'#clients','7':'#calculator','8':'#intelligence','9':'#settings'
+      };
+
+      function showShortcutsHelp() {
+        const rows = [
+          ['N',        'Lead nou'],
+          ['L',        'Log activitate rapidă'],
+          ['1 – 9',    'Navigare rapidă (Today → Setări)'],
+          ['?',        'Acest dialog'],
+          ['Esc',      'Închide dialog activ'],
+          ['Ctrl + B', 'Selectare folder backup'],
+          ['Ctrl + S', 'Confirmare salvare automată'],
+        ];
+        const kbdStyle = `background:var(--sf-surface-2);border:1px solid var(--sf-border);`
+          + `border-radius:var(--sf-r-sm);padding:2px 7px;font-family:var(--sf-font-num);font-size:12px`;
+        const tableRows = rows.map(([k, d]) =>
+          `<tr>
+             <td style="padding:7px 16px 7px 0;white-space:nowrap">
+               <kbd style="${kbdStyle}">${k}</kbd>
+             </td>
+             <td style="padding:7px 0;color:var(--sf-text-2)">${d}</td>
+           </tr>`
+        ).join('');
+        showModal(
+          `<table style="border-collapse:collapse;width:100%">${tableRows}</table>
+           <p style="margin:16px 0 0;font-size:12px;color:var(--sf-text-3)">
+             Dezactivate când focusul este într-un câmp de input.
+           </p>
+           <div style="text-align:right;margin-top:16px">
+             <button class="sf-btn sf-btn--secondary" onclick="closeModal()">Închide</button>
+           </div>`,
+          { title: 'Scurtături tastatură' }
+        );
+      }
+
+      document.addEventListener('keydown', function (e) {
+        const tag = (document.activeElement?.tagName || '').toLowerCase();
+        if (['input','textarea','select'].includes(tag) ||
+            document.activeElement?.getAttribute('contenteditable') === 'true') return;
+
+        const ctrl = e.ctrlKey || e.metaKey;
+        if (ctrl && e.key === 'b') {
+          e.preventDefault();
+          if (typeof selectBackupFolder === 'function') selectBackupFolder();
+          return;
+        }
+        if (ctrl && e.key === 's') {
+          e.preventDefault();
+          showToast('info', 'StudioFlow salvează automat în IndexedDB.');
+          return;
+        }
+        if (ctrl) return;
+
+        if (NAV_KEYS[e.key]) { navigate(NAV_KEYS[e.key]); return; }
+        switch (e.key) {
+          case 'n': case 'N': openNewLeadModal(); break;
+          case 'l': case 'L': openQuickLogModal(); break;
+          case 'Escape':      closeModal(); break;
+          case '?':           showShortcutsHelp(); break;
+        }
+      });
+    })();
+  </script>
   <script id="sf-init">
     document.addEventListener('DOMContentLoaded', initApp);
   </script>
