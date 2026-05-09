@@ -2146,6 +2146,7 @@
     // ── Mark Won ──────────────────────────────────────────────────────
     async function markLeadWon(leadId) {
       const lead = await AppState.db.get('leads', leadId);
+      if (!lead) { showToast('error','Lead nu mai există.'); return; }
       const def  = addDays(new Date(),365).toISOString().slice(0,10);
       showModal(`
         <div class="sf-modal-header"><h2 class="sf-modal-title">✓ Marchează câștigat</h2>
@@ -2161,6 +2162,7 @@
     }
     async function _confirmWon(leadId) {
       const lead = await AppState.db.get('leads', leadId);
+      if (!lead) { closeModal(); showToast('error','Lead nu mai există.'); return; }
       const wonVal  = parseFloat(document.getElementById('won-value')?.value)||0;
       const endDate = document.getElementById('won-end')?.value;
       if (!endDate) { showToast('error','Data finalizare este obligatorie'); return; }
@@ -2196,6 +2198,7 @@
     }
     async function _confirmLost(leadId) {
       const lead = await AppState.db.get('leads', leadId);
+      if (!lead) { closeModal(); showToast('error','Lead nu mai există.'); return; }
       const reason     = document.getElementById('lost-reason')?.value;
       const competitor = document.getElementById('lost-competitor')?.value?.trim()||'';
       const now = new Date().toISOString();
@@ -2308,8 +2311,8 @@
       else if (fSort==='age')   leads.sort((a,b) => (a.stageEnteredAt||a.createdAt).localeCompare(b.stageEnteredAt||b.createdAt));
       else                    leads.sort((a,b) => (b.updatedAt||b.createdAt).localeCompare(a.updatedAt||a.createdAt));
 
-      // Stats
-      const activePipe  = leads.filter(l => l.status==='active');
+      // Stats — pipeTotal uses all active leads in funnel (not filtered), other KPIs are global
+      const activePipe  = allLeads.filter(l => l.funnelType===funnel && l.status==='active');
       const allWon      = allLeads.filter(l => l.status==='won');
       const allLost     = allLeads.filter(l => l.status==='lost');
       const pipeTotal   = activePipe.reduce((s,l) => s+(l.estimatedValue||0), 0);
@@ -2437,6 +2440,7 @@
           message:'Lead-ul va fi marcat retras și nu va mai apărea în pipeline activ.' });
         if (!ok) return;
         const lead = await AppState.db.get('leads', leadId);
+        if (!lead) return;
         const now  = new Date().toISOString();
         await AppState.db.put('leads', {...lead, status:'withdrawn', pipelineStage:'retras', stageEnteredAt:now, updatedAt:now});
         showToast('info','Lead retras.');
