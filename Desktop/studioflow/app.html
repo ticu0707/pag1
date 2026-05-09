@@ -4478,7 +4478,7 @@
         if(!ok)return;
         try{
           await clearAllData(AppState.db);
-          if(backup.studio)await AppState.db.put('studio',backup.studio);
+          if(backup.studio)await AppState.db.put('studio',{...backup.studio,logoBlob:null});
           await Promise.all([
             backup.clients?.length&&AppState.db.putBulk('clients',backup.clients),
             backup.leads?.length&&AppState.db.putBulk('leads',backup.leads),
@@ -4511,7 +4511,7 @@
     async function _s10CalcStorage(){
       const el=document.getElementById('s10-storage');if(!el)return;
       try{
-        const all=await Promise.all(['studio','clients','leads','offers','activities','rateCards','settings'].map(s=>AppState.db.getAll(s)));
+        const all=await Promise.all(['studio','clients','leads','offers','activities','rateCards','settings','portfolio'].map(s=>AppState.db.getAll(s)));
         const bytes=new TextEncoder().encode(JSON.stringify(all)).length;
         el.innerHTML=`Spațiu estimat (fără imagini): <strong>${(bytes/1024/1024).toFixed(2)} MB</strong>`;
       }catch{el.textContent='Nu s-a putut calcula.';}
