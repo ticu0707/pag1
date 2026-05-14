@@ -22,3 +22,4 @@
 - [project_team_time_tracker.md](project_team_time_tracker.md) — Team Time Tracker: pontaj echipă pentru manageri — rămas la nivel de PRD, implementare neîncepută
 - [project_menu_mix_matrix.md](project_menu_mix_matrix.md) — MenuMix Matrix (2 HTML files, offline, SessionStorage): menu engineering HoReCa cu matrice SVG; implementare completă, commit local, nepushed; urmează config EmailJS + testare + deploy
 - [project_studioflow.md](project_studioflow.md) — StudioFlow CRM arhitectură (2 HTML + PWA, IndexedDB, offline): PRD v5.0 final pe Desktop; 10 module, implementare neîncepută; start cu Sprint 1 (F8→F0→F2→F3)
+- [project_safe_change_agent.md](project_safe_change_agent.md) — Safe Change Agent (CLI TypeScript, offline): PRD clarificat, implementare neîncepută; start cu Demo 1 end-to-end (patch pur safe)
