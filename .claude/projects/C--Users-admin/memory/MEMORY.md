@@ -23,4 +23,4 @@
 - [project_menu_mix_matrix.md](project_menu_mix_matrix.md) — MenuMix Matrix (2 HTML files, offline, SessionStorage): menu engineering HoReCa cu matrice SVG; implementare completă, commit local, nepushed; urmează config EmailJS + testare + deploy
 - [project_studioflow.md](project_studioflow.md) — StudioFlow CRM arhitectură (2 HTML + PWA, IndexedDB, offline): PRD v5.0 final pe Desktop; 10 module, implementare neîncepută; start cu Sprint 1 (F8→F0→F2→F3)
 - [project_safe_change_agent.md](project_safe_change_agent.md) — Safe Change Agent (CLI TypeScript, offline): PRD clarificat, implementare neîncepută; start cu Demo 1 end-to-end (patch pur safe)
-- [project_ghid_agent_ai.md](project_ghid_agent_ai.md) — Ghid creare agent AI de la zero (beginner): structură agreată în 4 părți + skill-uri; în așteptare răspuns la 4 întrebări de aliniere înainte de generare
+- [project_ghid_agent_ai.md](project_ghid_agent_ai.md) — Ghid creare agent AI (TypeScript + Anthropic SDK, Task Agent): v4.0 COMPLET, salvat la Desktop/Agenti AI/ghid-agent-ai-v4.md; urmează implementare

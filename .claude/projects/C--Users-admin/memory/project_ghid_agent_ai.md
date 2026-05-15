@@ -1,28 +1,51 @@
 ---
 name: project_ghid_agent_ai
-description: "Ghid complet creare agent AI de la zero pentru începători — discuție în așteptare, structură agreată, urmează aliniere pe 4 întrebări"
+description: "Ghid complet creare agent AI de la zero (beginner) — v4.0 FINALIZAT, salvat pe Desktop/Agenti AI/"
 metadata: 
   node_type: memory
   type: project
   originSessionId: a763b17b-df42-4f24-aed3-13c28ef203d0
 ---
 
-Utilizatorul a cerut generarea unui ghid complet pentru crearea unui agent AI de la zero, incluzând skill-urile necesare funcționării agentului.
+Ghid complet pentru crearea primului agent AI de la zero, nivel beginner-intermediate.
 
-**Why:** Scop educațional, nivel beginner-intermediate, vrea ghidare efectivă pas-cu-pas nu doar teorie.
+**Why:** Scop educațional — utilizatorul urmează un curs de vibe-coding și vrea să creeze primul agent AI cu ghidare pas-cu-pas, nu doar teorie.
 
-**Structura agreată:**
-- Partea 1 — Fundament: concepte, setup, primul agent funcțional
-- Partea 2 — Skill-uri (Tool Use): anatomia unui tool, skill-uri concrete (căutare, fișiere, email, calcul), cum agentul decide ce skill să folosească, testare per skill
-- Partea 3 — System Prompt & Comportament: instrucțiuni care definesc personalitatea și limitele agentului
-- Partea 4 — Testare & Producție: scenarii de test, debugging, deployment
+**Fișier ghid:** `C:\Users\admin\Desktop\Agenti AI\ghid-agent-ai-v4.md`
 
-**Ghidare efectivă per skill:** cod complet gata de copiat, explicație linie cu linie, exercițiu de verificare, greșeli comune.
+**Alegeri tehnice:**
+- Limbaj: TypeScript (ESM, Node.js 20+)
+- SDK: Anthropic SDK direct (`@anthropic-ai/sdk`)
+- Exemplu concret: Task Management Agent (CRUD pe tasks.json)
+- Format: ghid conversațional complet cu cod gata de copiat
 
-**Status:** Discuție oprită înainte de generare — utilizatorul nu a răspuns încă la cele 4 întrebări de aliniere:
-1. Limbaj — JavaScript/TypeScript sau Python?
-2. Provider — Claude API (Anthropic SDK) sau provider-agnostic?
-3. Tip agent — exemplu concret (email, căutare) sau generic?
-4. Format final — conversație, fișier Markdown, sau document salvat în proiect?
+**Structura ghidului v4.0:**
+- Learning Map — harta timpului (45 min total)
+- Parte 0: Setup — API key, .env, npm install, package.json, tsconfig.json
+- Concepte Esențiale — tokeni, conversație, agent vs chatbot, bucla agentică
+- src/taskStore.ts — stratul de date (readTasks, writeTasks, generateId, clearTasks)
+- CHECKPOINT 1 — verificare compilare și structură fișiere
+- src/tools.ts — toolDefinitions (4 tools), funcții (add/list/complete/delete), toolExecutors router
+- src/agent.ts — CachedSystemBlock, callClaudeWithRetry (exponential backoff + jitter), safeTrimHistory, runAgent (bucla agentică)
+- src/index.ts — validateEnv, SessionStats, calculateCost, printStats, CLI interactiv
+- CHECKPOINT 2 — rulare npm start, test rapid
+- src/test.ts — 6 teste state-based (verifică tasks.json, nu textul lui Claude)
+- Extindere — template 3 pași pentru adăugare tool nou (exemplu: search_tasks)
+- Troubleshooting — Top 5 erori + soluții
+- Next Steps — Săptămâna 1-3 + dincolo (MCP, multi-agent, Computer Use)
 
-**How to apply:** La reluarea conversației, reamintește cele 4 întrebări și începe generarea după ce utilizatorul răspunde.
+**Concepte cheie acoperite:**
+- Agentic loop (stop_reason: end_turn vs tool_use)
+- Prompt Caching cu `cache_control: { type: "ephemeral" }` (~90% reducere costuri)
+- MAX_ITERATIONS = 15 (prevenire bucle infinite)
+- safeTrimHistory — tăiere sigură, fără a rupe perechi tool_use/tool_result
+- Exponential backoff cu jitter pentru retry la RateLimitError
+- Token tracking + cost estimation per sesiune
+- State-based testing (readTasks() nu textul Claude)
+- ENOENT check pentru diferențiere "fișier lipsă" vs "JSON corupt"
+- crypto.randomUUID() pentru ID-uri unice garantate
+- .env + dotenv — cheia API niciodată în cod
+
+**Status:** COMPLET — v4.0 finalizat și salvat. Ghidul a trecut prin 4 iterații de optimizare (v1.0→v4.0) bazate pe feedback expert simulat + real.
+
+**How to apply:** La reluarea lucrului pe acest ghid, deschide direct `C:\Users\admin\Desktop\Agenti AI\ghid-agent-ai-v4.md`. Utilizatorul poate porni implementarea creând folderul `task-agent/` și urmând Partea 0.
