@@ -48,4 +48,10 @@ Ghid complet pentru crearea primului agent AI de la zero, nivel beginner-interme
 
 **Status:** COMPLET — v4.0 finalizat și salvat. Ghidul a trecut prin 4 iterații de optimizare (v1.0→v4.0) bazate pe feedback expert simulat + real.
 
+**Ghid Tools suplimentar:** `C:\Users\admin\Desktop\Agenti AI\ghid-tools-agent-ai-v3.md`
+- Ghid dedicat creării de Tools pentru agenți AI, nivel beginner → production-ready
+- Conține: model mental complet + tool_choice (1.6), 5 componente anatomie, 3 exemple practice, buclă agentică production-ready, prompt caching cu prefix caching explanation, comparație framework-uri (+ LangGraph), securitate (path.sep + ALLOWED_EXTENSIONS + anti-injection), template reutilizabil, 9 greșeli comune, checklist extins, entry point (main)
+- 18 rafinări față de v2: 6 bug fixes + 12 îmbunătățiri expert
+- v2 la `ghid-tools-agent-ai-v2.md` (depășită); v1 la `ghid-skills-agent-ai.md` (depășită)
+
 **How to apply:** La reluarea lucrului pe acest ghid, deschide direct `C:\Users\admin\Desktop\Agenti AI\ghid-agent-ai-v4.md`. Utilizatorul poate porni implementarea creând folderul `task-agent/` și urmând Partea 0.
