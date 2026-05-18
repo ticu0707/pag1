@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Calculator gratuit de reaprovizionare stocuri. Știi exact ce să comanzi și când, fără Excel, fără surprize.">
+<meta property="og:title" content="Reorder Radar — Știi exact ce să comanzi mâine dimineață">
+<meta property="og:description" content="Calculator gratuit de reorder point. Funcționează pe laptop, fără internet, fără instalare.">
+<title>Reorder Radar — Știi exact ce să comanzi mâine dimineață</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  body { font-family: 'Inter', sans-serif; background: #0f172a; }
+  .btn-cta { background: linear-gradient(135deg, #f59e0b, #f97316); transition: all .25s; }
+  .btn-cta:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(245,158,11,.35); }
+  .text-grad { background: linear-gradient(135deg, #f59e0b, #f97316); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .card { background: rgba(15,23,42,.85); border: 1px solid rgba(99,102,241,.2); backdrop-filter: blur(8px); }
+  .hero-bg { background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 55%, #0f172a 100%); }
+  .status-r { background: rgba(239,68,68,.18); color: #f87171; border: 1px solid rgba(239,68,68,.3); }
+  .status-y { background: rgba(245,158,11,.18); color: #fbbf24; border: 1px solid rgba(245,158,11,.3); }
+  .status-g { background: rgba(34,197,94,.18); color: #4ade80; border: 1px solid rgba(34,197,94,.3); }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
+  .fade-up { animation: fadeUp .7s ease both; }
+  .fade-up-2 { animation: fadeUp .7s .15s ease both; }
+</style>
+</head>
+<body class="text-white">
+
+<!-- ===================== NAVBAR ===================== -->
+<nav class="fixed top-0 w-full z-50 bg-slate-900/85 backdrop-blur-md border-b border-slate-800">
+  <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <div class="w-8 h-8 rounded-lg btn-cta flex items-center justify-center text-white font-black text-xs">RR</div>
+      <span class="font-bold text-white text-lg">Reorder Radar</span>
+    </div>
+    <a href="reorder-radar.html" download="Reorder-Radar.html"
+       class="btn-cta text-white font-semibold px-5 py-2 rounded-lg text-sm inline-block">
+      Descarcă gratuit →
+    </a>
+  </div>
+</nav>
+
+<!-- ===================== HERO ===================== -->
+<section class="hero-bg min-h-screen flex items-center pt-20 px-6">
+  <div class="max-w-6xl mx-auto w-full grid lg:grid-cols-2 gap-14 items-center py-20">
+
+    <!-- Text -->
+    <div class="fade-up">
+      <div class="inline-flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 rounded-full px-4 py-2 text-amber-400 text-xs font-semibold mb-6">
+        <span class="w-2 h-2 bg-amber-400 rounded-full inline-block"></span>
+        Gratuit · Offline · Fără cont · Fără instalare
+      </div>
+      <h1 class="text-4xl lg:text-5xl font-black leading-tight mb-5">
+        Știi exact ce să comanzi<br>
+        <span class="text-grad">mâine dimineață.</span>
+      </h1>
+      <p class="text-slate-300 text-lg leading-relaxed mb-8">
+        Reorder Radar calculează instant <strong class="text-white">când și cât să comanzi</strong> —
+        fără Excel, fără surprize, fără stoc epuizat.
+      </p>
+      <div class="flex flex-col sm:flex-row gap-4 mb-8">
+        <a href="reorder-radar.html" download="Reorder-Radar.html"
+           class="btn-cta text-white font-bold px-8 py-4 rounded-xl text-base text-center inline-block">
+          ⬇ Descarcă gratuit
+        </a>
+        <div class="flex items-center gap-2 text-slate-400 text-sm self-center">
+          <svg class="w-4 h-4 text-emerald-400" fill="currentColor" viewBox="0 0 20 20">
+            <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+          </svg>
+          Fișier .html · Rulează local · Zero date personale
+        </div>
+      </div>
+      <div class="flex gap-8">
+        <div><div class="text-2xl font-black">5 min</div><div class="text-slate-400 text-xs mt-1">până la primul rezultat</div></div>
+        <div><div class="text-2xl font-black">0 lei</div><div class="text-slate-400 text-xs mt-1">pentru totdeauna</div></div>
+        <div><div class="text-2xl font-black">100%</div><div class="text-slate-400 text-xs mt-1">offline pe laptop</div></div>
+      </div>
+    </div>
+
+    <!-- App Mockup -->
+    <div class="hidden lg:block fade-up-2">
+      <div class="card rounded-2xl p-6 shadow-2xl" style="border-color:rgba(99,102,241,.3)">
+
+        <!-- Health Score -->
+        <div class="flex items-center justify-between mb-5">
+          <div>
+            <div class="text-slate-400 text-xs uppercase tracking-widest mb-1">Inventory Health Score</div>
+            <div class="text-4xl font-black">72 <span class="text-slate-500 text-lg font-normal">/ 100</span></div>
+          </div>
+          <div class="text-right text-sm space-y-1">
+            <div class="text-red-400 font-semibold">2 critice</div>
+            <div class="text-amber-400 font-semibold">1 avertisment</div>
+            <div class="text-emerald-400 font-semibold">3 OK</div>
+          </div>
+        </div>
+        <div class="h-2 bg-slate-700 rounded-full mb-5">
+          <div class="h-2 rounded-full" style="width:72%;background:linear-gradient(90deg,#ef4444,#f59e0b,#22c55e)"></div>
+        </div>
+
+        <!-- Mini table -->
+        <table class="w-full text-xs">
+          <thead>
+            <tr class="text-slate-500 uppercase tracking-wider text-xs">
+              <th class="text-left pb-3">SKU</th>
+              <th class="text-right pb-3">Stoc</th>
+              <th class="text-right pb-3">Zile</th>
+              <th class="text-right pb-3">Status</th>
+            </tr>
+          </thead>
+          <tbody class="text-slate-300">
+            <tr class="border-t border-slate-700/50">
+              <td class="py-3 font-semibold">Cafea Arabica 1kg</td>
+              <td class="text-right py-3">3</td>
+              <td class="text-right py-3 text-red-400 font-bold">1.5z</td>
+              <td class="text-right py-3"><span class="status-r px-2 py-1 rounded text-xs font-bold">COMANDĂ AZI</span></td>
+            </tr>
+            <tr class="border-t border-slate-700/50">
+              <td class="py-3 font-semibold">Lapte UHT 1L</td>
+              <td class="text-right py-3">18</td>
+              <td class="text-right py-3 text-amber-400 font-bold">3z</td>
+              <td class="text-right py-3"><span class="status-y px-2 py-1 rounded text-xs font-bold">ÎN CURÂND</span></td>
+            </tr>
+            <tr class="border-t border-slate-700/50">
+              <td class="py-3 font-semibold">Zahar 1kg</td>
+              <td class="text-right py-3">45</td>
+              <td class="text-right py-3 text-emerald-400 font-bold">22z</td>
+              <td class="text-right py-3"><span class="status-g px-2 py-1 rounded text-xs font-bold">OK</span></td>
+            </tr>
+            <tr class="border-t border-slate-700/50">
+              <td class="py-3 font-semibold">Pahare 250ml</td>
+              <td class="text-right py-3">5</td>
+              <td class="text-right py-3 text-red-400 font-bold">0.8z</td>
+              <td class="text-right py-3"><span class="status-r px-2 py-1 rounded text-xs font-bold">COMANDĂ AZI</span></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <!-- Draft button -->
+        <div class="mt-5 btn-cta rounded-lg py-3 text-center text-white font-bold text-sm cursor-default">
+          📋 Copiază lista comenzii (2 produse)
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ===================== PROBLEM ===================== -->
+<section class="py-24 px-6 bg-slate-900">
+  <div class="max-w-4xl mx-auto text-center mb-14">
+    <h2 class="text-3xl lg:text-4xl font-black mb-3">Recunoști situația?</h2>
+    <p class="text-slate-400 text-lg">Dacă da, nu ești singurul. Majoritatea afacerilor mici cu stoc se confruntă cu aceeași problemă.</p>
+  </div>
+  <div class="max-w-5xl mx-auto grid md:grid-cols-3 gap-6">
+    <div class="card rounded-xl p-6">
+      <div class="text-4xl mb-4">😰</div>
+      <h3 class="font-bold text-white mb-2">Ai rămas fără marfă</h3>
+      <p class="text-slate-400 text-sm leading-relaxed">Clientul a comandat, tu nu ai stoc. Vânzare pierdută, client nemulțumit, reputație afectată.</p>
+    </div>
+    <div class="card rounded-xl p-6">
+      <div class="text-4xl mb-4">🎲</div>
+      <h3 class="font-bold text-white mb-2">Comanzi "din ochi"</h3>
+      <p class="text-slate-400 text-sm leading-relaxed">Uneori prea mult — îți îngheți cash-ul. Alteori prea puțin — rămâi descoperit.</p>
+    </div>
+    <div class="card rounded-xl p-6">
+      <div class="text-4xl mb-4">⏰</div>
+      <h3 class="font-bold text-white mb-2">Timp pierdut săptămânal</h3>
+      <p class="text-slate-400 text-sm leading-relaxed">Verifici manual fiecare produs, te bazezi pe memorie. Procesul depinde de tine, nu de date.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== HOW IT WORKS ===================== -->
+<section class="py-24 px-6" style="background:rgba(15,23,42,.6)">
+  <div class="max-w-4xl mx-auto text-center mb-14">
+    <h2 class="text-3xl lg:text-4xl font-black mb-3">Cum funcționează</h2>
+    <p class="text-slate-400 text-lg">3 pași. 5 minute. Rezultate clare.</p>
+  </div>
+  <div class="max-w-4xl mx-auto grid md:grid-cols-3 gap-10">
+    <div class="text-center">
+      <div class="w-14 h-14 btn-cta rounded-2xl flex items-center justify-center text-white font-black text-xl mx-auto mb-4">1</div>
+      <h3 class="font-bold text-white mb-2">Introduci datele</h3>
+      <p class="text-slate-400 text-sm leading-relaxed">SKU, stoc curent, vânzări medii/zi, lead time furnizor, stoc minim. Manual sau prin CSV.</p>
+    </div>
+    <div class="text-center">
+      <div class="w-14 h-14 btn-cta rounded-2xl flex items-center justify-center text-white font-black text-xl mx-auto mb-4">2</div>
+      <h3 class="font-bold text-white mb-2">Calculul e automat</h3>
+      <p class="text-slate-400 text-sm leading-relaxed">Reorder Radar calculează instant data optimă de comandă, cantitatea și alertele pentru fiecare SKU.</p>
+    </div>
+    <div class="text-center">
+      <div class="w-14 h-14 btn-cta rounded-2xl flex items-center justify-center text-white font-black text-xl mx-auto mb-4">3</div>
+      <h3 class="font-bold text-white mb-2">Trimiți lista</h3>
+      <p class="text-slate-400 text-sm leading-relaxed">Copiezi lista comenzii cu un click și o trimiți pe WhatsApp sau email furnizorului. Gata.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== FEATURES ===================== -->
+<section class="py-24 px-6 bg-slate-900">
+  <div class="max-w-6xl mx-auto">
+    <div class="text-center mb-14">
+      <h2 class="text-3xl lg:text-4xl font-black mb-3">Ce primești</h2>
+      <p class="text-slate-400 text-lg">Tot ce ai nevoie. Nimic în plus.</p>
+    </div>
+    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+      <div class="card rounded-xl p-5">
+        <div class="w-9 h-9 bg-amber-500/15 rounded-lg flex items-center justify-center mb-3 text-lg">📊</div>
+        <h3 class="font-bold text-white mb-1">Inventory Health Score</h3>
+        <p class="text-slate-400 text-sm">Scor 0–100 care îți arată dintr-o privire cât de sănătoase sunt stocurile tale.</p>
+      </div>
+      <div class="card rounded-xl p-5">
+        <div class="w-9 h-9 bg-red-500/15 rounded-lg flex items-center justify-center mb-3 text-lg">🚨</div>
+        <h3 class="font-bold text-white mb-1">Alerte vizuale instant</h3>
+        <p class="text-slate-400 text-sm">Roșu = comandă azi. Galben = în curând. Verde = ești acoperit. Fără interpretare.</p>
+      </div>
+      <div class="card rounded-xl p-5">
+        <div class="w-9 h-9 bg-emerald-500/15 rounded-lg flex items-center justify-center mb-3 text-lg">📋</div>
+        <h3 class="font-bold text-white mb-1">Draft comandă gata</h3>
+        <p class="text-slate-400 text-sm">Un click și ai lista formatată, gata de trimis furnizorului. Zero timp pierdut.</p>
+      </div>
+      <div class="card rounded-xl p-5">
+        <div class="w-9 h-9 bg-indigo-500/15 rounded-lg flex items-center justify-center mb-3 text-lg">📁</div>
+        <h3 class="font-bold text-white mb-1">Import / Export CSV</h3>
+        <p class="text-slate-400 text-sm">Ai multe SKU-uri? Completezi template-ul în Excel și îl încarci. Gata în 2 minute.</p>
+      </div>
+      <div class="card rounded-xl p-5">
+        <div class="w-9 h-9 bg-purple-500/15 rounded-lg flex items-center justify-center mb-3 text-lg">💾</div>
+        <h3 class="font-bold text-white mb-1">Se salvează automat</h3>
+        <p class="text-slate-400 text-sm">Datele rămân pe laptopul tău. Deschizi săptămâna viitoare și totul e acolo. Fără cloud.</p>
+      </div>
+      <div class="card rounded-xl p-5">
+        <div class="w-9 h-9 bg-orange-500/15 rounded-lg flex items-center justify-center mb-3 text-lg">🖨️</div>
+        <h3 class="font-bold text-white mb-1">Export PDF / Print</h3>
+        <p class="text-slate-400 text-sm">Printezi lista comenzii sau o salvezi ca PDF pentru arhivă. Un singur click.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== AUTHORITY ===================== -->
+<section class="py-24 px-6" style="background:rgba(15,23,42,.7)">
+  <div class="max-w-4xl mx-auto">
+    <div class="text-center mb-12">
+      <h2 class="text-3xl lg:text-4xl font-black mb-3">Bazat pe formule reale de inventory management</h2>
+      <p class="text-slate-400 text-lg">Nu ghicim. Calculăm.</p>
+    </div>
+    <div class="grid md:grid-cols-2 gap-5">
+      <div class="card rounded-xl p-6">
+        <div class="text-amber-400 text-xs font-bold uppercase tracking-widest mb-3">Reorder Point</div>
+        <div class="font-mono text-white text-sm bg-slate-900 rounded-lg p-3 mb-3">
+          ROP = (Vânzări/zi × Lead Time) + Stoc Minim
+        </div>
+        <p class="text-slate-400 text-sm">Nivelul exact al stocului sub care trebuie plasată comanda pentru a nu rămâne fără marfă când furnizorul livrează.</p>
+      </div>
+      <div class="card rounded-xl p-6">
+        <div class="text-amber-400 text-xs font-bold uppercase tracking-widest mb-3">Cantitate Sugerată</div>
+        <div class="font-mono text-white text-sm bg-slate-900 rounded-lg p-3 mb-3">
+          Q = Stoc Min + Vânzări × (LT + 7z) − Stoc Curent
+        </div>
+        <p class="text-slate-400 text-sm">Cât să comanzi pentru a acoperi lead time-ul, săptămâna de revizuire și buffer-ul de siguranță.</p>
+      </div>
+    </div>
+    <div class="mt-5 card rounded-xl p-5 text-center">
+      <p class="text-slate-400 text-sm">
+        ⚠️ <strong class="text-slate-300">Versiune lite</strong> — nu acoperă sezonalitate, promoții sau variații mari de cerere.
+        Proiectat ca punct de plecare, nu ca sistem ERP complet.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== FINAL CTA ===================== -->
+<section class="py-32 px-6 hero-bg">
+  <div class="max-w-3xl mx-auto text-center">
+    <div class="text-5xl mb-6">🎯</div>
+    <h2 class="text-4xl lg:text-5xl font-black mb-5">
+      Descarcă Reorder Radar.<br>
+      <span class="text-grad">Gratuit. Acum.</span>
+    </h2>
+    <p class="text-slate-300 text-xl mb-10 leading-relaxed">
+      Un singur fișier HTML. Rulează pe orice laptop.<br>
+      Funcționează fără internet. Rezultate în 5 minute.
+    </p>
+    <a href="reorder-radar.html" download="Reorder-Radar.html"
+       class="btn-cta text-white font-black px-12 py-5 rounded-2xl text-xl inline-block">
+      ⬇ Descarcă gratuit →
+    </a>
+    <div class="mt-5 text-slate-500 text-sm">
+      Fișier .html · Zero instalare · Zero cont · Zero date personale
+    </div>
+  </div>
+</section>
+
+<!-- ===================== FOOTER ===================== -->
+<footer class="border-t border-slate-800 py-8 px-6 text-center text-slate-500 text-sm bg-slate-900">
+  <div class="flex items-center justify-center gap-3 mb-2">
+    <div class="w-6 h-6 rounded btn-cta flex items-center justify-center text-white font-black text-xs">RR</div>
+    <span class="text-white font-semibold">Reorder Radar</span>
+  </div>
+  <p>Calculator gratuit de reaprovizionare stocuri · Versiunea 1.0</p>
+</footer>
+
+</body>
+</html>

@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Instrumente gratuite pentru IMM-uri</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --blue:    #2563EB;
+      --blue-dk: #1D4ED8;
+      --blue-lt: #EFF6FF;
+      --green:   #16A34A;
+      --gray-50: #F9FAFB;
+      --gray-100:#F3F4F6;
+      --gray-300:#D1D5DB;
+      --gray-500:#6B7280;
+      --gray-700:#374151;
+      --gray-900:#111827;
+      --white:   #FFFFFF;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--gray-50);
+      color: var(--gray-900);
+      line-height: 1.6;
+    }
+
+    /* ── HEADER ── */
+    header {
+      background: var(--white);
+      border-bottom: 1px solid var(--gray-100);
+      padding: 1.25rem 1.5rem;
+      text-align: center;
+    }
+    .logo {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: var(--blue);
+      letter-spacing: -0.5px;
+    }
+    .logo span { color: var(--gray-900); }
+
+    /* ── HERO ── */
+    .hero {
+      background: var(--blue);
+      color: var(--white);
+      text-align: center;
+      padding: 3rem 1.5rem 2.5rem;
+    }
+    .hero h1 {
+      font-size: clamp(1.5rem, 5vw, 2.25rem);
+      font-weight: 800;
+      line-height: 1.2;
+      margin-bottom: 0.75rem;
+    }
+    .hero p {
+      font-size: 1rem;
+      opacity: 0.85;
+      max-width: 480px;
+      margin: 0 auto;
+    }
+
+    /* ── GRID ── */
+    .grid-section {
+      max-width: 680px;
+      margin: 0 auto;
+      padding: 2rem 1rem 3rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    /* ── CARD ── */
+    .card {
+      background: var(--white);
+      border-radius: 16px;
+      padding: 1.4rem 1.4rem 1.2rem;
+      border: 1px solid var(--gray-100);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+    }
+    .card-top {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.9rem;
+    }
+    .card-icon {
+      font-size: 2rem;
+      line-height: 1;
+      flex-shrink: 0;
+      width: 48px;
+      height: 48px;
+      background: var(--blue-lt);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .card-meta { flex: 1; }
+    .card-meta h2 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--gray-900);
+      margin-bottom: 0.2rem;
+    }
+    .card-meta p {
+      font-size: 0.825rem;
+      color: var(--gray-500);
+      line-height: 1.5;
+    }
+    .tag {
+      display: inline-block;
+      background: #DCFCE7;
+      color: #15803D;
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 0.15rem 0.55rem;
+      border-radius: 999px;
+      margin-top: 0.35rem;
+    }
+    .btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      background: var(--blue);
+      color: var(--white);
+      font-size: 0.9rem;
+      font-weight: 600;
+      padding: 0.75rem 1rem;
+      border-radius: 10px;
+      text-decoration: none;
+      transition: background 0.15s;
+      text-align: center;
+    }
+    .btn:hover { background: var(--blue-dk); }
+    .btn svg { flex-shrink: 0; }
+
+    /* ── FOOTER ── */
+    footer {
+      text-align: center;
+      padding: 1.5rem;
+      font-size: 0.75rem;
+      color: var(--gray-500);
+      border-top: 1px solid var(--gray-100);
+      background: var(--white);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo">Instrumente<span> IMM</span></div>
+  </header>
+
+  <section class="hero">
+    <h1>7 instrumente gratuite<br>pentru afacerea ta</h1>
+    <p>Toate rulează direct în browser. Fără cont, fără abonament, fără date trimise nicăieri.</p>
+  </section>
+
+  <div class="grid-section">
+
+    <!-- CashPulse -->
+    <div class="card">
+      <div class="card-top">
+        <div class="card-icon">💰</div>
+        <div class="card-meta">
+          <h2>CashPulse</h2>
+          <p>Forecast cash-flow pe 13 săptămâni. Afli în ce săptămână intri în deficit înainte să se întâmple.</p>
+          <span class="tag">Finanțe</span>
+        </div>
+      </div>
+      <a href="https://cashpulse-ticu.vercel.app" class="btn" target="_blank">
+        <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+        Deschide CashPulse
+      </a>
+    </div>
+
+    <!-- Reorder Radar -->
+    <div class="card">
+      <div class="card-top">
+        <div class="card-icon">📦</div>
+        <div class="card-meta">
+          <h2>Reorder Radar</h2>
+          <p>Alertă automată când stocul unui produs scade sub pragul de reaprovizionare. Pentru retaileri și depozite.</p>
+          <span class="tag">Stocuri</span>
+        </div>
+      </div>
+      <a href="https://reorder-radar.vercel.app" class="btn" target="_blank">
+        <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+        Deschide Reorder Radar
+      </a>
+    </div>
+
+    <!-- FollowUp Board -->
+    <div class="card">
+      <div class="card-top">
+        <div class="card-icon">🎯</div>
+        <div class="card-meta">
+          <h2>FollowUp Board</h2>
+          <p>Tracker vizual pentru urmărirea clienților și lead-urilor. Știi mereu cine așteaptă un răspuns de la tine.</p>
+          <span class="tag">Vânzări</span>
+        </div>
+      </div>
+      <a href="https://followup-board.vercel.app" class="btn" target="_blank">
+        <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+        Deschide FollowUp Board
+      </a>
+    </div>
+
+    <!-- PurchaseCompare -->
+    <div class="card">
+      <div class="card-top">
+        <div class="card-icon">⚖️</div>
+        <div class="card-meta">
+          <h2>PurchaseCompare</h2>
+          <p>Compari ofertele de la mai mulți furnizori pe același produs. Alegi cel mai bun raport preț-calitate instant.</p>
+          <span class="tag">Achiziții</span>
+        </div>
+      </div>
+      <a href="https://purchase-compare.vercel.app" class="btn" target="_blank">
+        <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+        Deschide PurchaseCompare
+      </a>
+    </div>
+
+    <!-- InvoiceChaser -->
+    <div class="card">
+      <div class="card-top">
+        <div class="card-icon">📋</div>
+        <div class="card-meta">
+          <h2>InvoiceChaser</h2>
+          <p>Tracker facturi restante cu generator automat de mesaje de reamintire. Nu mai uiți nicio factură neîncasată.</p>
+          <span class="tag">Facturare</span>
+        </div>
+      </div>
+      <a href="https://invoicechaser-ten.vercel.app" class="btn" target="_blank">
+        <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+        Deschide InvoiceChaser
+      </a>
+    </div>
+
+    <!-- Daily Sales Flash -->
+    <div class="card">
+      <div class="card-top">
+        <div class="card-icon">📈</div>
+        <div class="card-meta">
+          <h2>Daily Sales Flash</h2>
+          <p>Raport zilnic de vânzări cu comparație față de ziua precedentă și față de aceeași zi din săptămâna trecută.</p>
+          <span class="tag">Vânzări</span>
+        </div>
+      </div>
+      <a href="https://daily-sales-flash.vercel.app" class="btn" target="_blank">
+        <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+        Deschide Daily Sales Flash
+      </a>
+    </div>
+
+    <!-- MenuMix Matrix -->
+    <div class="card">
+      <div class="card-top">
+        <div class="card-icon">🍽️</div>
+        <div class="card-meta">
+          <h2>MenuMix Matrix</h2>
+          <p>Menu engineering pentru HoReCa. Afli care produse sunt stele, vaci de muls, semne de întrebare sau câini.</p>
+          <span class="tag">HoReCa</span>
+        </div>
+      </div>
+      <a href="https://menu-mix-matrix.vercel.app" class="btn" target="_blank">
+        <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
+        Deschide MenuMix Matrix
+      </a>
+    </div>
+
+  </div>
+
+  <footer>
+    Toate instrumentele sunt gratuite, private și funcționează offline &mdash; datele rămân pe dispozitivul tău.
+  </footer>
+
+</body>
+</html>
