@@ -1,0 +1,50 @@
+Top 15 Skill-uri de care ai nevoie
+FUNDAMENT — baza pe care se construiește totul
+1. Prompt Engineering & Vibe-Coding
+Acesta este multiplicatorul tuturor celorlalte skill-uri. Cu cât scrii prompt-uri mai precise, cu atât primești cod mai bun, mai rapid. Diferența dintre un prompt vag și unul structural e de 2-3 ore de muncă pe sesiune. Vibe-coding e metodologia ta principală de dezvoltare — merită studiat ca disciplină.
+
+2. JavaScript / TypeScript Fundamentals
+Folosești JS în 100% din proiecte, dar în TS copiezi fără să scrii. Înțelegerea reală a conceptelor (closures, async/await, tipuri, module ES) îți dă independență — nu mai ești blocat când Claude îți dă cod pe care nu îl înțelegi.
+
+3. Git & Deployment Workflow
+Ai zeci de commit-uri nepush-uite pe mai multe proiecte. Asta înseamnă risc (pierdere de muncă) și întârzieri la lansare. Git fluent + un pipeline simplu de deploy (push → Vercel auto-deploy) e diferența dintre "am terminat" și "e live".
+
+ARHITECTURA — decizii structurale care costă dacă greșești
+4. Offline-First Architecture (LocalStorage, IndexedDB, Service Workers, PWA)
+Jumătate din portofoliul tău e offline-first. Înțelegerea diferenței între LocalStorage vs SessionStorage vs IndexedDB (și când să folosești ce) + Service Workers pentru PWA + File System Access API sunt skill-uri pe care le folosești deja, dar ad-hoc. Sistematizarea lor îți reduce bug-urile.
+
+5. Database Design & Supabase/PostgreSQL
+Cel mai scump tip de greșeală: o schemă DB proastă se corectează greu după ce ai date reale. FinanceOS, StudioFlow și clinica au scheme complexe (RLS, foreign keys, views, funcții atomice). Înțelegerea normalizării, indexare și RLS Supabase îți salvează săptămâni de rework.
+
+6. Next.js Full-Stack Development
+Framework-ul tău principal pentru produse conectate. Cunoști bazele (routes, components, API routes), dar gap-urile sunt în: App Router avansat, server vs client components, middleware, optimizare performanță. Toate cele 5 proiecte full-stack depind de el.
+
+FUNCȚIONALITATE — ce construiești efectiv
+7. Data Visualization (Chart.js, Canvas API, Recharts)
+Aproape fiecare app a ta are grafice: CashPulse, Daily Sales Flash, MenuMix, StudioFlow Intelligence Dashboard, Vibe Budget. Ești deja utilizator avansat de Chart.js. Pasul următor: Canvas API pur (deja în StudioFlow) și Recharts pentru Next.js.
+
+8. Authentication & Authorization (JWT, RBAC, Supabase RLS)
+FinanceOS are 6 roluri, clinica are 3, Vibe Budget are auth live. Înțelegerea profundă a JWT + Row Level Security în Supabase + RBAC patterns e critică — breșele de securitate în produse cu date medicale/financiare sunt catastrofale.
+
+9. API Integration & Webhooks
+Twilio pentru IVR (clinica), BNR API pentru cursuri valutare (FinanceOS), API-uri terțe în general. Pattern-ul de webhook (primești date din exterior în momentul unui eveniment) e fundamental pentru IVR — fără el, botul vocal nu funcționează.
+
+10. CSS & Design Systems
+Folosești Tailwind (Next.js apps) și CSS Custom Properties (StudioFlow, aplicațiile HTML). Gândirea în design system — definești variabile o dată, le folosești peste tot — îți economisește timp și menține consistența vizuală profesionistă.
+
+AI & DIRECȚIA VIITOARE
+11. Claude API & AI Integration
+Vibe Budget are AI Coach live. Clinica are IVR cu Claude. Este tendința clară în portofoliul tău. Înțelegerea: model selection (Haiku vs Sonnet vs Opus), prompt caching (reduce costuri ~90%), streaming, context management — toate diferențiază un produs AI bun de unul mediocru.
+
+12. Agent Architecture (Anthropic SDK, agentic loop, tool use)
+Ai ghidul v4.0 scris, ai PRD pentru Safe Change Agent. Ești pe punctul să treci de la "integrez AI în app" la "construiesc un agent autonom". Conceptele cheie: tool definitions, stop_reason, safeTrimHistory, MAX_ITERATIONS — le-ai documentat deja, acum trebuie practică.
+
+PRODUS & BUSINESS — unde ești deja bun, dar merită formalizat
+13. Product Thinking & PRD Writing
+Acesta e deja un punct forte al tău — PRD-urile tale (StudioFlow v6.0, FinanceOS v3.0, Safe Change Agent) sunt structurate, clare, cu decizii arhitecturale explicite. Skill-ul de formalizat: cum prioritizezi ce construiești mai întâi când ai 15 proiecte active simultan.
+
+14. Business Domain Modeling
+Construiești tool-uri în domenii complexe: scoring oferte arhitectură (14 criterii), menu engineering HoReCa (matrice SVG), ERP financiar românesc (e-Factura, RBAC). Abilitatea de a traduce logică de business reală în cod (nu invers) e superputerea ta diferențiatoare față de un developer pur.
+
+15. Testing & Quality Assurance
+Cel mai ignorat, cel mai costisitor pe termen lung. Ai identificat bug-uri în StudioFlow, Reorder Radar, PurchaseCompare după implementare. Ghidul tău de agent AI include deja teste state-based. Un pattern simplu de teste (verifici starea datelor, nu output-ul UI) îți reduce regresia dramatică pe măsură ce modulele cresc.
