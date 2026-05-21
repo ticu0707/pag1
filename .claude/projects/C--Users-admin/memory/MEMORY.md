@@ -7,6 +7,7 @@
 ## Comenzi & Workflow
 - [reference_comenzi_workflow.md](reference_comenzi_workflow.md) — 4 comenzi slash custom: /start /end /commit /push — workflow complet de sesiune
 - [reference_skill_offline_audit.md](reference_skill_offline_audit.md) — Skill /offline-audit: audit static 12 reguli offline-first (localStorage/IndexedDB/SW/PWA), BLOCKER/ATENȚIE/OK
+- [reference_skill_nextjs_audit.md](reference_skill_nextjs_audit.md) — Skill /nextjs-audit: audit static 19 reguli Next.js App Router (securitate/boundary/ServerActions/TypeScript/pre-deploy), BLOCKER/ATENȚIE/OK
 
 ## Proiecte
 - [project_vibe_website.md](project_vibe_website.md) — Vibe Caffè (Next.js, branch starter): Hero + Features + Menu + Footer gata; urmează Navigation, About, ChatWidget (Barista Bot)
@@ -30,4 +31,4 @@
 - [project_ghid_git_deployment.md](project_ghid_git_deployment.md) — Ghid Git & Deployment Workflow (17 secțiuni, 5 Bloc-uri): v1.0 COMPLET, salvat la Desktop/Vibe-Coding/ghid-git-deployment-v1.md
 - [project_ghid_offline_first.md](project_ghid_offline_first.md) — Ghid Offline-First Architecture (17 secțiuni, 5 Bloc-uri): v1.1 COMPLET, salvat la Desktop/Vibe-Coding/ghid-offline-first-architecture-v1.md
 - [project_ghid_database_supabase.md](project_ghid_database_supabase.md) — Ghid Database Design & Supabase/PostgreSQL (17 secțiuni, 5 Bloc-uri + Realtime + Presence): v2.0 COMPLET, salvat la Desktop/Vibe-Coding/ghid-database-supabase-v2.md
-- [project_ghid_nextjs.md](project_ghid_nextjs.md) — Ghid Next.js Full-Stack Development (17 secțiuni, 5 Bloc-uri): RSC, Server Actions, Middleware, Caching, Streaming, 15 greșeli; v1.1 COMPLET, salvat la Desktop/Vibe-Coding/ghid-nextjs-full-stack-v1.md
+- [project_ghid_nextjs.md](project_ghid_nextjs.md) — Ghid Next.js Full-Stack Development (17 secțiuni, 5 Bloc-uri): RSC, Server Actions, useTransition, Router Cache, CSP, 18 greșeli; v2.0 COMPLET, salvat la Desktop/Vibe-Coding/ghid-nextjs-full-stack-v1.md
