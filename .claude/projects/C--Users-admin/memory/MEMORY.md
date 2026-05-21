@@ -32,3 +32,4 @@
 - [project_ghid_offline_first.md](project_ghid_offline_first.md) — Ghid Offline-First Architecture (17 secțiuni, 5 Bloc-uri): v1.1 COMPLET, salvat la Desktop/Vibe-Coding/ghid-offline-first-architecture-v1.md
 - [project_ghid_database_supabase.md](project_ghid_database_supabase.md) — Ghid Database Design & Supabase/PostgreSQL (17 secțiuni, 5 Bloc-uri + Realtime + Presence): v2.0 COMPLET, salvat la Desktop/Vibe-Coding/ghid-database-supabase-v2.md
 - [project_ghid_nextjs.md](project_ghid_nextjs.md) — Ghid Next.js Full-Stack Development (17 secțiuni, 5 Bloc-uri): RSC, Server Actions, useTransition, Router Cache, CSP, 18 greșeli; v2.0 COMPLET, salvat la Desktop/Vibe-Coding/ghid-nextjs-full-stack-v1.md
+- [project_ghid_data_viz.md](project_ghid_data_viz.md) — Ghid Data Visualization (18 secțiuni, 5 Bloc-uri): Chart.js, Canvas API, Recharts, D3 utilities, ECharts, SVG vs Canvas decision, 24 greșeli; v1.0 COMPLET, salvat la Desktop/Vibe-Coding/ghid-data-visualization-v1.md
