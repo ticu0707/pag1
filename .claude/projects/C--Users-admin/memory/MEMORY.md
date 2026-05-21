@@ -27,3 +27,4 @@
 - [project_ghid_prompt_engineering.md](project_ghid_prompt_engineering.md) — Ghid Prompt Engineering vibe-coding (16 secțiuni, CoT + Critic→Builder + Meta-Prompting): v4.0 COMPLET, salvat la Desktop/Vibe-Coding/ghid-prompt-engineering-v4.md
 - [project_ghid_javascript_typescript.md](project_ghid_javascript_typescript.md) — Ghid JS/TS pentru Vibe-Coding (16 secțiuni, async/array/useEffect/securitate/CRUD): v1.0 COMPLET, salvat la Desktop/Vibe-Coding/ghid-javascript-typescript-v1.md
 - [project_ghid_git_deployment.md](project_ghid_git_deployment.md) — Ghid Git & Deployment Workflow (17 secțiuni, 5 Bloc-uri): v1.0 COMPLET, salvat la Desktop/Vibe-Coding/ghid-git-deployment-v1.md
+- [project_ghid_offline_first.md](project_ghid_offline_first.md) — Ghid Offline-First Architecture (17 secțiuni, 5 Bloc-uri): v1.1 COMPLET, salvat la Desktop/Vibe-Coding/ghid-offline-first-architecture-v1.md
