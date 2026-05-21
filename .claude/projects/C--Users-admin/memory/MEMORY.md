@@ -26,3 +26,4 @@
 - [project_ghid_agent_ai.md](project_ghid_agent_ai.md) — Ghid creare agent AI (TypeScript + Anthropic SDK, Task Agent): v4.0 COMPLET, salvat la Desktop/Agenti AI/ghid-agent-ai-v4.md; urmează implementare
 - [project_ghid_prompt_engineering.md](project_ghid_prompt_engineering.md) — Ghid Prompt Engineering vibe-coding (16 secțiuni, CoT + Critic→Builder + Meta-Prompting): v4.0 COMPLET, salvat la Desktop/Vibe-Coding/ghid-prompt-engineering-v4.md
 - [project_ghid_javascript_typescript.md](project_ghid_javascript_typescript.md) — Ghid JS/TS pentru Vibe-Coding (16 secțiuni, async/array/useEffect/securitate/CRUD): v1.0 COMPLET, salvat la Desktop/Vibe-Coding/ghid-javascript-typescript-v1.md
+- [project_ghid_git_deployment.md](project_ghid_git_deployment.md) — Ghid Git & Deployment Workflow (17 secțiuni, 5 Bloc-uri): v1.0 COMPLET, salvat la Desktop/Vibe-Coding/ghid-git-deployment-v1.md
