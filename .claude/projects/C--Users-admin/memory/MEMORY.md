@@ -6,6 +6,7 @@
 
 ## Comenzi & Workflow
 - [reference_comenzi_workflow.md](reference_comenzi_workflow.md) — 4 comenzi slash custom: /start /end /commit /push — workflow complet de sesiune
+- [reference_skill_offline_audit.md](reference_skill_offline_audit.md) — Skill /offline-audit: audit static 12 reguli offline-first (localStorage/IndexedDB/SW/PWA), BLOCKER/ATENȚIE/OK
 
 ## Proiecte
 - [project_vibe_website.md](project_vibe_website.md) — Vibe Caffè (Next.js, branch starter): Hero + Features + Menu + Footer gata; urmează Navigation, About, ChatWidget (Barista Bot)

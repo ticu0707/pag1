@@ -807,7 +807,12 @@
       scenariuPct:      state.scenariuPct,
       savedAt:          Date.now()
     };
-    localStorage.setItem(LS_KEY, JSON.stringify(data));
+    try {
+      localStorage.setItem(LS_KEY, JSON.stringify(data));
+    } catch (e) {
+      if (e.name === 'QuotaExceededError')
+        console.warn('CashPulse: spațiu stocare plin — date nesalvate.');
+    }
   }
 
   function loadFromStorage() {
