@@ -1,5 +1,5 @@
 # GHID PRACTIC: Next.js Full-Stack Development pentru Vibe-Coding
-**Skill 6 — v1.1 · Ediție Expert**
+**Skill 6 — v2.0 · Ediție Expert**
 **Data:** Mai 2026 | **Nivel:** Intermediate → Expert
 **Timp realist:** 90 min citit + practică pe proiectele tale
 
@@ -27,7 +27,7 @@
 
 **Dacă lucrezi pe proiecte financiare** (ERP, FinanceOS): prioritizează Parte 3 (Server Actions + validare + useOptimistic) și Parte 9 (Caching + revalidare).
 
-**Dashboard-uri complexe** (StudioFlow, Clinică): citește Parte 11 (Streaming + Parallel Routes + next/dynamic).
+**Dashboard-uri complexe** (StudioFlow, Clinică): citește Parte 11 (Streaming + Parallel Routes + Intercepting Routes + next/dynamic).
 
 ---
 
@@ -37,29 +37,29 @@
 BLOC 1 — APP ROUTER: ARHITECTURA NOUĂ                    [TOATE proiectele]
   [0]  RSC Mental Model — cum gândești diferit față de Pages Router
   [1]  Server vs Client Components — regula de aur + Context Providers   ★★
-  [2]  File Conventions — layout, loading, error, template, Route Groups
+  [2]  File Conventions — layout, loading, error, generateStaticParams, Route Groups
 
 BLOC 2 — DATE ȘI ACȚIUNI
-  [3]  Server Actions — formulare, bind(), useOptimistic, Zod              ★
+  [3]  Server Actions — formulare, bind(), useOptimistic, useTransition, Zod   ★
   [4]  Route Handlers — REST, webhooks, CORS, când NU să le folosești
-  [5]  Data Fetching — parallel, React.cache(), streaming, unstable_cache  ★
+  [5]  Data Fetching — parallel, React.cache(), nuqs, use(), unstable_cache     ★
 
 BLOC 3 — SECURITATE
-  [6]  Middleware — auth, redirects, matchers, edge limitations             ★
-  [7]  Supabase SSR — server-only, createServerClient, getUser()            ★★
+  [6]  Middleware — auth, rate limiting, matchers, edge limitations              ★
+  [7]  Supabase SSR — server-only, createServerClient, getUser()                 ★★
   [8]  Variabile de mediu — NEXT_PUBLIC_, server-only, validare la startup
 
 BLOC 4 — PERFORMANȚĂ
-  [9]  Caching — 4 nivele, React.cache(), unstable_cache, revalidare        ★
+  [9]  Caching — 4 nivele, Router Cache, React.cache(), revalidare, use cache    ★
   [10] next/image (sizes, blur), next/font, next/script
-  [11] Streaming, Suspense, next/dynamic, Parallel Routes
+  [11] Streaming, Suspense, Intercepting Routes, next/dynamic, Parallel Routes
 
 BLOC 5 — DEBUGGING ȘI TOOLKIT
-  [12] 15 Greșeli Comune App Router (before/after)
-  [13] TypeScript — PageProps, Server Actions types, Zod
+  [12] 18 Greșeli Comune App Router (before/after)
+  [13] TypeScript — PageProps, Next.js 15, Server Actions types, Zod, use()
   [14] Structura de proiect — folder organization, naming conventions
   [15] Checklist Pre-Deploy
-  [16] Deployment Vercel — security headers, env vars, logs
+  [16] Deployment Vercel — CSP, security headers, env vars, Sentry
   [17] Quick Reference Card
 ```
 
@@ -102,18 +102,42 @@ Browser → cere /dashboard
   → Navigare ulterioară = fetch RSC payload + patch DOM (fără full reload)
 ```
 
-**Navigarea internă — `Link` nu `<a>`:**
+**Navigare internă — API complet:**
 
 ```tsx
 import Link from 'next/link'
+import { useRouter, usePathname, useSearchParams } from 'next/navigation'
+// ✓ Din 'next/navigation' — App Router
+// ✗ NU din 'next/router' — acela e Pages Router (greșeală frecventă la migrare)
 
-// ✓ Link — SPA navigation, prefetch automat, fără full reload
+// Link — SPA navigation, prefetch automat, fără full reload
 <Link href="/dashboard/invoices">Facturi</Link>
 <Link href={`/invoices/${id}`} className="text-blue-600">Deschide</Link>
-<Link href="/dashboard" prefetch={false}>Dashboard</Link>  // dezactivezi prefetch
+<Link href="/dashboard" prefetch={false}>Dashboard</Link>
 
 // ✗ <a href> pentru rute interne = full page reload, pierde state client
 <a href="/dashboard">Dashboard</a>  // ← nu face asta niciodată intern
+
+// useRouter — navigare programatică din Client Components
+'use client'
+const router = useRouter()
+router.push('/dashboard')           // navighezi programatic
+router.replace('/login')            // fără history entry
+router.back()                       // back în history
+router.refresh()                    // re-fetch RSC payload, actualizează date server
+                                    // NU invalidează Data Cache — pentru asta: revalidatePath()
+
+// usePathname — ruta curentă (util pentru active nav links)
+const pathname = usePathname()      // '/dashboard/invoices'
+
+// redirect() — din Server Components, Server Actions, Route Handlers
+import { redirect } from 'next/navigation'
+redirect('/login')                  // 307 temporary
+redirect('/login', 'replace')       // 307 + înlocuiește history
+
+// notFound() — activează not-found.tsx cel mai apropiat
+import { notFound } from 'next/navigation'
+notFound()
 ```
 
 ---
@@ -261,7 +285,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 **Granița `'use client'` — ce importă o componentă client devine client:**
 
 ```tsx
-// ✗ GREȘIT: Server Component importat în Client Component
+// ✗ GREȘIT: Server Component importat direct în Client Component
 'use client'
 import { HeavyServerTable } from './HeavyServerTable'
 // HeavyServerTable + toate dependențele sale = în bundle JS
@@ -322,6 +346,7 @@ const ReactFlow = dynamic(() => import('reactflow'), { ssr: false })
 | `layout.tsx` | Wrapper persistent (nav, sidebar) | **Nu se remontează** la navigare |
 | `loading.tsx` | Skeleton la loading | Învelește automat în `<Suspense>` |
 | `error.tsx` | UI pentru erori | **Trebuie** `'use client'` (error boundary) |
+| `global-error.tsx` | Erori din root layout | **Trebuie** `'use client'` + `<html><body>` |
 | `not-found.tsx` | Pagina 404 | Activat de `notFound()` din `next/navigation` |
 | `template.tsx` | Ca layout, se **remontează** | Rar — când vrei reset state la navigare |
 | `route.ts` | Route Handler (API) | Nu coexistă cu `page.tsx` în același folder |
@@ -330,63 +355,13 @@ const ReactFlow = dynamic(() => import('reactflow'), { ssr: false })
 | `robots.ts` | Generare robots.txt | `export default function robots(): MetadataRoute.Robots` |
 | `sitemap.ts` | Generare sitemap.xml | `export default function sitemap(): MetadataRoute.Sitemap` |
 
-**`notFound()` — pattern corect:**
+**Ierarhia de Error Boundaries:**
 
 ```tsx
-import { notFound } from 'next/navigation'
+// app/error.tsx — prinde erori din page.tsx + layout.tsx copii
+// NU prinde erori din propriul layout.tsx (al aceluiași nivel)
 
-// ✓ activează not-found.tsx cel mai apropiat din ierarhie
-export default async function InvoicePage({ params }: { params: { id: string } }) {
-  const supabase = await createServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
-
-  const { data: invoice } = await supabase
-    .from('invoices')
-    .select('*')
-    .eq('id', params.id)
-    .eq('user_id', user.id)   // ← securitate: verifici ownership
-    .maybeSingle()            // ← .maybeSingle() nu aruncă eroare dacă lipsește
-
-  if (!invoice) notFound()   // ← aruncă NEXT_NOT_FOUND, prins de not-found.tsx
-
-  return <InvoiceDetails invoice={invoice} />
-}
-```
-
-**Route Groups:**
-
-```
-app/
-  (auth)/               ← grup: /login, nu /(auth)/login
-    login/page.tsx      ← ruta: /login
-    signup/page.tsx     ← ruta: /signup
-    layout.tsx          ← layout NUMAI pentru auth pages (minimal, fără nav)
-  (dashboard)/          ← grup: /dashboard, nu /(dashboard)/dashboard
-    dashboard/page.tsx  ← ruta: /dashboard
-    invoices/page.tsx   ← ruta: /invoices
-    layout.tsx          ← layout cu sidebar + header
-  layout.tsx            ← root layout (pentru toți)
-```
-
-**`loading.tsx` și `error.tsx`:**
-
-```tsx
-// app/dashboard/loading.tsx — afișat instant la navigare
-export default function DashboardLoading() {
-  return (
-    <div className="animate-pulse space-y-4 p-6">
-      <div className="h-8 bg-gray-200 rounded w-1/4" />
-      <div className="grid grid-cols-3 gap-4">
-        {[1, 2, 3].map(i => (
-          <div key={i} className="h-32 bg-gray-200 rounded" />
-        ))}
-      </div>
-    </div>
-  )
-}
-
-// app/dashboard/error.tsx — TREBUIE 'use client' (error boundary)
+// app/dashboard/error.tsx — 'use client' OBLIGATORIU
 'use client'
 export default function DashboardError({
   error,
@@ -405,8 +380,116 @@ export default function DashboardError({
     </div>
   )
 }
-// error.tsx prinde erorile din page.tsx frate + layout.tsx frate
-// Nu prinde erori din propriul layout.tsx → pentru asta: global-error.tsx
+
+// app/global-error.tsx — prinde erori din root layout.tsx (error.tsx nu poate face asta)
+'use client'
+export default function GlobalError({
+  error,
+  reset
+}: {
+  error: Error & { digest?: string }
+  reset: () => void
+}) {
+  return (
+    <html>    {/* ← OBLIGATORIU: înlocuiește tot root layout-ul */}
+      <body>
+        <h2>Aplicația a întâmpinat o eroare critică</h2>
+        <button onClick={reset}>Reîncarcă</button>
+      </body>
+    </html>
+  )
+}
+// ✓ global-error.tsx vizibil NUMAI în production (dev = overlay Next.js)
+```
+
+**`generateStaticParams` — SSG cu rute dinamice:**
+
+```tsx
+// app/blog/[slug]/page.tsx
+// La BUILD: Next.js generează HTML static pentru fiecare slug
+// La runtime: servit direct de CDN, zero compute, LCP instant
+
+export async function generateStaticParams() {
+  // Rulează pe server la build time
+  const { data: posts } = await supabase
+    .from('posts')
+    .select('slug')
+    .eq('published', true)
+  return (posts ?? []).map(post => ({ slug: post.slug }))
+}
+
+// dynamicParams = true (default): sluguri noi → ISR (generare la prima cerere)
+// dynamicParams = false: sluguri noi → 404
+export const dynamicParams = true
+
+export default async function BlogPost({ params }: { params: { slug: string } }) {
+  const { data: post } = await supabase
+    .from('posts').select('*').eq('slug', params.slug).maybeSingle()
+  if (!post) notFound()
+  return <PostContent post={post} />
+}
+
+// ✓ Util pentru: pagini publice (blog, produse, documente, landing pages)
+// ✗ Nu are sens pentru pagini protejate cu date per-user (folosești dynamic acolo)
+```
+
+**Route Groups:**
+
+```
+app/
+  (auth)/               ← grup: /login, nu /(auth)/login
+    login/page.tsx      ← ruta: /login
+    signup/page.tsx     ← ruta: /signup
+    layout.tsx          ← layout NUMAI pentru auth pages (minimal, fără nav)
+  (dashboard)/          ← grup: /dashboard, nu /(dashboard)/dashboard
+    dashboard/page.tsx  ← ruta: /dashboard
+    invoices/page.tsx   ← ruta: /invoices
+    layout.tsx          ← layout cu sidebar + header
+  layout.tsx            ← root layout (pentru toți)
+```
+
+**`notFound()` — pattern corect:**
+
+```tsx
+import { notFound } from 'next/navigation'
+import { redirect } from 'next/navigation'
+
+export default async function InvoicePage({ params }: { params: { id: string } }) {
+  const supabase = await createServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const { data: invoice } = await supabase
+    .from('invoices')
+    .select('*')
+    .eq('id', params.id)
+    .eq('user_id', user.id)   // ← securitate: verifici ownership
+    .maybeSingle()            // ← .maybeSingle() nu aruncă eroare dacă lipsește
+
+  if (!invoice) notFound()   // ← aruncă NEXT_NOT_FOUND, prins de not-found.tsx
+
+  return <InvoiceDetails invoice={invoice} />
+}
+```
+
+**`loading.tsx` și `error.tsx`:**
+
+```tsx
+// app/dashboard/loading.tsx — afișat instant la navigare
+export default function DashboardLoading() {
+  return (
+    <div className="animate-pulse space-y-4 p-6">
+      <div className="h-8 bg-gray-200 rounded w-1/4" />
+      <div className="grid grid-cols-3 gap-4">
+        {[1, 2, 3].map(i => (
+          <div key={i} className="h-32 bg-gray-200 rounded" />
+        ))}
+      </div>
+    </div>
+  )
+}
+// loading.tsx = shorthand pentru Suspense automat
+// Suspense explicit în page.tsx → control granular per-secțiune (mai bun)
 ```
 
 ---
@@ -528,6 +611,40 @@ export function InvoiceRow({ invoice }: { invoice: Invoice }) {
 }
 // ✓ Nu ai nevoie de Client Component pentru un simplu delete button
 // ✓ Progressive enhancement: funcționează fără JS
+```
+
+**`useTransition` — Server Actions din event handlers (fără form):**
+
+```tsx
+// Când ai un buton care apelează Server Action dar nu e într-un <form>
+// useTransition = pending state + non-blocking UI
+
+'use client'
+import { useTransition } from 'react'
+import { deleteInvoice } from '@/actions/invoices'
+
+export function DeleteButton({ id }: { id: string }) {
+  const [isPending, startTransition] = useTransition()
+
+  return (
+    <button
+      disabled={isPending}
+      onClick={() => startTransition(() => deleteInvoice(id))}
+      className={`text-red-600 text-sm ${isPending ? 'opacity-50 cursor-not-allowed' : ''}`}
+    >
+      {isPending ? 'Se șterge...' : 'Șterge'}
+    </button>
+  )
+}
+
+// ✓ startTransition() marchează tranzitia ca non-urgentă — React nu blochează UI
+// ✓ isPending = true pe durata Server Action — previne double-click
+// ✓ Alternativă la useOptimistic când nu ai nevoie de UI preview instant
+// ✓ Funcționează fără <form> — util pentru butoane standalone, dropdown actions, etc.
+
+// Diferență față de bind() + form:
+// bind() + form → Server Component posibil, progressive enhancement
+// useTransition → Client Component necesar, mai flexibil (logică condițională)
 ```
 
 **`useOptimistic` — UI instant fără să aștepți serverul:**
@@ -749,7 +866,7 @@ export default async function InvoicesPage() {
 }
 ```
 
-**`React.cache()` — memoizare per-request pentru funcții utilizate în mai multe locuri:**
+**`React.cache()` — memoizare per-request:**
 
 ```ts
 // lib/data/user.ts
@@ -784,6 +901,7 @@ unstable_cache():
 ✓ TTL configurabil (revalidate: 300)
 ✓ Invalidat prin revalidateTag()
 ✓ Ideal pentru: date care nu se schimbă des (lista de clienți, configurări)
+→ Next.js 15: redenumit 'use cache' directive (vezi Parte 9)
 ```
 
 **Parallel fetching cu error handling corect:**
@@ -797,6 +915,7 @@ export default async function DashboardPage() {
   const user = await getCurrentUser()
   if (!user) redirect('/login')
 
+  const supabase = await createServerClient()
   const [invoicesResult, clientsResult, statsResult] = await Promise.all([
     supabase.from('invoices').select('*').eq('user_id', user.id),
     supabase.from('clients').select('*').eq('user_id', user.id),
@@ -840,6 +959,84 @@ export const getCachedInvoices = unstable_cache(
 )
 // userId e inclus automat în cache key (prin argumentele funcției)
 // Invalidare în Server Action: revalidateTag('invoices')
+```
+
+**`nuqs` — type-safe URL search params (filtre, paginare):**
+
+```tsx
+// npm install nuqs
+// Problema: useSearchParams() returnează string pentru orice — page=1 e string, nu number
+// nuqs rezolvă: parsing + serialization type-safe + sync cu URL
+
+'use client'
+import { useQueryState, parseAsString, parseAsInteger, parseAsStringEnum } from 'nuqs'
+
+export function InvoiceFilters() {
+  const [status, setStatus] = useQueryState(
+    'status',
+    parseAsStringEnum(['all', 'paid', 'sent', 'draft']).withDefault('all')
+  )
+  const [page, setPage]   = useQueryState('page', parseAsInteger.withDefault(1))
+  const [q, setQ]         = useQueryState('q',    parseAsString.withDefault(''))
+
+  return (
+    <div className="flex gap-4">
+      <input
+        value={q}
+        onChange={e => { setQ(e.target.value); setPage(1) }}
+        placeholder="Caută..."
+      />
+      <select value={status} onChange={e => setStatus(e.target.value as typeof status)}>
+        <option value="all">Toate</option>
+        <option value="paid">Plătite</option>
+        <option value="sent">Trimise</option>
+      </select>
+    </div>
+  )
+}
+// URL: /invoices?status=paid&page=2&q=acme
+// ✓ Type-safe: status = 'all'|'paid'|'sent'|'draft' (nu string!)
+// ✓ URL partajabil, bookmarkabil, back-button corect
+// ✓ Sync automat — nu ai nevoie de useState separat
+```
+
+**`use()` hook — citire Promise în Client Component (React 19):**
+
+```tsx
+// Util când Server Component pasează un Promise la Client Component
+// Client Component suspendă până Promise se rezolvă
+
+'use client'
+import { use, Suspense } from 'react'
+
+type UserAvatarProps = { userPromise: Promise<User | null> }
+
+function UserAvatarInner({ userPromise }: UserAvatarProps) {
+  const user = use(userPromise)  // suspendă componenta — Suspense boundary necesară
+  if (!user) return null
+  return <img src={user.avatar_url ?? ''} alt={user.full_name ?? ''} className="h-8 w-8 rounded-full" />
+}
+
+export function UserAvatar(props: UserAvatarProps) {
+  return (
+    <Suspense fallback={<div className="h-8 w-8 rounded-full bg-gray-200 animate-pulse" />}>
+      <UserAvatarInner {...props} />
+    </Suspense>
+  )
+}
+
+// Server Component parent — NU await Promise-ul:
+export default async function Layout({ children }: { children: React.ReactNode }) {
+  const userPromise = getCurrentUser()  // ← fără await, pasezi Promise-ul
+  return (
+    <nav>
+      <UserAvatar userPromise={userPromise} />  {/* Client Component */}
+      {children}
+    </nav>
+  )
+}
+// ✓ Layout nu se blochează pentru user — UI-ul apare imediat cu fallback
+// ✓ Paralel cu restul render tree-ului
 ```
 
 **Streaming cu Suspense:**
@@ -935,6 +1132,51 @@ export const config = {
   matcher: [
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'
   ]
+}
+```
+
+**Notă performanță — `getUser()` în middleware:**
+
+```ts
+// supabase.auth.getUser() face request HTTP la Supabase Auth Server PER REQUEST
+// La trafic mare (>500 req/min), latența se adună
+
+// Opțiunea pragmatică: getUser() în middleware e OK pentru majoritatea proiectelor
+// La trafic mare: evaluezi verificare JWT locală cu 'jose' (no HTTP call)
+// Tradeoff: jose nu refreshează automat cookie-ul — gestionezi expirations manual
+// import { jwtVerify } from 'jose'
+// const secret = new TextEncoder().encode(process.env.SUPABASE_JWT_SECRET)
+// await jwtVerify(token, secret)
+```
+
+**Rate limiting cu Upstash Redis (edge-compatible):**
+
+```ts
+// npm install @upstash/ratelimit @upstash/redis
+// Env: UPSTASH_REDIS_REST_URL, UPSTASH_REDIS_REST_TOKEN (din Upstash dashboard)
+import { Ratelimit } from '@upstash/ratelimit'
+import { Redis } from '@upstash/redis'
+
+const ratelimit = new Ratelimit({
+  redis: Redis.fromEnv(),
+  limiter: Ratelimit.slidingWindow(10, '10 s')  // 10 req per 10 secunde per IP
+})
+
+export async function middleware(request: NextRequest) {
+  // Rate limit numai pentru API routes (nu pentru pagini statice)
+  if (request.nextUrl.pathname.startsWith('/api/')) {
+    const ip = request.ip
+      ?? request.headers.get('x-forwarded-for')?.split(',')[0]
+      ?? '127.0.0.1'
+    const { success } = await ratelimit.limit(ip)
+    if (!success) {
+      return NextResponse.json(
+        { error: 'Prea multe cereri. Încearcă din nou în câteva secunde.' },
+        { status: 429, headers: { 'Retry-After': '10' } }
+      )
+    }
+  }
+  // ... restul middleware-ului
 }
 ```
 
@@ -1054,6 +1296,38 @@ const { data: { user } } = await supabase.auth.getUser()
 if (!user) redirect('/login')
 ```
 
+**`router.refresh()` după Supabase Realtime:**
+
+```tsx
+// Client Component care ascultă Realtime și re-fetchează date server
+'use client'
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { createSupabaseBrowserClient } from '@/lib/supabase/client'
+
+export function RealtimeInvoiceSync({ userId }: { userId: string }) {
+  const router = useRouter()
+  const supabase = createSupabaseBrowserClient()
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('invoices-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'invoices', filter: `user_id=eq.${userId}` },
+        () => router.refresh()  // re-fetch RSC payload → date actualizate pe pagină
+      )
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [userId, router, supabase])
+
+  return null  // componentă invizibilă — doar sincronizare
+}
+// ✓ router.refresh() re-renderizează Server Components cu date noi din DB
+// ✓ Nu invalidează Data Cache (unstable_cache) — pentru asta: revalidateTag() din Server Action
+```
+
 **Auth flow complet:**
 
 ```ts
@@ -1118,6 +1392,7 @@ SUPABASE_SERVICE_ROLE_KEY=eyJ...   # ⛔ bypasses RLS — SUPER SECRET
 ANTHROPIC_API_KEY=sk-ant-...       # ⛔ SUPER SECRET
 STRIPE_SECRET_KEY=sk_live_...      # ⛔ SUPER SECRET
 STRIPE_WEBHOOK_SECRET=whsec_...    # ⛔ server-only
+SUPABASE_JWT_SECRET=your-jwt-secret  # ⛔ server-only (din Supabase → Settings → JWT)
 ```
 
 **Validare la startup:**
@@ -1149,6 +1424,7 @@ declare global {
       NEXT_PUBLIC_SUPABASE_ANON_KEY: string
       NEXT_PUBLIC_APP_URL:           string
       SUPABASE_SERVICE_ROLE_KEY:     string
+      SUPABASE_JWT_SECRET:           string
       ANTHROPIC_API_KEY:             string
       STRIPE_SECRET_KEY?:            string
       STRIPE_WEBHOOK_SECRET?:        string
@@ -1175,11 +1451,13 @@ export {}
 2. Data Cache            → persistent între request-uri
    Tool: fetch() cache   → fetch nativ
          unstable_cache  → Supabase SDK / orice funcție async
+         'use cache'     → Next.js 15 stable API (înlocuiește unstable_cache)
 
 3. Full Route Cache      → pagini statice, cached la build pe CDN
    Control: dynamic = 'force-dynamic', revalidate = 0/N
 
 4. Router Cache          → client-side, RSC payloads prefetchate
+   Durate: static = 5 min, dynamic = 30 sec (Next.js 14)
    Invalidat de: revalidatePath(), revalidateTag(), router.refresh()
 ```
 
@@ -1209,6 +1487,30 @@ export const getCachedInvoices = unstable_cache(
 // Invalidat explicit de revalidateTag('invoices') după mutație
 ```
 
+**`use cache` — Next.js 15 (stable API, înlocuiește `unstable_cache`):**
+
+```ts
+// Next.js 15 introduce 'use cache' directive la nivel de funcție sau fișier
+// ATENȚIE: require experimental.dynamicIO = true în next.config.ts
+
+// lib/data/invoices.ts
+import { cacheTag, cacheLife } from 'next/cache'
+
+async function getInvoicesFromDB(userId: string) {
+  'use cache'              // ← directive la nivel de funcție
+  cacheTag('invoices')    // echivalent cu tags: ['invoices']
+  cacheLife('minutes')    // profile predefinit: minutes = revalidate 60s
+  // sau: cacheLife({ revalidate: 300, expire: 3600 })
+
+  const supabase = await createServerClient()
+  const { data, error } = await supabase.from('invoices').select('*').eq('user_id', userId)
+  if (error) throw error
+  return data ?? []
+}
+// Invalidare: revalidateTag('invoices') — identic cu unstable_cache
+// unstable_cache rămâne valid în Next.js 14 și funcționează în 15
+```
+
 **Full Route Cache — control explicit:**
 
 ```tsx
@@ -1216,6 +1518,23 @@ export const dynamic = 'force-dynamic'   // mereu server-render (niciodată stat
 export const revalidate = 0              // echivalent cu force-dynamic pentru date
 export const revalidate = 3600           // ISR — re-build la fiecare oră
 // Pagina devine dynamic automat dacă folosești: cookies(), headers(), searchParams
+```
+
+**Router Cache — date stale pe client:**
+
+```ts
+// PROBLEMĂ FRECVENTĂ: după revalidatePath() pe server, clientul poate vedea date vechi
+// Router Cache păstrează RSC payload 30 sec (dynamic) sau 5 min (static)
+// router.refresh() forțează re-fetch RSC payload — dar NU invalidează Data Cache
+
+// Control Router Cache (Next.js 15 next.config.ts):
+// experimental: { staleTimes: { dynamic: 0, static: 300 } }
+// dynamic: 0 → dezactivezi client cache pentru pagini dynamic
+
+// Pattern practic:
+// Server Action → revalidateTag('invoices')   → invalidează Data Cache
+// Client Component → router.refresh()          → re-fetch RSC payload cu date noi
+// Împreună: data e mereu fresh
 ```
 
 **`revalidatePath` vs `revalidateTag`:**
@@ -1261,7 +1580,7 @@ import localHero from '/public/hero.jpg'
 // Remote images: blurDataURL manual (string base64 ~40px)
 <Image
   src={user.avatarUrl}
-  alt={user.name}
+  alt={user.name ?? ''}
   width={40} height={40}
   placeholder="blur"
   blurDataURL="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
@@ -1313,7 +1632,7 @@ import Script from 'next/script'
 
 ---
 
-### Parte 11 — Streaming, Suspense și next/dynamic
+### Parte 11 — Streaming, Suspense, Intercepting Routes, next/dynamic
 
 **`next/dynamic` — code splitting și componente browser-only:**
 
@@ -1337,16 +1656,6 @@ const LeafletMap = dynamic(
   () => import('@/components/Map'),
   { ssr: false }  // Leaflet accesează window — crash pe server fără ssr: false
 )
-
-// Utilizare în Server Component (fără 'use client' pe pagină)
-export default function DashboardPage() {
-  return (
-    <div>
-      <RevenueChart />   {/* downloadat separat, lazy */}
-      <LeafletMap />     {/* browser-only, no SSR */}
-    </div>
-  )
-}
 ```
 
 **Streaming cu Suspense:**
@@ -1368,6 +1677,73 @@ export default function DashboardPage() {
     </div>
   )
 }
+```
+
+**Intercepting Routes — modal routing pattern:**
+
+```
+Scenariu: /invoices (lista) → click pe factură → modal overlay (URL se schimbă la /invoices/123)
+           Dacă accesezi /invoices/123 direct → pagina completă (nu modal)
+
+app/
+  (dashboard)/
+    invoices/
+      page.tsx                    ← /invoices (lista completa)
+      [id]/
+        page.tsx                  ← /invoices/123 accesat DIRECT = pagina completă
+      @modal/
+        (.)invoices/[id]/
+          page.tsx                ← /invoices/123 accesat DIN /invoices = modal overlay
+        default.tsx               ← null — slot gol când nu e activ
+      layout.tsx                  ← primește slot @modal
+```
+
+```tsx
+// app/(dashboard)/invoices/layout.tsx
+export default function InvoicesLayout({
+  children,
+  modal
+}: {
+  children: React.ReactNode
+  modal:    React.ReactNode
+}) {
+  return (
+    <>
+      {children}
+      {modal}   {/* modal e null din default.tsx când nu e activ */}
+    </>
+  )
+}
+
+// app/(dashboard)/invoices/@modal/default.tsx
+export default function ModalDefault() { return null }
+
+// app/(dashboard)/invoices/@modal/(.)invoices/[id]/page.tsx
+import { InvoiceModal } from '@/components/InvoiceModal'
+
+export default async function InvoiceModalPage({ params }: { params: { id: string } }) {
+  const invoice = await getInvoice(params.id)
+  if (!invoice) notFound()
+  return <InvoiceModal invoice={invoice} />
+}
+
+// InvoiceModal.tsx — se închide cu router.back()
+'use client'
+export function InvoiceModal({ invoice }: { invoice: Invoice }) {
+  const router = useRouter()
+  return (
+    <div className="fixed inset-0 bg-black/50 z-50" onClick={() => router.back()}>
+      <div className="bg-white rounded-lg p-6 max-w-lg mx-auto mt-20" onClick={e => e.stopPropagation()}>
+        <h2>{invoice.client_name}</h2>
+        {/* ... */}
+      </div>
+    </div>
+  )
+}
+// (.) = interceptează ruta din același nivel (invoices)
+// (..) = din nivelul parent
+// ✓ URL se schimbă → shareable, back-button funcționează
+// ✓ Acces direct la URL → pagina completă (nu modal)
 ```
 
 **Parallel Routes — slot-uri independente:**
@@ -1416,7 +1792,7 @@ export default function DashboardLayout({
 
 ---
 
-### Parte 12 — 15 Greșeli Comune App Router
+### Parte 12 — 18 Greșeli Comune App Router
 
 **G1 — `'use client'` pe page.tsx pentru un singur element interactiv**
 
@@ -1504,10 +1880,13 @@ function SearchComponent() { const params = useSearchParams() }
 ```ts
 // ✗ UI rămâne stale — cache-ul nu e invalidat
 export async function createClient(formData: FormData) {
-  await supabase.from('clients').insert({...})
+  await supabase.from('clients').insert({ /* ... */ })
   redirect('/clients')  // datele vechi în cache
+}
 
 // ✓ Invalidezi ÎNAINTE de redirect
+export async function createClient(formData: FormData) {
+  await supabase.from('clients').insert({ /* ... */ })
   revalidateTag('clients')
   redirect('/clients')
 }
@@ -1611,8 +1990,74 @@ export function Badge() {
   // sau: {new Date().toLocaleString()} — diferit server vs client
 }
 
-// ✓ Calculezi în useEffect sau useflowsuppressHydrationWarning
+// ✓ Calculezi în useEffect (după hydration)
+'use client'
+export function CurrentTime() {
+  const [time, setTime] = useState('')
+  useEffect(() => setTime(new Date().toLocaleString('ro-RO')), [])
+  return <span>{time}</span>
+}
+
+// ✓ SAU folosești suppressHydrationWarning (pentru valori time-sensitive)
 <span suppressHydrationWarning>{new Date().toLocaleString()}</span>
+```
+
+**G16 — `router.refresh()` confundat cu `revalidatePath()`**
+
+```tsx
+// DIFERENȚA CRITICĂ:
+// router.refresh() = re-fetch RSC payload CLIENT-SIDE, nu invalidează Data Cache
+// revalidatePath()  = invalidează Data Cache SERVER-SIDE, router-ul primește date noi
+
+// ✗ Dacă faci router.refresh() după insert → primești date DIN CACHE, nu noul rând
+const router = useRouter()
+await createInvoice(formData)
+router.refresh()   // re-fetchează RSC, dar Data Cache e intact = date vechi posibile
+
+// ✓ Server Action invalidează cache → router.refresh() obține date noi
+// În Server Action:
+//   revalidateTag('invoices')   → Data Cache invalidat
+//   redirect('/invoices')       → sau lași clientul să facă router.refresh()
+
+// ✓ Când e corect router.refresh():
+// - Supabase Realtime → schimbare externă → vrei să re-fetch-ezi date server
+// - Operații care nu trec prin propriile Server Actions (ex: alt tab a modificat)
+```
+
+**G17 — Server Action apelat din `useEffect`**
+
+```tsx
+// ✗ GREȘIT: Server Actions nu sunt pentru efecte — sunt pentru mutații user-triggered
+useEffect(() => {
+  logPageView()          // Server Action într-un effect = anti-pattern
+}, [])
+
+// ✓ Server Actions = răspuns la acțiuni utilizator (click, submit)
+// Pentru logging/tracking automat → Route Handler sau analytics library
+// Pentru date inițiale → fetch direct în Server Component (nu useEffect)
+```
+
+**G18 — Double-submit: lipsă pending state după Server Action**
+
+```tsx
+// ✗ User poate click de mai multe ori — creează N înregistrări
+async function handleSubmit() {
+  await createInvoice(data)   // fără loading state → butonul e activ
+}
+
+// ✓ useTransition previne double-submit
+'use client'
+const [isPending, startTransition] = useTransition()
+
+<button
+  onClick={() => startTransition(() => createInvoice(data))}
+  disabled={isPending}
+>
+  {isPending ? 'Se salvează...' : 'Salvează'}
+</button>
+
+// SAU: useActionState cu isPending (React 19)
+// const [state, formAction, isPending] = useActionState(createInvoice, null)
 ```
 
 ---
@@ -1633,14 +2078,18 @@ export default async function Page({ params, searchParams }: PageProps) {
   const status = typeof searchParams.status === 'string' ? searchParams.status : undefined
 }
 
-// Next.js 15 — params și searchParams devin Promise (breaking change)
+// Next.js 15 — params și searchParams devin Promise (BREAKING CHANGE)
 type PageProps15 = {
   params:       Promise<{ id: string }>
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>
 }
-export default async function Page({ params }: PageProps15) {
+export default async function Page({ params, searchParams }: PageProps15) {
   const { id } = await params
+  const { status } = await searchParams
 }
+
+// ✓ Verifici versiunea Next.js în package.json înainte de a migra
+// ✓ Ambele sintaxe coexistă pe perioade — Next.js 14 sintaxa funcționează în 15 cu deprecation warning
 ```
 
 **Server Action return type:**
@@ -1660,7 +2109,7 @@ export async function createInvoice(
 // Client: discriminated union → TypeScript știe exact ce câmpuri există
 ```
 
-**Types din Supabase generate:**
+**Types din Supabase generate + Zod integration:**
 
 ```bash
 npx supabase gen types typescript --project-id your-id > types/supabase.ts
@@ -1668,9 +2117,38 @@ npx supabase gen types typescript --local > types/supabase.ts
 ```
 
 ```ts
-type Invoice        = Database['public']['Tables']['invoices']['Row']
-type InvoiceInsert  = Database['public']['Tables']['invoices']['Insert']
+type Invoice       = Database['public']['Tables']['invoices']['Row']
+type InvoiceInsert = Database['public']['Tables']['invoices']['Insert']
 type CreateInvoiceInput = Omit<InvoiceInsert, 'id' | 'created_at' | 'updated_at' | 'user_id'>
+
+// ✓ z.infer — derivă tipul din Zod schema (single source of truth)
+const InvoiceSchema = z.object({
+  client_name: z.string().min(1),
+  amount:      z.coerce.number().positive(),
+  status:      z.enum(['draft', 'sent', 'paid'])
+})
+type InvoiceFormData = z.infer<typeof InvoiceSchema>
+// Nu declari tipul manual — Zod îl generează automat din schema validare
+
+// ✓ satisfies — tip strict fără widening
+const config = {
+  supabase: { url: process.env.NEXT_PUBLIC_SUPABASE_URL! }
+} satisfies Record<string, Record<string, string>>
+// typeof config rămâne precis (nu widened la Record)
+```
+
+**`use()` hook — types:**
+
+```ts
+// Server Component — pasează Promise la Client
+type Props = { userPromise: Promise<User | null> }
+
+// Client Component — consumă cu use()
+'use client'
+import { use } from 'react'
+function Component({ userPromise }: Props) {
+  const user = use(userPromise)  // User | null (TypeScript știe tipul)
+}
 ```
 
 **Metadata:**
@@ -1700,6 +2178,9 @@ my-app/
 │   ├── (dashboard)/
 │   │   ├── dashboard/page.tsx
 │   │   ├── invoices/
+│   │   │   ├── @modal/          ← Intercepting Routes (modals)
+│   │   │   │   ├── (.)invoices/[id]/page.tsx
+│   │   │   │   └── default.tsx
 │   │   │   ├── page.tsx
 │   │   │   ├── loading.tsx
 │   │   │   ├── error.tsx        ← 'use client' obligatoriu
@@ -1710,6 +2191,7 @@ my-app/
 │   │   └── webhooks/stripe/route.ts
 │   ├── layout.tsx               ← Root Layout (fonts, Providers)
 │   ├── not-found.tsx
+│   ├── global-error.tsx         ← 'use client' + <html><body>
 │   └── error.tsx
 │
 ├── components/
@@ -1772,7 +2254,8 @@ Types:        PascalCase       → Invoice, ActionResult
 - [ ] RLS activat + FORCE RLS pe toate tabelele Supabase
 - [ ] Auth callback validează `redirectTo` (previne Open Redirect)
 - [ ] `.env.local` în `.gitignore`
-- [ ] Security headers în `next.config.ts`
+- [ ] Security headers în `next.config.ts` (inclusiv **CSP**)
+- [ ] Rate limiting pe API routes expuse public (Upstash)
 
 **Performanță:**
 - [ ] Fetch-uri independente cu `Promise.all()` (nu sequential)
@@ -1791,10 +2274,12 @@ Types:        PascalCase       → Invoice, ActionResult
 - [ ] `middleware.ts` la rădăcina proiectului (nu în `/app`)
 - [ ] `remotePatterns` în `next.config.ts` pentru imagini externe
 - [ ] `.env.example` commituit
+- [ ] `global-error.tsx` prezent (pentru erori în root layout)
 
 **Config:**
 - [ ] Toate variabilele de mediu în Vercel (Production + Preview)
 - [ ] Supabase Auth: redirect URLs adăugate (Settings → URL Configuration)
+- [ ] Sentry DSN configurat dacă folosești error monitoring
 
 ---
 
@@ -1811,7 +2296,7 @@ vercel inspect <url>            # Detalii deployment + build logs
 vercel rollback [deployment-id] # Rollback la deployment anterior
 ```
 
-**Security headers în `next.config.ts`:**
+**Security headers complet în `next.config.ts` (inclusiv CSP):**
 
 ```ts
 import type { NextConfig } from 'next'
@@ -1822,15 +2307,31 @@ const nextConfig: NextConfig = {
   },
 
   async headers() {
+    // CSP adaptat pentru Next.js + Supabase + Tailwind
+    // unsafe-inline: necesar pentru Next.js hydration inline scripts
+    // Ideal: nonce-uri generate în middleware pentru CSP strict (advanced)
+    const ContentSecurityPolicy = [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://vercel.live",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' blob: data: https://*.supabase.co https://lh3.googleusercontent.com https://avatars.githubusercontent.com",
+      "font-src 'self'",
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://vitals.vercel-insights.com",
+      "frame-ancestors 'none'",
+      "base-uri 'self'",
+      "form-action 'self'"
+    ].join('; ')
+
     return [
       {
         source: '/(.*)',
         headers: [
+          { key: 'Content-Security-Policy',   value: ContentSecurityPolicy },
           { key: 'X-Frame-Options',           value: 'DENY' },
-          { key: 'X-Content-Type-Options',     value: 'nosniff' },
-          { key: 'Referrer-Policy',            value: 'strict-origin-when-cross-origin' },
-          { key: 'Permissions-Policy',         value: 'camera=(), microphone=(), geolocation=()' },
-          { key: 'Strict-Transport-Security',  value: 'max-age=63072000; includeSubDomains; preload' }
+          { key: 'X-Content-Type-Options',    value: 'nosniff' },
+          { key: 'Referrer-Policy',           value: 'strict-origin-when-cross-origin' },
+          { key: 'Permissions-Policy',        value: 'camera=(), microphone=(), geolocation=()' },
+          { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' }
         ]
       }
     ]
@@ -1856,6 +2357,22 @@ export default function RootLayout({ children }) {
     </body></html>
   )
 }
+```
+
+**Sentry pentru Next.js (error monitoring):**
+
+```bash
+npx @sentry/wizard@latest -i nextjs
+# Wizard configurează automat:
+# - sentry.client.config.ts
+# - sentry.server.config.ts
+# - next.config.ts instrumentare
+```
+
+```ts
+// Variabile necesare în Vercel:
+// SENTRY_DSN=https://...@sentry.io/...
+// SENTRY_ORG, SENTRY_PROJECT (pentru source maps în producție)
 ```
 
 **Environment Variables în Vercel:**
@@ -1896,6 +2413,15 @@ Client Components:
 ══ bind() PENTRU ARGUMENTE EXTRA ══════════════════
   const deleteWithId = deleteInvoice.bind(null, id)
   <form action={deleteWithId}><button type="submit">Șterge</button></form>
+
+══ useTransition — SERVER ACTION DIN BUTTON ══════
+  const [isPending, startTransition] = useTransition()
+  <button
+    disabled={isPending}
+    onClick={() => startTransition(() => serverAction(id))}
+  >
+    {isPending ? 'Se procesează...' : 'Acțiune'}
+  </button>
 
 ══ PARALLEL FETCH CU ERROR HANDLING ═══════════════
   const [invResult, cliResult] = await Promise.all([
@@ -1939,21 +2465,38 @@ Client Components:
     await deleteItem(id)  // server în background
   }
 
-══ FILE CONVENTIONS ════════════════════════════════
-  page.tsx      → ruta
-  layout.tsx    → persistent (nu se remontează)
-  loading.tsx   → Suspense automat
-  error.tsx     → Error Boundary ('use client' obligatoriu)
-  not-found.tsx → 404 (activat de notFound())
-  route.ts      → API endpoint
-  middleware.ts → LA RĂDĂCINĂ, nu în /app
+══ nuqs — TYPE-SAFE URL PARAMS ════════════════════
+  const [status, setStatus] = useQueryState(
+    'status', parseAsString.withDefault('all')
+  )
+  const [page, setPage] = useQueryState(
+    'page', parseAsInteger.withDefault(1)
+  )
+
+══ router.refresh() vs revalidatePath() ══════════
+  revalidatePath('/path')   → SERVER: invalidează Data Cache
+  router.refresh()          → CLIENT: re-fetch RSC payload
+  Împreună: date mereu fresh după mutație
 
 ══ NAVIGARE ════════════════════════════════════════
+  import { useRouter, usePathname } from 'next/navigation'  // ← App Router
+  // ✗ NU din 'next/router' — acela e Pages Router
   <Link href="/path">Text</Link>         ← intern (SPA)
   <a href="https://ext.com">Text</a>     ← extern
   redirect('/path')                      ← Server (action/page)
   router.push('/path')                   ← Client Component
+  router.refresh()                       ← re-fetch RSC payload
   notFound()                             ← activează not-found.tsx
+
+══ FILE CONVENTIONS ════════════════════════════════
+  page.tsx          → ruta
+  layout.tsx        → persistent (nu se remontează)
+  loading.tsx       → Suspense automat
+  error.tsx         → Error Boundary ('use client' obligatoriu)
+  global-error.tsx  → erori root layout ('use client' + <html><body>)
+  not-found.tsx     → 404 (activat de notFound())
+  route.ts          → API endpoint
+  middleware.ts     → LA RĂDĂCINĂ, nu în /app
 
 ══ SECURITATE ══════════════════════════════════════
   import 'server-only'         în lib/supabase/server.ts
@@ -1961,12 +2504,14 @@ Client Components:
   getSession() ✗ bypass-abil
   NEXT_PUBLIC_ numai pentru chei non-secrete
   redirect()   afară din try/catch
+  CSP header   în next.config.ts headers()
 
 ══ CACHING ═════════════════════════════════════════
   revalidatePath('/path')               → invalidează pagina
   revalidateTag('tag')                  → invalidează cu acel tag
   export const revalidate = 3600        → ISR la nivel de segment
   export const dynamic = 'force-dynamic' → mereu server-render
+  staleTimes: { dynamic: 0 }           → dezactivezi Router Cache (Next.js 15)
 ```
 
 ---
@@ -2050,6 +2595,7 @@ const InvoiceSchema = z.object({
   amount:      z.coerce.number().positive(),
   status:      z.enum(['draft', 'sent', 'paid']).default('draft')
 })
+type InvoiceFormData = z.infer<typeof InvoiceSchema>
 
 type Result<T = void> = { success: true; data: T } | { success: false; error: string }
 
@@ -2116,7 +2662,7 @@ export default async function InvoicesPage() {
 ```tsx
 // components/dashboard/InvoiceList.tsx
 'use client'
-import { useOptimistic } from 'react'
+import { useOptimistic, useTransition } from 'react'
 import { deleteInvoice } from '@/actions/invoices'
 import type { Database } from '@/types/supabase'
 
@@ -2127,10 +2673,13 @@ export function InvoiceList({ invoices }: { invoices: Invoice[] }) {
     invoices,
     (state, deletedId: string) => state.filter(inv => inv.id !== deletedId)
   )
+  const [isPending, startTransition] = useTransition()
 
-  async function handleDelete(id: string) {
-    removeOptimistic(id)   // UI instant
-    await deleteInvoice(id)
+  function handleDelete(id: string) {
+    startTransition(async () => {
+      removeOptimistic(id)   // UI instant
+      await deleteInvoice(id)
+    })
   }
 
   if (optimistic.length === 0) {
@@ -2165,7 +2714,8 @@ export function InvoiceList({ invoices }: { invoices: Invoice[] }) {
               <td className="px-4 py-3 text-right">
                 <button
                   onClick={() => handleDelete(invoice.id)}
-                  className="text-red-500 hover:text-red-700 text-sm"
+                  disabled={isPending}
+                  className="text-red-500 hover:text-red-700 text-sm disabled:opacity-50"
                 >
                   Șterge
                 </button>
@@ -2182,22 +2732,37 @@ export function InvoiceList({ invoices }: { invoices: Invoice[] }) {
 ---
 
 *Proiecte de referință: Vibe Budget · ERP Financiar · Clinică Medicală · StudioFlow · Descrieri Produse*
-*Actualizat: Mai 2026 — v1.1 cu rafinări expert:*
+*Actualizat: Mai 2026 — v2.0 cu rafinări exhaustive expert:*
+
+**Fix-uri v1.1 (prima rundă):**
 - *ADĂUGAT: `import 'server-only'` + admin client cu service role*
 - *ADĂUGAT: Context Providers pattern — izolat în Client Component*
-- *ADĂUGAT: `React.cache()` pentru memoizare per-request vs `unstable_cache` persistent*
-- *ADĂUGAT: `bind()` pattern pentru Server Actions cu argumente extra*
-- *ADĂUGAT: `useOptimistic` hook — UI instant fără să aștepți serverul*
-- *ADĂUGAT: `next/dynamic` cu `ssr: false` pentru browser-only components*
-- *ADĂUGAT: `Link` component — navigare internă SPA (nu `<a>`)*
-- *ADĂUGAT: `notFound()` pattern cu `.maybeSingle()`*
-- *ADĂUGAT: `sizes` + `placeholder="blur"` pentru next/image*
-- *ADĂUGAT: Security headers în next.config.ts + Vercel Analytics*
-- *ADĂUGAT: CORS pentru Route Handlers publice*
-- *ADĂUGAT: Open Redirect protection în auth callback*
-- *ADĂUGAT: Admin client cu service role (createAdminClient)*
-- *ADĂUGAT: 3 greșeli noi: G4 (Context Providers), G5 (Date), G14 (Link), G15 (hydration)*
-- *FIX: `Promise.all` cu error handling per query*
-- *FIX: `Date` objects non-serializabile server→client*
-- *FIX: `useFormStatus` clarificat — componentă copil a formului cu Server Action*
-- *APPENDIX: CRUD complet cu getCurrentUser + getCachedInvoices + useOptimistic*
+- *ADĂUGAT: `React.cache()` vs `unstable_cache` persistent*
+- *ADĂUGAT: `bind()` pattern + `useOptimistic` + `next/dynamic`*
+- *ADĂUGAT: `Link`, `notFound()`, `sizes` + `blur`, security headers, CORS, Open Redirect*
+- *FIX: `Promise.all` cu error handling per query, Date objects, useFormStatus*
+
+**Fix-uri v2.0 (a doua rundă — exhaustivă):**
+- *FIX REGRESIE: G15 `useflowsuppressHydrationWarning` → `suppressHydrationWarning` corect*
+- *FIX: G7 structura cod ✗/✓ separată corect în funcții distincte*
+- *ADĂUGAT: `useRouter` / `usePathname` din `next/navigation` (nu `next/router`)*
+- *ADĂUGAT: `router.refresh()` — distincție față de `revalidatePath()` + pattern Realtime*
+- *ADĂUGAT: `generateStaticParams` + `dynamicParams` — SSG cu rute dinamice*
+- *ADĂUGAT: `global-error.tsx` — distincție față de `error.tsx`, ierarhie completă*
+- *ADĂUGAT: `useTransition` + `startTransition` — Server Actions din event handlers*
+- *ADĂUGAT: `nuqs` — type-safe URL search params pentru filtre/paginare*
+- *ADĂUGAT: `use()` hook React 19 — citire Promise în Client Component*
+- *ADĂUGAT: Rate limiting cu Upstash Redis în Middleware*
+- *ADĂUGAT: Notă performanță middleware — `getUser()` HTTP call per request*
+- *ADĂUGAT: Router Cache control — `staleTimes`, `router.refresh()` vs server revalidation*
+- *ADĂUGAT: `use cache` directive Next.js 15 — `cacheTag()`, `cacheLife()`*
+- *ADĂUGAT: Intercepting Routes — modal routing pattern `(.)` complet*
+- *ADĂUGAT: G16 `router.refresh()` vs `revalidatePath()`, G17 Server Action în useEffect, G18 double-submit*
+- *ADĂUGAT: `z.infer<typeof Schema>` + `satisfies` operator în TypeScript section*
+- *ADĂUGAT: Next.js 15 breaking changes — `params`/`searchParams` ca Promises*
+- *ADĂUGAT: CSP (Content Security Policy) — cel mai important header, absent în v1.1*
+- *ADĂUGAT: Sentry integration pentru Next.js (error monitoring producție)*
+- *ADĂUGAT: `SUPABASE_JWT_SECRET` în env vars (pentru verificare JWT locală)*
+- *ACTUALIZAT: Appendix cu `useTransition` + `z.infer` + `global-error.tsx` în structura proiect*
+- *ACTUALIZAT: Checklist Pre-Deploy cu CSP + global-error.tsx + rate limiting + Sentry*
+- *ACTUALIZAT: Quick Reference Card cu toate pattern-urile noi*
