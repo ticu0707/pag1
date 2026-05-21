@@ -351,10 +351,17 @@
 const KEY = 'ic_invoices';
 
 function loadInvoices() {
-  return JSON.parse(localStorage.getItem(KEY) || '[]');
+  try {
+    return JSON.parse(localStorage.getItem(KEY) ?? '[]');
+  } catch { return []; }
 }
 function saveInvoices(arr) {
-  localStorage.setItem(KEY, JSON.stringify(arr));
+  try {
+    localStorage.setItem(KEY, JSON.stringify(arr));
+  } catch(e) {
+    if (e.name === 'QuotaExceededError')
+      console.warn('InvoiceChaser: spațiu stocare plin — date nesalvate.');
+  }
 }
 function uid() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);

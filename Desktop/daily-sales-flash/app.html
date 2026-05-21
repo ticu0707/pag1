@@ -1325,7 +1325,12 @@ DSF.config = (function() {
   }
 
   function _save(obj) {
-    localStorage.setItem(KEY, JSON.stringify(obj));
+    try {
+      localStorage.setItem(KEY, JSON.stringify(obj));
+    } catch(e) {
+      if (e.name === 'QuotaExceededError')
+        console.warn('DSF: spațiu stocare plin — config nesalvat.');
+    }
   }
 
   return {

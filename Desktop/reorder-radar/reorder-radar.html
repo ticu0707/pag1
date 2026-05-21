@@ -383,7 +383,12 @@ function uid() {
 }
 
 function saveToStorage() {
-  localStorage.setItem('rr_skus', JSON.stringify(skus));
+  try {
+    localStorage.setItem('rr_skus', JSON.stringify(skus));
+  } catch(e) {
+    if (e.name === 'QuotaExceededError')
+      console.warn('Reorder Radar: spațiu stocare plin — date nesalvate.');
+  }
 }
 
 function loadFromStorage() {

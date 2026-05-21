@@ -810,7 +810,10 @@ PC.storage = (function() {
   const KEY = 'pc_session';
 
   function save(state) {
-    try { sessionStorage.setItem(KEY, JSON.stringify(state)); } catch(e) {}
+    try { sessionStorage.setItem(KEY, JSON.stringify(state)); } catch(e) {
+      if (e.name === 'QuotaExceededError')
+        console.warn('PurchaseCompare: spațiu stocare plin — sesiune nesalvată.');
+    }
   }
 
   function load() {

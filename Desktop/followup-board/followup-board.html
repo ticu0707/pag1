@@ -553,7 +553,10 @@ const Storage = {
     } catch(e) { return this.defaultState(); }
   },
   save(st) {
-    try { localStorage.setItem(this.KEY, JSON.stringify(st)); } catch(e) {}
+    try { localStorage.setItem(this.KEY, JSON.stringify(st)); } catch(e) {
+      if (e.name === 'QuotaExceededError')
+        console.warn('FollowUp Board: spațiu stocare plin — date nesalvate.');
+    }
   },
   generateId() {
     return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);

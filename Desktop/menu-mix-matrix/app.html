@@ -1358,7 +1358,10 @@
   }
 
   function saveState() {
-    try { sessionStorage.setItem('mmm_data', JSON.stringify(getState())); } catch(e) {}
+    try { sessionStorage.setItem('mmm_data', JSON.stringify(getState())); } catch(e) {
+      if (e.name === 'QuotaExceededError')
+        console.warn('MenuMix Matrix: spațiu stocare plin — sesiune nesalvată.');
+    }
   }
 
   function restoreState() {
