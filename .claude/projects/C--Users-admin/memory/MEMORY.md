@@ -9,6 +9,7 @@
 - [reference_skill_offline_audit.md](reference_skill_offline_audit.md) — Skill /offline-audit: audit static 12 reguli offline-first (localStorage/IndexedDB/SW/PWA), BLOCKER/ATENȚIE/OK
 - [reference_skill_nextjs_audit.md](reference_skill_nextjs_audit.md) — Skill /nextjs-audit: audit static 19 reguli Next.js App Router (securitate/boundary/ServerActions/TypeScript/pre-deploy), BLOCKER/ATENȚIE/OK
 - [reference_skill_dataviz_audit.md](reference_skill_dataviz_audit.md) — Skill /dataviz-audit: audit static 16 reguli data viz (Chart.js/Canvas/Recharts/ECharts/Date/Robustness); HTML Vanilla + Next.js, BLOCKER/ATENȚIE/OK
+- [reference_skill_auth_audit.md](reference_skill_auth_audit.md) — Skill /auth-audit: audit static 22 reguli auth (Supabase Auth/RLS/Storage/Middleware/Session/Server Actions/HTML Vanilla); Next.js + HTML Vanilla, BLOCKER/ATENȚIE/OK
 
 ## Proiecte
 - [project_vibe_website.md](project_vibe_website.md) — Vibe Caffè (Next.js, branch starter): Hero + Features + Menu + Footer gata; urmează Navigation, About, ChatWidget (Barista Bot)
