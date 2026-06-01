@@ -1,0 +1,19 @@
+# Chei API si date sensibile - NICIODATA in git
+.env
+.env.local
+.env.*.local
+CHEI API.txt
+COPE CHEI API.txt
+*chei*.txt
+*CHEI*.txt
+*key*.txt
+*KEY*.txt
+
+# Memory si date generate de agent
+memory/
+
+# Fisiere temporare
+*.tmp
+*.log
+__pycache__/
+*.pyc

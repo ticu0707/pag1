@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fișă de aprobare — {{BRIEF_SLUG}}</title>
+<style>
+  :root{
+    --crem:#f4ecdd; --crem2:#fbf6ec; --ink:#2b2520; --mut:#7a6f60;
+    --cupru:#b06a34; --cupru2:#c98a4a; --linie:#e3d6c2; --ok:#4f7a3f; --rosu:#9a3b2e;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--crem);color:var(--ink);
+    font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+  .wrap{max-width:1100px;margin:0 auto;padding:28px 22px 70px}
+  .top{display:flex;align-items:center;justify-content:space-between;gap:16px;
+    border-bottom:2px solid var(--linie);padding-bottom:16px}
+  .top h1{font-size:20px;margin:0;letter-spacing:.2px}
+  .top .sub{color:var(--mut);font-size:13px;margin-top:4px}
+  .top .sub a{color:var(--cupru)}
+  .verdict{margin:16px 0 22px;padding:11px 15px;background:#eef4e7;border:1px solid #cfe0bd;
+    border-radius:10px;font-size:14px;color:#3c6330}
+  .verdict b{color:var(--ok)}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:22px;align-items:start}
+  @media(max-width:880px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--crem2);border:1px solid var(--linie);border-radius:16px;
+    overflow:hidden;box-shadow:0 1px 0 #fff inset,0 6px 20px rgba(80,60,30,.07)}
+  .head{display:flex;align-items:center;gap:11px;padding:14px 16px;border-bottom:1px solid var(--linie)}
+  .ava{width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--cupru),var(--cupru2));
+    color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px}
+  .who{font-weight:600;font-size:14px}
+  .plat{color:var(--mut);font-size:12px}
+  .imgwrap{background:#efe7d7;border-bottom:1px solid var(--linie)}
+  .imgwrap img{display:block;width:100%;height:auto}
+  .cap{padding:16px;font-size:14.5px;white-space:pre-wrap}
+  .tags{padding:0 16px 14px;color:#3f5f86;font-size:13.5px;font-weight:600}
+  .meta{display:flex;flex-wrap:wrap;gap:8px;padding:12px 16px;border-top:1px solid var(--linie);background:#f7efe0}
+  .chip{font-size:12px;padding:5px 9px;border-radius:7px;background:#e3efd9;color:var(--ok);font-weight:600}
+  .foot{margin-top:28px;padding-top:16px;border-top:2px solid var(--linie);color:var(--mut);font-size:13px}
+
+  /* Scheduling widget */
+  .sched{margin-top:14px;background:#f7f2e8;border:1px solid var(--linie);border-radius:12px;padding:14px 16px}
+  .sched-title{font-size:12px;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}
+  .sched-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;flex-wrap:wrap}
+  .sched-row:last-child{margin-bottom:0}
+  .plat-badge{font-size:12px;font-weight:700;width:64px;flex-shrink:0}
+  .plat-badge.fb{color:#1877f2}.plat-badge.li{color:#0a66c2}
+  .radio-group{display:flex;gap:6px}
+  .radio-group label{display:flex;align-items:center;gap:5px;font-size:13px;cursor:pointer;
+    padding:5px 10px;border-radius:7px;border:1px solid var(--linie);background:#fff;transition:background .15s}
+  .radio-group label:has(input:checked){background:#e3efd9;border-color:#b5d49a}
+  .radio-group input{accent-color:var(--ok);width:14px;height:14px}
+  .dt-pick{display:none;gap:6px;align-items:center}
+  .dt-pick.visible{display:flex}
+  .dt-pick input{border:1px solid var(--linie);border-radius:7px;padding:5px 8px;font-size:13px;
+    background:#fff;color:var(--ink);font-family:inherit}
+
+  /* Butoane */
+  .btn-row{display:flex;flex-direction:column;align-items:flex-start;gap:10px;margin-top:16px}
+  .btn{border:none;cursor:pointer;font-size:15px;font-weight:700;padding:12px 28px;
+    border-radius:12px;transition:opacity .15s,transform .1s;letter-spacing:.1px}
+  .btn:active{transform:scale(.97)}
+  .btn-publish{background:#4f7a3f;color:#fff}
+  .btn-publish:hover{opacity:.88}
+  .btn-review{background:#9a3b2e;color:#fff}
+  .btn-review:hover{opacity:.88}
+  .btn-reset{background:var(--linie);color:var(--mut);font-size:13px;padding:9px 18px;border-radius:9px;margin-top:6px}
+
+  /* Panoul Review */
+  #review-panel{display:none;margin-top:14px;background:#fdf0ed;border:1px solid #e0b8b0;
+    border-radius:12px;padding:16px}
+  #review-panel textarea{width:100%;min-height:80px;border:1px solid #e0b8b0;border-radius:8px;
+    padding:10px;font:14px/1.5 inherit;resize:vertical;background:#fff}
+  #review-panel .btn-gen{margin-top:10px;background:#9a3b2e;color:#fff;border-radius:8px;
+    padding:9px 18px;font-weight:700;border:none;cursor:pointer;font-size:14px}
+
+  /* Toast */
+  #toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(60px);
+    background:#2b2520;color:#fff;padding:12px 24px;border-radius:10px;font-size:14px;
+    font-weight:600;opacity:0;transition:opacity .3s,transform .3s;pointer-events:none;z-index:999}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  /* Reset */
+  .placeholder-img{background:var(--linie);display:flex;align-items:center;justify-content:center;
+    min-height:180px;color:var(--mut);font-size:13px;font-weight:600}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="top">
+    <div>
+      <h1>Fișă de aprobare — <span style="color:var(--cupru)">{{BRIEF_SLUG}}</span></h1>
+      <div class="sub">Brief: briefs/{{BRIEF_SLUG}}.md · {{BRIEF_DATE}} · sursă: <a href="{{SOURCE_URL}}">{{SOURCE_LABEL}}</a></div>
+    </div>
+  </div>
+
+  <div class="verdict" id="verdict-banner">
+    Self-verify: <b>GATA DE APROBARE</b>. Toți validatorii trec.
+
+    <div class="sched">
+      <div class="sched-title">Când publicăm?</div>
+      <div class="sched-row">
+        <span class="plat-badge fb">Facebook</span>
+        <div class="radio-group">
+          <label><input type="radio" name="fb-time" value="now" checked onchange="toggleDt('fb')"> Acum</label>
+          <label><input type="radio" name="fb-time" value="scheduled" onchange="toggleDt('fb')"> Programează</label>
+        </div>
+        <div class="dt-pick" id="dt-fb">
+          <input type="date" id="fb-date">
+          <input type="time" id="fb-hour" value="10:00">
+        </div>
+      </div>
+      <div class="sched-row">
+        <span class="plat-badge li">LinkedIn</span>
+        <div class="radio-group">
+          <label><input type="radio" name="li-time" value="now" checked onchange="toggleDt('li')"> Acum</label>
+          <label><input type="radio" name="li-time" value="scheduled" onchange="toggleDt('li')"> Programează</label>
+        </div>
+        <div class="dt-pick" id="dt-li">
+          <input type="date" id="li-date">
+          <input type="time" id="li-hour" value="09:00">
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-publish" id="btn-publish" onclick="doPublish()">Publică acum pe Facebook + LinkedIn</button>
+      <button class="btn btn-review" onclick="toggleReview()">Review — vreau modificări</button>
+    </div>
+
+    <div id="review-panel">
+      <div style="font-weight:700;font-size:13px;margin-bottom:8px;color:#7a2818">Ce vrei să schimb?</div>
+      <textarea id="review-notes" placeholder="ex: schimbă tonul pe LinkedIn, fă mai scurt textul Facebook…"></textarea>
+      <button class="btn-gen" onclick="doReview()">Trimite feedback la agent</button>
+    </div>
+
+    <button class="btn btn-reset" id="btn-reset" onclick="resetSheet()">Resetează fișa pentru brief nou</button>
+  </div>
+  <div id="toast"></div>
+
+  <div class="grid">
+
+    <!-- FACEBOOK -->
+    <div class="card">
+      <div class="head">
+        <div class="ava">{{USER_INITIALS}}</div>
+        <div><div class="who">{{FB_NAME}}</div><div class="plat">Facebook · {{FB_ACCOUNT}}</div></div>
+      </div>
+      <div class="imgwrap"><img src="facebook-image.png" alt="Imagine Facebook"></div>
+      <div class="cap">{{FB_TEXT}}</div>
+      <div class="meta">{{FB_CHIPS}}</div>
+    </div>
+
+    <!-- LINKEDIN -->
+    <div class="card">
+      <div class="head">
+        <div class="ava">{{USER_INITIALS}}</div>
+        <div><div class="who">{{LI_NAME}}</div><div class="plat">LinkedIn · {{LI_ACCOUNT}}</div></div>
+      </div>
+      <div class="imgwrap"><img src="linkedin-image.png" alt="Imagine LinkedIn"></div>
+      <div class="cap">{{LI_TEXT}}</div>
+      <div class="tags">{{LI_TAGS}}</div>
+      <div class="meta">{{LI_CHIPS}}</div>
+    </div>
+
+  </div>
+
+  <div class="foot">
+    Fișier: output/{{BRIEF_DATE}}/{{BRIEF_SLUG}}/fisa-aprobare.html · Imagini: facebook-image.png, linkedin-image.png · Texte: facebook-text.md, linkedin-text.md
+  </div>
+
+</div>
+
+<script>
+const SERVER = 'http://localhost:7734';
+
+function toast(msg, dur=3200){
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), dur);
+}
+
+async function send(payload){
+  try {
+    const r = await fetch(SERVER, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    return r.ok;
+  } catch(e){
+    toast('⚠️ Serverul nu răspunde — rulează: python3 scripts/trigger_server.py');
+    return false;
+  }
+}
+
+function getSchedule(platform){
+  const mode = document.querySelector(`input[name="${platform}-time"]:checked`).value;
+  if(mode === 'now') return 'now';
+  const date = document.getElementById(`${platform}-date`).value;
+  const hour = document.getElementById(`${platform}-hour`).value;
+  return date ? `${date}T${hour}:00` : 'now';
+}
+
+function toggleDt(platform){
+  const mode = document.querySelector(`input[name="${platform}-time"]:checked`).value;
+  document.getElementById(`dt-${platform}`).classList.toggle('visible', mode === 'scheduled');
+  updateBtnLabel();
+}
+
+function updateBtnLabel(){
+  const fb = document.querySelector('input[name="fb-time"]:checked').value;
+  const li = document.querySelector('input[name="li-time"]:checked').value;
+  const btn = document.getElementById('btn-publish');
+  if(!btn || btn.disabled) return;
+  if(fb==='now' && li==='now') btn.textContent='Publică acum pe Facebook + LinkedIn';
+  else if(fb==='scheduled' && li==='scheduled') btn.textContent='Programează Facebook + LinkedIn';
+  else if(fb==='scheduled') btn.textContent='Publică LinkedIn acum · Programează Facebook';
+  else btn.textContent='Publică Facebook acum · Programează LinkedIn';
+}
+
+async function doPublish(){
+  const btn = document.getElementById('btn-publish');
+  const origText = btn.textContent;
+  btn.textContent = '⏳ Se trimite…'; btn.disabled = true;
+  const payload = {
+    action: 'publish',
+    schedule: { facebook: getSchedule('fb'), linkedin: getSchedule('li') }
+  };
+  const ok = await send(payload);
+  if(ok){
+    btn.textContent = '✓ Comandă primită de agent';
+    btn.style.opacity = '0.6';
+    const fb = payload.schedule.facebook === 'now' ? 'live acum' : payload.schedule.facebook;
+    const li = payload.schedule.linkedin === 'now' ? 'live acum' : payload.schedule.linkedin;
+    toast(`✅ FB: ${fb} · LI: ${li}`);
+  } else {
+    btn.textContent = origText; btn.disabled = false;
+  }
+}
+
+function toggleReview(){
+  const p=document.getElementById('review-panel');
+  p.style.display = p.style.display==='none' ? 'block' : 'none';
+  if(p.style.display==='block') document.getElementById('review-notes').focus();
+}
+
+async function doReview(){
+  const notes=document.getElementById('review-notes').value.trim();
+  if(!notes){ toast('⚠️ Scrie mai întâi ce vrei schimbat'); return; }
+  const btn=document.querySelector('.btn-gen');
+  btn.textContent='⏳ Se trimite…'; btn.disabled=true;
+  const ok = await send({action:'review', notes});
+  if(ok){ btn.textContent='✓ Feedback trimis'; toast('📋 Agentul revizuiește'); }
+  else { btn.textContent='Trimite feedback'; btn.disabled=false; }
+}
+
+function resetSheet(){
+  document.querySelectorAll('.cap').forEach(el=>{ el.textContent='— în așteptare brief nou —'; });
+  document.querySelectorAll('.imgwrap').forEach(el=>{
+    el.innerHTML='<div class="placeholder-img">Imagine nouă după brief</div>';
+  });
+  document.querySelectorAll('.meta').forEach(el=>el.innerHTML='');
+  document.querySelectorAll('.tags').forEach(el=>el.textContent='');
+  document.getElementById('verdict-banner').innerHTML=
+    '<span style="color:var(--mut)">Niciun brief activ. Trimite un brief nou în <code>briefs/</code>.</span>';
+  document.querySelector('h1 span').textContent='—';
+  document.querySelector('.sub').innerHTML='Fișă liberă · gata pentru sesiunea următoare';
+  toast('Fișă resetată');
+}
+</script>
+</body>
+</html>
