@@ -14,6 +14,7 @@
 - [reference_skill_skill_creator.md](reference_skill_skill_creator.md) — Skill /skill-creator: meta-skill pentru crearea de noi skill-uri; include scripts/init_skill.py, package_skill.py, quick_validate.py + references/workflows.md, output-patterns.md; instalat global
 
 ## Proiecte
+- [project_agent_danut_m.md](project_agent_danut_m.md) — Agent Danut M (SM Writer, Claude Code agent, Facebook): setup complet, commit local; urmează activare + test cu brief haos-operational
 - [project_vibe_website.md](project_vibe_website.md) — Vibe Caffè (Next.js, branch starter): Hero + Features + Menu + Footer gata; urmează Navigation, About, ChatWidget (Barista Bot)
 - [project_clinica_medicala.md](project_clinica_medicala.md) — Clinică medicală: IVR bot vocal (Twilio + Claude API) + admin panel Next.js + Supabase; planificare completă, urmează Modulul 1 (Supabase)
 - [project_erp_financiar.md](project_erp_financiar.md) — ERP financiar intern (Next.js + Supabase): 6 module, plan aprobat, rafinări DB critice neaplicate, implementare neîncepută
@@ -30,6 +31,7 @@
 - [project_studioflow.md](project_studioflow.md) — StudioFlow CRM arhitectură (2 HTML + PWA, IndexedDB, offline): PRD v5.0 final pe Desktop; 10 module, implementare neîncepută; start cu Sprint 1 (F8→F0→F2→F3)
 - [project_safe_change_agent.md](project_safe_change_agent.md) — Safe Change Agent (CLI TypeScript, offline): PRD clarificat, implementare neîncepută; start cu Demo 1 end-to-end (patch pur safe)
 - [project_ghid_agent_ai.md](project_ghid_agent_ai.md) — Ghid creare agent AI (TypeScript + Anthropic SDK, Task Agent): v4.0 COMPLET, salvat la Desktop/Agenti AI/ghid-agent-ai-v4.md; urmează implementare
+- [project_team_builder_kb.md](project_team_builder_kb.md) — Baza cunoaștere meta-skill /team-builder: v4.0 COMPLET (3253 linii, 122KB), Desktop/Agenti AI/baza-cunostinte-team-builder-v4.md; referință completă cu 24 secțiuni + Day-2 ops
 - [project_ghid_prompt_engineering.md](project_ghid_prompt_engineering.md) — Ghid Prompt Engineering vibe-coding (16 secțiuni, CoT + Critic→Builder + Meta-Prompting): v4.0 COMPLET, salvat la Desktop/Vibe-Coding/ghid-prompt-engineering-v4.md
 - [project_ghid_javascript_typescript.md](project_ghid_javascript_typescript.md) — Ghid JS/TS pentru Vibe-Coding (16 secțiuni, async/array/useEffect/securitate/CRUD): v1.0 COMPLET, salvat la Desktop/Vibe-Coding/ghid-javascript-typescript-v1.md
 - [project_ghid_git_deployment.md](project_ghid_git_deployment.md) — Ghid Git & Deployment Workflow (17 secțiuni, 5 Bloc-uri): v1.0 COMPLET, salvat la Desktop/Vibe-Coding/ghid-git-deployment-v1.md
