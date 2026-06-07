@@ -1,21 +1,44 @@
 ---
 name: project_team_builder_kb
-description: Baza de cunoaștere pentru meta-skill /team-builder — v4.0 COMPLET cu toate lacunele rezolvate
+description: Meta-skill /team-builder — v6.0 COMPLET (12 gap-uri rezolvate: TypeScript API, Secrets, Structured Output, Pattern E, Chaos Testing, CI/CD, effort, PLANNER, MCP, bypassPermissions, When-to-Redesign, Shadow Testing)
 metadata: 
   node_type: memory
   type: project
   originSessionId: cd2cfd53-aa2a-41de-aad6-9b4f5d9354e3
 ---
 
-Baza de cunoaștere pentru meta-skill `/team-builder` și `/skill-creator`.
+Meta-skill `/team-builder` — skill complet pentru crearea de echipe de agenți AI care funcționează în producție.
 
-**Why:** Documentul servește ca fundament pentru generarea meta-skill-ului de creare echipe de agenți AI — conține toate regulile, pattern-urile, template-urile și spec-urile necesare.
+**Why:** Skill-ul acoperă complet problematica creării echipelor de agenți AI în producție — de la calificare și design la hardening, evals, secrets management, versionare și diagnosticare.
 
-**Fișier curent:** `C:\Users\admin\Desktop\Agenti AI\baza-cunostinte-team-builder-v4.md`
+**Fișier skill:** `C:\Users\admin\.claude\skills\team-builder\` (8 fișiere: SKILL.md + 7 references)
 
-**How to apply:** La reluarea lucrului pe /team-builder, citește v4 direct. Versiunile anterioare (v1, v2, v3) există pe același path cu numărul corespunzător — v4 le supersedează pe toate.
+**How to apply:** La reluarea lucrului pe /team-builder, citește direct fișierele din skills folder. Baza de cunoaștere v4 de pe Desktop este supercedată — skill-ul live este autoritatea.
 
-**v4.0 — 3253 linii, 122KB, 24 secțiuni + Executive Summary cu 9 concluzii**
+**v6.0 — toate cele 12 gap-uri din analiza finală rezolvate:**
+
+**Dimensiuni fișiere v6.0:** SKILL.md 331L · skill-output.md 523L · production-hardening.md 442L · patterns.md 291L · evals.md 239L · tool-matrix.md 219L · agent-roles.md 217L · cost-reference.md 170L
+
+**Gap-uri rezolvate în v6.0:**
+1. B1 — Structured Output Contract: production-hardening.md + SKILL.md checklist
+2. B2 — TypeScript Managed Agents API: skill-output.md (exemplu complet cu streaming + NDJSON)
+3. M1 — MCP server tools guidance: tool-matrix.md (Claude Code + Managed API + Pattern C)
+4. M2 — `task_budget` în workflow: cost-reference.md (tabel team size → budget) + SKILL.md Step 6
+5. M3 — Agent versioning cu shadow testing: skill-output.md Day-2 (proces 5 pași)
+6. M4 — Secrets management: production-hardening.md (secțiune dedicată, MCP creds, startup validation)
+7. M5 — Pattern E (team-of-teams): patterns.md (CLI + Managed API router, agent count planning)
+8. M6 — "When to redesign" diagnostic: patterns.md + skill-output.md (tabel cu 8 semnale → acțiuni)
+9. m1 — `effort` în toate template-urile: agent-roles.md (low/medium/high/xhigh per rol)
+10. m2 — `initialPrompt` în template RESEARCHER: agent-roles.md (cu ghidaj caching >1024 tokens)
+11. m3 — Pattern C YAML orchestrator: patterns.md (exemplu complet fanout-coordinator)
+12. m4 — Color conventions: agent-roles.md + tool-matrix.md (tabel semantic blue/green/orange/red/purple)
+
+**Bonus adăugat:**
+- Rol 5 PLANNER/ANALYZER: agent-roles.md (purple, plan permissionMode, produce plan nu cod)
+- bypassPermissions risk documentation: tool-matrix.md
+- disallowedTools vs tools guidance: tool-matrix.md
+- Chaos testing matrix + script Python: evals.md
+- CI/CD integration GitHub Actions: evals.md
 
 **Structura documentului:**
 - S0: Când NU construiești o echipă (criterii + cost overhead)
